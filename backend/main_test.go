@@ -70,6 +70,21 @@ func TestUpazilaDetail(t *testing.T) {
 	}
 }
 
+func TestDepartmentsAndUnions(t *testing.T) {
+	a := testApp(t)
+	_, v := get(t, a, "/api/v1/departments")
+	items := v["items"].([]any)
+	if len(items) != 39 || items[len(items)-1] != "Other" {
+		t.Fatalf("unexpected department list: %d", len(items))
+	}
+	want := map[string]int{"sadar": 11, "ashuganj": 8, "akhaura": 5, "nabinagar": 21, "nasirnagar": 13, "kasba": 10, "bancharampur": 13, "sarail": 9, "bijoynagar": 10}
+	for _, u := range a.Store.Upazilas {
+		if len(u.Unions) != want[u.Slug] {
+			t.Errorf("%s has %d unions, want %d", u.Slug, len(u.Unions), want[u.Slug])
+		}
+	}
+}
+
 func TestContactValidationHoneypotAndLimit(t *testing.T) {
 	a := testApp(t)
 	post := func(body string) int {

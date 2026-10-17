@@ -30,6 +30,10 @@ UPAZILAS = {
     "sarail": ["sarail", "shorail", "সরাইল"],
 }
 DEPTS = [  # (regex, canonical name)
+    (r"islamic history", "Islamic History & Culture"), (r"genetic", "Genetic Engineering & Biotechnology"),
+    (r"social work|সমাজকর্ম", "Social Work"), (r"আইন", "Law"), (r"sociolog", "Sociology"), (r"fine art", "Fine Arts"),
+    (r"modern language|^iml", "Institute of Modern Languages"), (r"^ier$|institute of education", "Institute of Education & Research"),
+    (r"^bangla", "Bangla"),
     (r"^(ais|accounting)", "Accounting & Information Systems"),
     (r"management|^mgt|^bba", "Management Studies"),
     (r"^marketing|^mkt", "Marketing"), (r"^finance", "Finance"),
@@ -56,7 +60,7 @@ def dept(v):
     for rx, name in DEPTS:
         if re.search(rx, s):
             return name
-    return clean(v).title() if len(s) > 2 else ""
+    return "Other" if len(s) > 2 else ""
 
 
 def batch_no(*vals):
@@ -89,14 +93,24 @@ def sid(prefix, name, n):
     return prefix + hashlib.sha1(f"{name}{n}".encode()).hexdigest()[:8]
 
 
-def rows(path, header_hint):
+def blocks(path):
+    """Yield one list of row-dicts per header row found in the sheet.
+
+    The exports contain several tables stacked in one sheet (alumni, students,
+    21st batch), each with its own header row, so columns are mapped per block.
+    """
     ws = openpyxl.load_workbook(path, read_only=True).active
-    all_rows = list(ws.iter_rows(values_only=True))
-    for i, r in enumerate(all_rows):
-        if any(header_hint in clean(c).lower() for c in r):
-            hdr = [clean(c).lower() for c in r]
-            return [dict(zip(hdr, rr)) for rr in all_rows[i + 1:] if any(rr)]
-    return []
+    hdr, cur = None, []
+    for r in ws.iter_rows(values_only=True):
+        cells = [clean(c).lower() for c in r]
+        if "timestamp" in cells and "name" in " ".join(cells):
+            if cur:
+                yield cur
+            hdr, cur = cells, []
+        elif hdr and any(r):
+            cur.append(dict(zip(hdr, r)))
+    if cur:
+        yield cur
 
 
 def get(r, *keys):
@@ -106,41 +120,45 @@ def get(r, *keys):
     return None
 
 
+def blood_group(v):
+    s = clean(v).upper().replace(" ", "").replace("(", "").replace(")", "")
+    s = s.replace("POSITIVE", "+").replace("NEGATIVE", "-").replace("+VE", "+").replace("-VE", "-").replace("VE", "")
+    return s if re.fullmatch(r"(A|B|AB|O)[+-]", s) else ""
+
+
 def build_real():
-    students, blood = [], Counter()
-    seen = set()
-    for f in glob.glob(os.path.join(DATA, "*Responses*.xlsx")):
-        for r in rows(f, "name"):
-            name = clean(get(r, "name"))
-            if len(name) < 4 or name.lower() in seen:
-                continue
-            b = batch_no(get(r, "batch"), get(r, "academic session")) if "batch" in r else None
-            if "21 batch" in os.path.basename(f):
-                b = 21
-            addr = get(r, "permanent address", "upazila and village")
-            students.append({
-                "id": sid("s", name, len(students)), "name": name, "batch": b,
-                "department": dept(get(r, "department")), "session": session(get(r, "academic session")),
-                "upazila": upazila(addr),
-            })
-            seen.add(name.lower())
-            bg = clean(get(r, "blood group")).upper().replace(" ", "")
-            if re.fullmatch(r"(A|B|AB|O)[+-]", bg):
-                blood[bg] += 1
-    alumni = []
-    for r in rows(os.path.join(DATA, "alumni association.xlsx"), "occupation"):
-        name = clean(get(r, "name"))
-        if len(name) < 3:
-            continue
-        alumni.append({
-            "id": sid("a", name, len(alumni)), "name": name, "batch": batch_no(get(r, "batch")),
-            "department": dept(get(r, "department")), "occupation": clean(get(r, "occupation")),
-            "workplace": clean(get(r, "work place")), "designation": clean(get(r, "designation")),
-            "upazila": upazila(get(r, "village")),
-        })
-        bg = clean(get(r, "blood group")).upper().replace(" ", "")
-        if re.fullmatch(r"(A|B|AB|O)[+-]", bg):
-            blood[bg] += 1
+    students, alumni, blood = [], [], Counter()
+    seen_s, seen_a = set(), set()
+    for f in sorted(glob.glob(os.path.join(DATA, "*.xlsx"))):
+        is21 = "21 batch" in os.path.basename(f)
+        for block in blocks(f):
+            for r in block:
+                name = clean(get(r, "name"))
+                if len(name) < 4 or name.lower() in ("name", "name (english )"):
+                    continue
+                bg = blood_group(get(r, "blood group"))
+                if "occupation" in r:  # alumni layout
+                    if name.lower() in seen_a:
+                        continue
+                    seen_a.add(name.lower())
+                    alumni.append({
+                        "id": sid("a", name, len(alumni)), "name": name, "batch": batch_no(get(r, "batch")),
+                        "department": dept(get(r, "department")), "occupation": clean(get(r, "occupation")),
+                        "workplace": clean(get(r, "work place")), "designation": clean(get(r, "designation")),
+                        "upazila": upazila(get(r, "village")),
+                    })
+                else:  # student layouts
+                    if name.lower() in seen_s:
+                        continue
+                    seen_s.add(name.lower())
+                    b = 21 if is21 else batch_no(get(r, "batch"))
+                    students.append({
+                        "id": sid("s", name, len(students)), "name": name, "batch": b,
+                        "department": dept(get(r, "department")), "session": session(get(r, "academic session")),
+                        "upazila": upazila(get(r, "permanent address", "upazila and village")),
+                    })
+                if bg:
+                    blood[bg] += 1
     return students, alumni, blood
 
 

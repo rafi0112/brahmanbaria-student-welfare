@@ -37,6 +37,7 @@ type Upazila struct {
 	Population   *int     `json:"population"`
 	AreaKm2      *float64 `json:"areaKm2"`
 	Source       string   `json:"source"`
+	UnionSource  string   `json:"unionSource"`
 	LastVerified string   `json:"lastVerified"`
 	Verified     bool     `json:"verified"`
 	Note         string   `json:"note"`
@@ -89,6 +90,7 @@ type Store struct {
 	Upazilas []Upazila
 	Places   []Place
 	Posts    []Post
+	Depts    []string
 	Blood    map[string]int
 	Sample   bool // true when synthetic student data is in use
 }
@@ -105,7 +107,7 @@ func readJSON(path string, v any) error {
 // when they are absent the synthetic *.sample.json files are used instead.
 func loadStore(dir string) (*Store, error) {
 	s := &Store{Blood: map[string]int{}}
-	for name, dst := range map[string]any{"upazilas": &s.Upazilas, "heritage": &s.Places, "blog": &s.Posts} {
+	for name, dst := range map[string]any{"upazilas": &s.Upazilas, "heritage": &s.Places, "blog": &s.Posts, "departments": &s.Depts} {
 		if err := readJSON(filepath.Join(dir, "content", name+".json"), dst); err != nil {
 			return nil, fmt.Errorf("content/%s: %w", name, err)
 		}

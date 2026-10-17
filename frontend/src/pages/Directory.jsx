@@ -121,7 +121,7 @@ export function UpazilaDetail() {
                   {unions.length === 0 ? <Empty>{t('dir.noUnion')}</Empty> : (
                     <ol className="union-list">{unions.map((x) => <li key={x}>{x}</li>)}</ol>
                   )}
-                  <p className="muted small">{t('dir.source')}: <a href={u.source} target="_blank" rel="noreferrer">Wikipedia</a> · {u.lastVerified}. {u.note}</p>
+                  <p className="muted small">{u.unionSource} {u.note} {t('dir.source')}: <a href={u.source} target="_blank" rel="noreferrer">Wikipedia</a> · {u.lastVerified}.</p>
                 </div>
                 <div>
                   <h2>{t('dir.places')}</h2>

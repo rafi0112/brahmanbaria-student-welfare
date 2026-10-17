@@ -32,6 +32,9 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/v1/alumni", a.alumni)
 	m.HandleFunc("GET /api/v1/upazilas", a.upazilas)
 	m.HandleFunc("GET /api/v1/upazilas/{slug}", a.upazila)
+	m.HandleFunc("GET /api/v1/departments", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"items": a.Store.Depts})
+	})
 	m.HandleFunc("GET /api/v1/heritage", a.heritage)
 	m.HandleFunc("GET /api/v1/heritage/{slug}", a.heritageOne)
 	m.HandleFunc("GET /api/v1/blog", a.blog)

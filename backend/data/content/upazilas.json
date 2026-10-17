@@ -4,31 +4,32 @@
   "nameBn": "আখাউড়া উপজেলা",
   "nameEn": "Akhaura Upazila",
   "unions": [
-   "South Akhaura",
+   "Dakshin Akhaura",
    "Dharkhar",
-   "Monionda",
+   "Maniand",
    "Mogra",
-   "North Akhaura"
+   "Uttar Akhaura"
   ],
   "population": 168472,
   "areaKm2": 99.28,
   "source": "https://en.wikipedia.org/wiki/Akhaura_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "ashuganj",
   "nameBn": "আশুগঞ্জ উপজেলা",
   "nameEn": "Ashuganj Upazila",
   "unions": [
-   "Araishidha",
    "Ashuganj",
+   "Araisidha",
    "Char Chartala",
    "Durgapur",
    "Lalpur",
-   "Paschim Talshahar",
-   "Sarifpur",
+   "Sharifpur",
+   "Talsahar Paschim",
    "Tarua"
   ],
   "population": 210356,
@@ -36,33 +37,35 @@
   "source": "https://en.wikipedia.org/wiki/Ashuganj_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "bancharampur",
   "nameBn": "বাঞ্ছারামপুর উপজেলা",
   "nameEn": "Bancharampur Upazila",
   "unions": [
-   "Ayabpur",
-   "Bancharampur",
+   "Aiaubpur",
    "Dariadaulat",
-   "Darikandi",
-   "Fardabad",
-   "Manikpur",
-   "Pahariyakandi",
-   "Rupasdi",
-   "Saifullyakandi",
+   "Pahariakandi",
+   "Paschim Saifullakandi",
+   "Paschim Rupasdi",
+   "Paschim Ujan Char",
+   "Purba Rupasdi",
+   "Purba Ujan Char",
    "Salimabad",
    "Sonarampur",
    "Tezkhali",
-   "Ujanchar"
+   "Uttar Banchharampur",
+   "Dakshin Banchharampur"
   ],
   "population": 335118,
   "areaKm2": 219.38,
   "source": "https://en.wikipedia.org/wiki/Bancharampur_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "bijoynagar",
@@ -70,22 +73,23 @@
   "nameEn": "Bijoynagar Upazila",
   "unions": [
    "Bhudanty",
-   "Bishupor",
    "Chandura",
-   "Char Islampur",
    "Champaknagar",
+   "Char Islampur",
    "Harashpur",
-   "Ichhapur",
+   "Ichapura",
    "Paharpur",
    "Pattan",
-   "Singerbil"
+   "Singerbil",
+   "Bishnupur"
   ],
   "population": 290431,
   "areaKm2": 221.17,
   "source": "https://en.wikipedia.org/wiki/Bijoynagar_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "sadar",
@@ -93,23 +97,24 @@
   "nameEn": "Brahmanbaria Sadar Upazila",
   "unions": [
    "Basudeb",
-   "Bodhal",
+   "Budhanti",
+   "Chandura",
+   "Char Islampur",
    "Dakshin Natai",
-   "Machihata",
+   "Dakshin Shuhilpur",
+   "Harashpur",
+   "Machhihata",
    "Majlishpur",
    "Ramrail",
-   "Sadekpur",
-   "Shuhilpur",
-   "Sultanpur",
-   "Talsahar",
-   "Uttar Natai"
+   "Sultanpur"
   ],
   "population": 677243,
   "areaKm2": null,
   "source": "https://en.wikipedia.org/wiki/Brahmanbaria_Sadar_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "kasba",
@@ -117,22 +122,23 @@
   "nameEn": "Kasba Upazila",
   "unions": [
    "Badair",
-   "Benauty",
    "Bayek",
+   "Binauti",
    "Gopinathpur",
-   "Kasba Paschim",
    "Kayempur",
+   "Kasba Paschim",
    "Kharera",
    "Kuti",
    "Mehari",
-   "Mulagram"
+   "Mulgram"
   ],
   "population": 357961,
   "areaKm2": 209.77,
   "source": "https://en.wikipedia.org/wiki/Kasba_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "nabinagar",
@@ -145,46 +151,44 @@
    "Birgaon",
    "Bitghar",
    "Ibrahimpur",
-   "Junedpur",
-   "Kaitala Dakshin",
-   "Kaitala Uttar",
+   "Jinodpur",
+   "Kaitala North",
+   "Kaitala South",
    "Krishnanagar",
    "Laur Fatehpur",
    "Natghar",
-   "Paschim Nabinagar",
-   "Purba Nabinagar",
+   "Nabinagar East",
+   "Nabinagar West",
    "Rasullabad",
    "Ratanpur",
    "Salimganj",
    "Satmura",
    "Shibpur",
    "Shyamgram",
-   "Sreerampur",
-   "Shahpur",
-   "Gulpukuria",
-   "Damla"
+   "Sreerampur"
   ],
   "population": null,
   "areaKm2": null,
   "source": "https://en.wikipedia.org/wiki/Nabinagar_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official. Wikipedia states 21 union parishads but lists 24 names."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "nasirnagar",
   "nameBn": "নাসিরনগর উপজেলা",
   "nameEn": "Nasirnagar Upazila",
   "unions": [
+   "Bolakot",
    "Burishwar",
-   "Bhalakut",
    "Chapartala",
    "Chatalpar",
-   "Dharmondol",
+   "Dhar Mandal",
    "Fandauk",
    "Goalnagar",
    "Gokarna",
-   "Goniauk",
+   "Guniauk",
    "Haripur",
    "Kunda",
    "Nasirnagar",
@@ -195,28 +199,30 @@
   "source": "https://en.wikipedia.org/wiki/Nasirnagar_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  },
  {
   "slug": "sarail",
   "nameBn": "সরাইল উপজেলা",
   "nameEn": "Sarail Upazila",
   "unions": [
-   "Auraol",
+   "Aruail",
    "Chunta",
    "Kalikachchha",
    "Noagaon",
    "Pakshimul",
-   "Panishor",
    "Sarail",
    "Shahbazpur",
-   "Shahjadapur"
+   "Shahjadapur",
+   "Uttar Panishwar"
   ],
   "population": 364369,
   "areaKm2": 227.22,
   "source": "https://en.wikipedia.org/wiki/Sarail_Upazila",
   "lastVerified": "2026-10-17",
   "verified": false,
-  "note": "Union names copied from Wikipedia (CC BY-SA); confirm against LGED/BBS before treating as official."
+  "note": "Population and area come from Wikipedia (CC BY-SA); census year not recorded.",
+  "unionSource": "Union list supplied by the committee (Oct 2026); not yet checked against LGED/BBS."
  }
 ]

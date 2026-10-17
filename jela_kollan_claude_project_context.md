@@ -844,7 +844,7 @@ checked in the browser at desktop and phone width):
 - Go API `/api/v1`: health, stats, students (search, batch, department,
   upazila filters, pagination, profile), alumni, upazilas, heritage,
   blog, contact (validation, honeypot, rate limit, JSONL store).
-- Real data: 138 students and 277 alumni imported from `Data/*.xlsx` by
+- Real data: 138 students and 107 alumni imported from `Data/*.xlsx` by
   `scripts/build_data.py`. Only name, batch, department, session and home
   upazila are exposed; phone, email, Facebook, address, school/college,
   blood group and the welfare column are never served. Blood group is
@@ -868,10 +868,10 @@ checked in the browser at desktop and phone width):
 - Auth is UI only (validation and flow screens). Registration, email
   verification, sessions and roles need PostgreSQL + Brevo and are the
   next backend milestone. Dashboard and Admin show preview data.
-- Union parishad names come from Wikipedia (CC BY-SA) and are flagged
-  "not verified"; Nabinagar lists 24 names while Wikipedia says 21.
-  Akhaura shows 5 unions. Check against LGED / BBS.
-- Population figures are Wikipedia's (census year not recorded).
+- Union parishad names are the committee-supplied lists (9 upazilas, 100 unions; counts 11/8/5/21/13/10/13/9/10); not yet checked against LGED / BBS. Union names are English only.
+- Population and area figures are Wikipedia's (census year not recorded).
+- The `Data/alumni association.xlsx` sheet stacks several tables (alumni, students, 21st batch); `scripts/build_data.py` maps columns per header row. An earlier import wrongly counted ~170 student rows as alumni; fixed (107 alumni). Batch is only taken from the Batch column (never guessed from session); rows without it show no batch.
+- Departments follow the committee's 39-item list (`backend/data/content/departments.json`, `/api/v1/departments`); unmatched imported values become "Other".
 - Only 6 heritage places have photos and verified facts; Kal Bhairab
   temple has no licensed photo yet. The history text is deliberately
   minimal; do not add claims without a source.

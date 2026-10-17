@@ -1,7 +1,7 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
-    'hero.script': 'আমাদের শিকড়, আমাদের গর্ব', 'heritage.byMap': 'মানচিত্রে খুঁজুন',
+    'hero.script': 'আমাদের শিকড়, আমাদের গর্ব', 'auth.batch': 'ব্যাচ', 'auth.dept': 'বিভাগ', 'auth.upazila': 'উপজেলা', 'auth.union': 'ইউনিয়ন', 'auth.select': 'বেছে নিন', 'auth.e.select': 'একটি অপশন বেছে নিন।', 'heritage.byMap': 'মানচিত্রে খুঁজুন',
     'quick.studentsD': 'সহপাঠীদের খুঁজুন ও যুক্ত হোন', 'quick.directoryD': 'স্থানীয় প্রশাসনিক কাঠামো জানুন', 'quick.heritageD': 'ঐতিহ্য ও নিদর্শন আবিষ্কার করুন',
     'quick.blogD': 'লেখা, অভিজ্ঞতা ও খবর', 'quick.galleryD': 'মুহূর্ত ও সংস্কৃতি',
     'collage.kicker': 'আমাদের জেলা আবিষ্কার', 'collage.title': 'ইতিহাস, সংস্কৃতি ও মানুষ',
@@ -93,7 +93,7 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
-    'hero.script': 'Our roots, our pride', 'heritage.byMap': 'Explore by map',
+    'hero.script': 'Our roots, our pride', 'auth.batch': 'Batch', 'auth.dept': 'Department', 'auth.upazila': 'Upazila', 'auth.union': 'Union', 'auth.select': 'Select', 'auth.e.select': 'Choose an option.', 'heritage.byMap': 'Explore by map',
     'quick.studentsD': 'Find and connect with fellow students', 'quick.directoryD': 'Explore the local administration', 'quick.heritageD': 'Discover our rich heritage and landmarks',
     'quick.blogD': 'Read articles, experiences and updates', 'quick.galleryD': 'Moments and culture',
     'collage.kicker': 'Discover our district', 'collage.title': 'History, Culture and People',
