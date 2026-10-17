@@ -874,6 +874,7 @@ checked in the browser at desktop and phone width):
 - Union parishad names are the committee-supplied lists (9 upazilas, 100 unions; counts 11/8/5/21/13/10/13/9/10); not yet checked against LGED / BBS. Union names are English only.
 - Population and area figures are Wikipedia's (census year not recorded).
 - The `Data/alumni association.xlsx` sheet stacks several tables (alumni, students, 21st batch); `scripts/build_data.py` maps columns per header row. An earlier import wrongly counted ~170 student rows as alumni; fixed (107 alumni). Batch is only taken from the Batch column (never guessed from session); rows without it show no batch.
+- The two batch PDFs (`Data/1 to 15 Batch .pdf`: 103 alumni, `16 to 21 Batch .pdf`: 128 students) list the same people as the sheets; the importer reads them to fill blank fields (batch, department, session, upazila, job fields) and adds anyone missing (none were). Batch is never derived from session: only 83 of 118 records satisfy batch = start year − 2004. Names are de-duplicated ignoring "Md"/punctuation (137 students, 104 alumni, 10 students still without a batch).
 - Departments follow the committee's 39-item list (`backend/data/content/departments.json`, `/api/v1/departments`); unmatched imported values become "Other".
 - Only 6 heritage places have photos and verified facts; Kal Bhairab
   temple has no licensed photo yet. The history text is deliberately

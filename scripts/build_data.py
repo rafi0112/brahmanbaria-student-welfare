@@ -134,6 +134,95 @@ def blood_group(v):
     return s if re.fullmatch(r"(A|B|AB|O)[+-]", s) else ""
 
 
+def norm_name(n):
+    s = re.sub(r"[^a-z0-9 ]", " ", n.lower())
+    return " ".join(w for w in s.split() if w not in ("md", "mohammad", "muhammad", "mst"))
+
+
+FIELD = re.compile(r"^(Dept|Batch|Session|Mobile|Address|Blood Group|Blood|Workplace|Designation|Occupation):\s*(.*)$")
+
+
+def pdf_records(path):
+    """Parse the batch directory PDFs into one dict per '#NNN' entry.
+
+    Values can wrap over several lines, so continuation lines are appended to
+    the previous field. Section headings such as '17th Batch' are ignored.
+    """
+    import pypdf
+    lines = []
+    for page in pypdf.PdfReader(path).pages:
+        lines += [clean(x) for x in (page.extract_text() or "").splitlines()]
+    recs, cur, field = [], None, None
+    for ln in lines:
+        if not ln:
+            continue
+        if re.fullmatch(r"#\d{3}", ln):
+            cur = {"_n": ln, "name": ""}
+            recs.append(cur)
+            field = "name"
+            continue
+        if cur is None or ln == "No Photo" or re.fullmatch(r"\d+(st|nd|rd|th) Batch", ln):
+            continue
+        m = FIELD.match(ln)
+        if m:
+            field = m.group(1).lower().replace("blood group", "blood")
+            cur[field] = (cur.get(field, "") + " " + m.group(2)).strip()
+        elif field:
+            cur[field] = (cur.get(field, "") + " " + ln).strip()
+    return recs
+
+
+def batch_from_session(sess):
+    m = re.match(r"(\d{4})-", sess or "")
+    return int(m.group(1)) - 2004 if m else None
+
+
+def add_pdf_people(students, alumni, blood, seen_s, seen_a):
+    """Merge the batch PDFs: add people missing from the sheets and fill blank fields of known ones.
+
+    Returns (new students, new alumni, filled field count, (batch==session-2004 agreements, checked)).
+    """
+    ns = na = filled = agree = checked = 0
+    by_s = {norm_name(x["name"]): x for x in students}
+    by_a = {norm_name(x["name"]): x for x in alumni}
+    for fname, kind in (("1 to 15 Batch .pdf", "alumni"), ("16 to 21 Batch .pdf", "student")):
+        path = os.path.join(DATA, fname)
+        if not os.path.exists(path):
+            continue
+        for r in pdf_records(path):
+            name = clean(r.get("name"))
+            key = norm_name(name)
+            if len(key) < 3:
+                continue
+            sess = session(r.get("session"))
+            rb = batch_no(r.get("batch"))
+            if kind == "student" and rb and batch_from_session(sess):
+                checked += 1
+                agree += rb == batch_from_session(sess)
+            new = {
+                "batch": rb,
+                "department": dept(r.get("dept")), "session": sess, "upazila": upazila(r.get("address")),
+                "occupation": job(r.get("occupation")), "workplace": job(r.get("workplace")), "designation": job(r.get("designation")),
+            }
+            known = (by_a if kind == "alumni" else by_s).get(key)
+            if known is not None:
+                for k, v in new.items():
+                    if k in known and v and (known[k] in ("", None, "Other")):
+                        known[k] = v
+                        filled += 1
+                continue
+            if kind == "alumni":
+                rec = {"id": sid("a", name, len(alumni)), "name": name, **{k: new[k] for k in ("batch", "department", "occupation", "workplace", "designation", "upazila")}}
+                alumni.append(rec); by_a[key] = rec; seen_a.add(key); na += 1
+            else:
+                rec = {"id": sid("s", name, len(students)), "name": name, **{k: new[k] for k in ("batch", "department", "session", "upazila")}}
+                students.append(rec); by_s[key] = rec; seen_s.add(key); ns += 1
+            bg = blood_group(r.get("blood"))
+            if bg:
+                blood[bg] += 1
+    return ns, na, filled, (agree, checked)
+
+
 def build_real():
     students, alumni, blood = [], [], Counter()
     seen_s, seen_a = set(), set()
@@ -146,9 +235,9 @@ def build_real():
                     continue
                 bg = blood_group(get(r, "blood group"))
                 if "occupation" in r:  # alumni layout
-                    if name.lower() in seen_a:
+                    if norm_name(name) in seen_a:
                         continue
-                    seen_a.add(name.lower())
+                    seen_a.add(norm_name(name))
                     alumni.append({
                         "id": sid("a", name, len(alumni)), "name": name, "batch": batch_no(get(r, "batch")),
                         "department": dept(get(r, "department")), "occupation": job(get(r, "occupation")),
@@ -156,9 +245,9 @@ def build_real():
                         "upazila": upazila(get(r, "village")),
                     })
                 else:  # student layouts
-                    if name.lower() in seen_s:
+                    if norm_name(name) in seen_s:
                         continue
-                    seen_s.add(name.lower())
+                    seen_s.add(norm_name(name))
                     b = 21 if is21 else batch_no(get(r, "batch"))
                     students.append({
                         "id": sid("s", name, len(students)), "name": name, "batch": b,
@@ -167,6 +256,8 @@ def build_real():
                     })
                 if bg:
                     blood[bg] += 1
+    ns, na, filled, agree = add_pdf_people(students, alumni, blood, seen_s, seen_a)
+    print(f"from PDFs: +{ns} students, +{na} alumni, {filled} blank fields filled; batch==session-2004 on {agree[0]}/{agree[1]} records that list both")
     return students, alumni, blood
 
 
