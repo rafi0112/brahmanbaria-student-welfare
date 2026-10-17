@@ -1,0 +1,218 @@
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import images from '../data/images.json'
+import { api, useApi } from '../lib/api.js'
+import { useApp } from '../lib/app.jsx'
+import { Badge, Credit, Crumbs, Data, Empty, PageHero, Photo } from '../components/ui.jsx'
+import { PostCard } from '../components/cards.jsx'
+import { Monument, Plane } from '../components/Sketch.jsx'
+
+/* ---------------- Blog ---------------- */
+export function Blog() {
+  const { t, pick } = useApp()
+  const [sp, setSp] = useSearchParams()
+  const cat = sp.get('category') || ''
+  const res = useApi(`/blog${cat ? `?category=${cat}` : ''}`)
+  const cats = ['student-life', 'heritage', 'community']
+  return (
+    <>
+      <PageHero kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} image="titas-morning" shape="b" />
+      <section className="section wrap">
+        <div className="chips" role="group">
+          <button className={`chip ${!cat ? 'on' : ''}`} onClick={() => setSp({})}>{t('blog.all')}</button>
+          {cats.map((c) => <button key={c} className={`chip ${cat === c ? 'on' : ''}`} onClick={() => setSp({ category: c })}>{t(`cat.${c}`)}</button>)}
+        </div>
+        <Data q={res}>
+          {(d) => d.items.length === 0 ? <Empty /> : (
+            <div className="blog-layout">
+              <PostCard p={d.items[0]} big />
+              <div className="blog-side">
+                {d.items.slice(1).map((p) => (
+                  <Link key={p.slug} to={`/blog/${p.slug}`} className="post-row">
+                    <Photo id={p.image} shape="shape-a" sizes="160px" />
+                    <div><h3>{pick(p.titleBn, p.titleEn)}</h3><small className="muted">{p.date}</small></div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </Data>
+      </section>
+    </>
+  )
+}
+
+export function BlogPost() {
+  const { slug } = useParams()
+  const { t, pick, n } = useApp()
+  const res = useApi(`/blog/${slug}`)
+  const more = useApi('/blog')
+  return (
+    <section className="section wrap narrow">
+      <Data q={res}>
+        {(p) => (
+          <article className="article">
+            <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: '/blog', label: t('nav.blog') }, { label: pick(p.titleBn, p.titleEn) }]} />
+            <div className="row"><Badge tone="gold">{t(`cat.${p.category}`)}</Badge>{p.sample && <Badge tone="muted">{t('blog.sample')}</Badge>}</div>
+            <h1>{pick(p.titleBn, p.titleEn)}</h1>
+            <p className="muted">{p.author} · {p.date} · {n(p.readMin)} {t('blog.min')}</p>
+            <Photo id={p.image} shape="shape-a" sketch eager sizes="(min-width: 900px) 720px, 95vw" />
+            <Credit id={p.image} />
+            <div className="prose">{pick(p.bodyBn, p.bodyEn).map((para, i) => <p key={i}>{para}</p>)}</div>
+            <Link className="link-arrow" to="/blog">← {t('blog.back')}</Link>
+            <h2>{t('blog.latest')}</h2>
+            <div className="cards-2">{(more.data?.items || []).filter((x) => x.slug !== p.slug).slice(0, 2).map((x) => <PostCard key={x.slug} p={x} />)}</div>
+          </article>
+        )}
+      </Data>
+    </section>
+  )
+}
+
+/* ---------------- Gallery ---------------- */
+const ORDER = ['titas-sunset', 'arifail-01', 'titas-morning', 'bariura-bridge', 'kullapathar', 'dhoranti-sarail', 'anandamayi-kali', 'kasba-sunset',
+  'akhaura-water', 'alinagar-fair', 'titas-shahbazpur', 'arifail-10', 'meghna-bridge', 'bb-sunset', 'nabinagar', 'char-sonarampur', 'akhaura-station', 'titas-boat', 'arifail-06']
+
+export function Gallery() {
+  const { t, pick } = useApp()
+  const [open, setOpen] = useState(null)
+  const closeRef = useRef(null)
+  const ids = ORDER.filter((id) => images[id])
+  useEffect(() => {
+    if (open == null) return undefined
+    closeRef.current?.focus()
+    const key = (e) => {
+      if (e.key === 'Escape') setOpen(null)
+      if (e.key === 'ArrowRight') setOpen((i) => (i + 1) % ids.length)
+      if (e.key === 'ArrowLeft') setOpen((i) => (i - 1 + ids.length) % ids.length)
+    }
+    addEventListener('keydown', key)
+    document.body.style.overflow = 'hidden'
+    return () => { removeEventListener('keydown', key); document.body.style.overflow = '' }
+  }, [open, ids.length])
+  const m = open != null ? images[ids[open]] : null
+  return (
+    <>
+      <PageHero kicker={t('gallery.kicker')} title={t('gallery.title')} lede={t('gallery.lede')} image="dhoranti-sarail" shape="a" />
+      <section className="section wrap">
+        <div className="masonry">
+          {ids.map((id, i) => (
+            <button key={id} className="masonry-item" onClick={() => setOpen(i)} aria-label={images[id].alt}>
+              <Photo id={id} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
+              <span>{images[id].alt}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+      {m && (
+        <div className="lightbox" role="dialog" aria-modal="true" aria-label={m.alt} onClick={(e) => e.target === e.currentTarget && setOpen(null)}>
+          <button ref={closeRef} className="icon-btn lb-close" onClick={() => setOpen(null)} aria-label={t('gallery.close')}>✕</button>
+          <button className="icon-btn lb-prev" onClick={() => setOpen((open - 1 + ids.length) % ids.length)} aria-label={t('gallery.prev')}>‹</button>
+          <figure>
+            <img src={`/images/${ids[open]}-1280.webp`} alt={m.alt} />
+            <figcaption>
+              <strong>{m.alt}</strong>
+              <span>{t('place.photoCredit')}: {m.author} · {t('gallery.license')}: <a href={m.licenseUrl || m.source} target="_blank" rel="noreferrer">{m.license}</a> · <a href={m.source} target="_blank" rel="noreferrer">{t('gallery.source')}</a></span>
+            </figcaption>
+          </figure>
+          <button className="icon-btn lb-next" onClick={() => setOpen((open + 1) % ids.length)} aria-label={t('gallery.next')}>›</button>
+        </div>
+      )}
+    </>
+  )
+}
+
+/* ---------------- About ---------------- */
+export function About() {
+  const { t } = useApp()
+  const stats = useApi('/stats')
+  const { n } = useApp()
+  const s = stats.data
+  const values = [['v1', 'M9 8a3 3 0 1 0 0-.1M3 20c.7-3.6 3.2-5.5 6-5.5s5.3 1.9 6 5.5'], ['v2', 'M3 20h18M5 20V10M19 20V10M3 10l9-6 9 6'], ['v3', 'M3 10l9-5 9 5-9 5zM7 12v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4'], ['v4', 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z']]
+  return (
+    <>
+      <PageHero kicker={t('about.kicker')} title={t('about.title')} lede={t('about.p1')} image="kasba-sunset" shape="c" />
+      <section className="section wrap two-col">
+        <div>
+          <p className="lede">{t('about.p2')}</p>
+          <h2>{t('about.mission')}</h2>
+          <ul className="ticks">{['m1', 'm2', 'm3', 'm4'].map((k) => <li key={k}>{t(`about.${k}`)}</li>)}</ul>
+        </div>
+        <div className="sketch-card"><Monument className="sketch" /></div>
+      </section>
+      <section className="section wrap">
+        <h2>{t('about.values')}</h2>
+        <div className="values">
+          {values.map(([k, d]) => (
+            <div key={k} className="value">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+              <h3>{t(`about.${k}`)}</h3><p className="muted">{t(`about.${k}d`)}</p>
+            </div>
+          ))}
+        </div>
+        <dl className="hero-stats on-paper">
+          {[['students', s?.students], ['batches', s?.batches], ['upazilas', s?.upazilas], ['places', s?.places]].map(([k, v]) => (
+            <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
+          ))}
+        </dl>
+      </section>
+    </>
+  )
+}
+
+/* ---------------- Contact ---------------- */
+export function Contact() {
+  const { t } = useApp()
+  const [v, setV] = useState({ name: '', email: '', subject: '', message: '', website: '' })
+  const [st, setSt] = useState({ status: 'idle', fields: {} })
+  const on = (k) => (e) => setV({ ...v, [k]: e.target.value })
+  const submit = async (e) => {
+    e.preventDefault()
+    setSt({ status: 'sending', fields: {} })
+    try {
+      await api('/contact', { method: 'POST', body: JSON.stringify(v) })
+      setSt({ status: 'ok', fields: {} })
+      setV({ name: '', email: '', subject: '', message: '', website: '' })
+    } catch (err) {
+      setSt({ status: err.status === 429 ? 'limit' : err.fields ? 'invalid' : 'fail', fields: err.fields || {} })
+    }
+  }
+  const field = (k, label, props = {}) => (
+    <label className="field">
+      <span>{label}</span>
+      {props.area ? <textarea rows="6" value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required /> : <input type={props.type || 'text'} value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required />}
+      {st.fields[k] && <small className="err">{st.fields[k]}</small>}
+    </label>
+  )
+  return (
+    <>
+      <PageHero kicker={t('contact.kicker')} title={t('contact.title')} lede={t('contact.lede')} image="alinagar-fair" shape="b" />
+      <section className="section wrap two-col">
+        <form className="card-form" onSubmit={submit} noValidate>
+          {field('name', t('contact.name'))}
+          {field('email', t('contact.email'), { type: 'email' })}
+          {field('subject', t('contact.subject'))}
+          {field('message', t('contact.message'), { area: true })}
+          <input className="hp" tabIndex="-1" autoComplete="off" aria-hidden="true" value={v.website} onChange={on('website')} name="website" />
+          <button className="btn btn-dark" disabled={st.status === 'sending'}>{st.status === 'sending' ? t('contact.sending') : t('contact.send')}</button>
+          <div aria-live="polite">
+            {st.status === 'ok' && <p className="notice ok">{t('contact.ok')}</p>}
+            {st.status === 'fail' && <p className="notice bad">{t('contact.fail')}</p>}
+            {st.status === 'limit' && <p className="notice bad">{t('contact.limit')}</p>}
+          </div>
+        </form>
+        <div className="sketch-card"><Plane className="sketch plane" /><p className="muted">{t('contact.address')}</p></div>
+      </section>
+    </>
+  )
+}
+
+export function NotFound() {
+  const { t } = useApp()
+  return (
+    <section className="section wrap narrow center">
+      <h1>{t('nf.title')}</h1><p className="lede">{t('nf.body')}</p>
+      <Link className="btn btn-dark" to="/">{t('nf.home')}</Link>
+    </section>
+  )
+}
