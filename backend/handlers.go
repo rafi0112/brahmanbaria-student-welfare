@@ -20,6 +20,7 @@ type App struct {
 	Origin     string
 	ContactLog string
 	Limiter    *Limiter
+	Auth       *Auth
 	mu         sync.Mutex
 }
 
@@ -49,7 +50,8 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/v1/blog", a.blog)
 	m.HandleFunc("GET /api/v1/blog/{slug}", a.blogOne)
 	m.HandleFunc("POST /api/v1/contact", a.contact)
-	return a.cors(logging(m))
+	a.authRoutes(m)
+	return a.cors(a.originGuard(logging(m)))
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -73,8 +75,9 @@ func logging(next http.Handler) http.Handler {
 func (a *App) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", a.Origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Vary", "Origin")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if r.Method == http.MethodOptions {
@@ -125,7 +128,8 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 	pg, limit := paging(r, 48)
 	batch, _ := strconv.Atoi(q.Get("batch"))
 	out := []Student{}
-	for _, s := range a.Store.Students {
+	all := a.directoryStudents(r.Context())
+	for _, s := range all {
 		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
 			continue
 		}
@@ -143,7 +147,7 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	lo, hi, pages := window(len(out), pg, limit)
 	batches, depts := map[int]int{}, map[string]int{}
-	for _, s := range a.Store.Students {
+	for _, s := range all {
 		if s.Batch != nil {
 			batches[*s.Batch]++
 		}
@@ -156,7 +160,7 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) studentOne(w http.ResponseWriter, r *http.Request) {
-	for _, s := range a.Store.Students {
+	for _, s := range a.directoryStudents(r.Context()) {
 		if s.ID == r.PathValue("id") {
 			writeJSON(w, 200, s)
 			return
@@ -267,13 +271,14 @@ func (a *App) blogOne(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 	batches := map[int]bool{}
-	for _, s := range a.Store.Students {
+	students := a.directoryStudents(r.Context())
+	for _, s := range students {
 		if s.Batch != nil {
 			batches[*s.Batch] = true
 		}
 	}
 	writeJSON(w, 200, map[string]any{
-		"students": len(a.Store.Students), "alumni": len(a.Store.Alumni), "batches": len(batches),
+		"students": len(students), "alumni": len(a.Store.Alumni), "batches": len(batches),
 		"upazilas": len(a.Store.Upazilas), "places": len(a.Store.Places), "blood": a.Store.Blood, "sample": a.Store.Sample,
 	})
 }

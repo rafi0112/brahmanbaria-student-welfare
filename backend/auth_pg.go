@@ -1,0 +1,302 @@
+package main
+
+import (
+	"context"
+	"embed"
+	"errors"
+	"fmt"
+	"sort"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+//go:embed migrations/*.sql
+var migrationFS embed.FS
+
+type pgStore struct{ db *pgxpool.Pool }
+
+// openPostgres connects and applies pending migrations.
+// Simple-protocol mode keeps it compatible with Supabase's transaction pooler (port 6543).
+func openPostgres(ctx context.Context, url string) (*pgStore, error) {
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		return nil, err
+	}
+	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	cfg.MaxConns = 8
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	s := &pgStore{db: pool}
+	if err := s.migrate(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *pgStore) migrate(ctx context.Context) error {
+	conn, err := s.db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(727274)`); err != nil {
+		return err
+	}
+	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock(727274)`) //nolint:errcheck
+	if _, err := conn.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`); err != nil {
+		return err
+	}
+	entries, err := migrationFS.ReadDir("migrations")
+	if err != nil {
+		return err
+	}
+	names := []string{}
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		var done bool
+		if err := conn.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1)`, name).Scan(&done); err != nil {
+			return err
+		}
+		if done {
+			continue
+		}
+		sql, err := migrationFS.ReadFile("migrations/" + name)
+		if err != nil {
+			return err
+		}
+		tx, err := conn.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, string(sql)); err != nil {
+			_ = tx.Rollback(ctx)
+			return fmt.Errorf("migration %s: %w", name, err)
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
+			_ = tx.Rollback(ctx)
+			return err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *pgStore) Close()                         { s.db.Close() }
+func (s *pgStore) Ping(ctx context.Context) error { return s.db.Ping(ctx) }
+
+func isUnique(err error) bool {
+	var pe *pgconn.PgError
+	return errors.As(err, &pe) && pe.Code == "23505"
+}
+
+func (s *pgStore) CreateUser(ctx context.Context, n NewUser) (User, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	var u User
+	var verified *time.Time
+	err = tx.QueryRow(ctx, `INSERT INTO users (email, password_hash, role, email_verified_at)
+		VALUES ($1, $2, $3, CASE WHEN $4::boolean THEN now() END)
+		RETURNING id::text, email, password_hash, role, email_verified_at`,
+		n.Email, n.PasswordHash, n.Role, n.Verified).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verified)
+	if err != nil {
+		if isUnique(err) {
+			return User{}, ErrEmailTaken
+		}
+		return User{}, err
+	}
+	u.EmailVerified = verified != nil
+	if p := n.Profile; p != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO profiles (user_id, name, batch, department, upazila, union_name)
+			VALUES ($1, $2, $3, $4, $5, $6)`, u.ID, p.Name, p.Batch, p.Department, p.Upazila, p.Union); err != nil {
+			return User{}, err
+		}
+	}
+	return u, tx.Commit(ctx)
+}
+
+const userCols = `id::text, email, password_hash, role, email_verified_at`
+
+func scanUser(row pgx.Row) (User, error) {
+	var u User
+	var v *time.Time
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &v); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, ErrNotFound
+		}
+		return User{}, err
+	}
+	u.EmailVerified = v != nil
+	return u, nil
+}
+
+func (s *pgStore) UserByEmail(ctx context.Context, email string) (User, error) {
+	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE email = $1`, email))
+}
+
+func (s *pgStore) UserByID(ctx context.Context, id string) (User, error) {
+	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1::uuid`, id))
+}
+
+func (s *pgStore) SetEmailVerified(ctx context.Context, id string) error {
+	_, err := s.db.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE id = $1::uuid`, id)
+	return err
+}
+
+func (s *pgStore) SetPassword(ctx context.Context, id, hash string) error {
+	_, err := s.db.Exec(ctx, `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1::uuid`, id, hash)
+	return err
+}
+
+func (s *pgStore) SaveToken(ctx context.Context, userID, purpose, digest string, expires time.Time) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at) VALUES ($1, $2::uuid, $3, $4)`,
+		digest, userID, purpose, expires)
+	return err
+}
+
+func (s *pgStore) ConsumeToken(ctx context.Context, purpose, digest string) (string, error) {
+	var id string
+	err := s.db.QueryRow(ctx, `UPDATE email_tokens SET used_at = now()
+		WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > now()
+		RETURNING user_id::text`, digest, purpose).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return id, err
+}
+
+func (s *pgStore) CreateSession(ctx context.Context, userID, digest string, expires time.Time) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2::uuid, $3)`, digest, userID, expires)
+	return err
+}
+
+func (s *pgStore) SessionUser(ctx context.Context, digest string) (User, error) {
+	return scanUser(s.db.QueryRow(ctx, `SELECT u.id::text, u.email, u.password_hash, u.role, u.email_verified_at
+		FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > now()`, digest))
+}
+
+func (s *pgStore) DeleteSession(ctx context.Context, digest string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM sessions WHERE token_hash = $1`, digest)
+	return err
+}
+
+func (s *pgStore) DeleteUserSessions(ctx context.Context, userID string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1::uuid`, userID)
+	return err
+}
+
+const profCols = `user_id::text, name, batch, department, upazila, union_name, phone, blood_group, status,
+	show_in_directory, show_phone, show_email, show_blood, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`
+
+func scanProfile(row pgx.Row, p *Profile) error {
+	return row.Scan(&p.UserID, &p.Name, &p.Batch, &p.Department, &p.Upazila, &p.Union, &p.Phone, &p.BloodGroup, &p.Status,
+		&p.ShowInDirectory, &p.ShowPhone, &p.ShowEmail, &p.ShowBlood, &p.CreatedAt)
+}
+
+func (s *pgStore) ProfileByUser(ctx context.Context, id string) (*Profile, error) {
+	var p Profile
+	if err := scanProfile(s.db.QueryRow(ctx, `SELECT `+profCols+` FROM profiles WHERE user_id = $1::uuid`, id), &p); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) error {
+	tag, err := s.db.Exec(ctx, `UPDATE profiles SET
+		phone = COALESCE($2, phone), blood_group = COALESCE($3, blood_group), show_in_directory = COALESCE($4, show_in_directory),
+		show_phone = COALESCE($5, show_phone), show_email = COALESCE($6, show_email), show_blood = COALESCE($7, show_blood)
+		WHERE user_id = $1::uuid`, id, c.Phone, c.BloodGroup, c.ShowInDirectory, c.ShowPhone, c.ShowEmail, c.ShowBlood)
+	if err == nil && tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return err
+}
+
+func (s *pgStore) ListMembers(ctx context.Context, status string) ([]MemberRow, error) {
+	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.upazila, p.union_name, p.phone, p.blood_group, p.status,
+		p.show_in_directory, p.show_phone, p.show_email, p.show_blood, to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+		u.email, u.email_verified_at IS NOT NULL
+		FROM profiles p JOIN users u ON u.id = p.user_id
+		WHERE ($1 = '' OR p.status = $1) ORDER BY p.created_at`, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []MemberRow{}
+	for rows.Next() {
+		var m MemberRow
+		if err := rows.Scan(&m.UserID, &m.Name, &m.Batch, &m.Department, &m.Upazila, &m.Union, &m.Phone, &m.BloodGroup, &m.Status,
+			&m.ShowInDirectory, &m.ShowPhone, &m.ShowEmail, &m.ShowBlood, &m.CreatedAt, &m.Email, &m.EmailVerified); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *pgStore) ReviewProfile(ctx context.Context, id, status string) error {
+	tag, err := s.db.Exec(ctx, `UPDATE profiles SET status = $2, reviewed_at = now() WHERE user_id = $1::uuid`, id, status)
+	if err == nil && tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return err
+}
+
+func (s *pgStore) ApprovedDirectory(ctx context.Context) ([]Student, error) {
+	rows, err := s.db.Query(ctx, `SELECT user_id::text, name, batch, department, upazila FROM profiles
+		WHERE status = 'approved' AND show_in_directory ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Student{}
+	for rows.Next() {
+		var st Student
+		var b int
+		var id string
+		if err := rows.Scan(&id, &st.Name, &b, &st.Department, &st.Upazila); err != nil {
+			return nil, err
+		}
+		st.ID, st.Batch = "m-"+id, &b
+		out = append(out, st)
+	}
+	return out, rows.Err()
+}
+
+func (s *pgStore) Counts(ctx context.Context) (map[string]int, error) {
+	rows, err := s.db.Query(ctx, `SELECT status, count(*) FROM profiles GROUP BY status`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	c := map[string]int{StatusPending: 0, StatusApproved: 0, StatusRejected: 0}
+	for rows.Next() {
+		var k string
+		var n int
+		if err := rows.Scan(&k, &n); err != nil {
+			return nil, err
+		}
+		c[k] = n
+	}
+	return c, rows.Err()
+}

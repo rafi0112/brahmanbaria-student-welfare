@@ -1,16 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
 
 func main() {
+	loadDotEnv(".env")
 	dataDir := env("DATA_DIR", "data")
 	store, err := loadStore(dataDir)
 	if err != nil {
@@ -22,6 +26,23 @@ func main() {
 		ContactLog: env("CONTACT_LOG", dataDir+"/contact_messages.jsonl"),
 		Limiter:    newLimiter(5, time.Hour),
 	}
+
+	authStore, closeAuth := openAuthStore()
+	defer closeAuth()
+
+	if len(os.Args) > 1 && os.Args[1] == "create-admin" {
+		if err := createAdmin(authStore); err != nil {
+			log.Fatalf("create-admin: %v", err)
+		}
+		return
+	}
+	if authStore != nil {
+		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
+			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
+	} else {
+		log.Printf("auth disabled: set DATABASE_URL (or AUTH_DEV_MEMORY=true for local testing)")
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + env("PORT", "8080"),
 		Handler:           app.Routes(),
@@ -31,7 +52,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 	go func() {
-		log.Printf("api listening on %s (sample student data: %v)", srv.Addr, store.Sample)
+		log.Printf("api listening on %s (sample student data: %v, auth: %v)", srv.Addr, store.Sample, app.Auth != nil)
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
@@ -42,6 +63,104 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(ctx)
+}
+
+// openAuthStore picks Postgres when DATABASE_URL is set, an in-memory store only when explicitly asked.
+func openAuthStore() (AuthStore, func()) {
+	if url := os.Getenv("DATABASE_URL"); url != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		pg, err := openPostgres(ctx, url)
+		if err != nil {
+			log.Fatalf("database: %v", err)
+		}
+		log.Printf("connected to Postgres, migrations applied")
+		return pg, pg.Close
+	}
+	if env("AUTH_DEV_MEMORY", "false") == "true" {
+		if env("APP_ENV", "development") == "production" {
+			log.Fatal("AUTH_DEV_MEMORY must not be used with APP_ENV=production")
+		}
+		log.Printf("WARNING: in-memory auth store, accounts are lost on restart")
+		return newMemStore(), func() {}
+	}
+	return nil, func() {}
+}
+
+func openMailer() Mailer {
+	key := os.Getenv("BREVO_API_KEY")
+	if key == "" {
+		if env("APP_ENV", "development") == "production" {
+			log.Fatal("BREVO_API_KEY is required when APP_ENV=production")
+		}
+		log.Printf("no BREVO_API_KEY: emails are printed to this log (development only)")
+		return logMailer{}
+	}
+	from := os.Getenv("MAIL_FROM")
+	if from == "" {
+		log.Fatal("MAIL_FROM is required with BREVO_API_KEY")
+	}
+	return newBrevoMailer(key, from, env("MAIL_FROM_NAME", "BSWA"))
+}
+
+func sameSite(v string) http.SameSite {
+	switch strings.ToLower(v) {
+	case "none":
+		return http.SameSiteNoneMode
+	case "strict":
+		return http.SameSiteStrictMode
+	}
+	return http.SameSiteLaxMode
+}
+
+// createAdmin makes the first admin: `ADMIN_EMAIL=... ADMIN_PASSWORD=... go run . create-admin`.
+// The password comes from the environment so it never lands in shell history or source.
+func createAdmin(s AuthStore) error {
+	if s == nil {
+		return fmt.Errorf("DATABASE_URL is not set")
+	}
+	email, pw := normEmail(os.Getenv("ADMIN_EMAIL")), os.Getenv("ADMIN_PASSWORD")
+	if !emailRx.MatchString(email) {
+		return fmt.Errorf("set ADMIN_EMAIL to a valid address")
+	}
+	if len(pw) < 12 {
+		return fmt.Errorf("ADMIN_PASSWORD must be at least 12 characters")
+	}
+	hash, err := hashPassword(pw)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if _, err := s.CreateUser(ctx, NewUser{Email: email, PasswordHash: hash, Role: RoleAdmin, Verified: true}); err != nil {
+		return err
+	}
+	fmt.Println("admin created:", email)
+	return nil
+}
+
+// loadDotEnv reads KEY=VALUE lines from a local .env file without overriding real environment variables.
+func loadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		k, v = strings.TrimSpace(k), strings.Trim(strings.TrimSpace(v), `"'`)
+		if os.Getenv(k) == "" {
+			os.Setenv(k, v)
+		}
+	}
 }
 
 func env(k, def string) string {
