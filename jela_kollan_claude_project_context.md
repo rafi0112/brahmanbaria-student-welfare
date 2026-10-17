@@ -4,9 +4,12 @@
 > ছাত্রকল্যাণ সমিতি — Brahmanbaria district students' welfare community at
 > **Jagannath University (JnU), Dhaka**. Geographic scope for directory and
 > history pages = **Brahmanbaria district only** (9 upazilas), not all of
-> Bangladesh. Brand used in the approved design: **"Jela Kollan · for
-> University"** (leaf mark). Do not reuse "Titas" (the DU association's
-> brand, titasdu.com).
+> Bangladesh. **Brand: BSWA** — Brahmanbaria Student's Welfare Association
+> of Jagannath University (logo in `frontend/public/logo-*.webp`). Nav and
+> footer follow the committee's wording: Home, About, Students, Events,
+> Alumni, Committee, Gallery, FAQ, Contact; footer Explore / Members /
+> Contact. Do not reuse "Titas" (the DU association's brand). The district
+> features (map directory, heritage, blog) stay reachable from the Home page.
 >
 > **UI:** full bilingual UI (বাংলা default + English toggle) and
 > light/dark theme (follows system, user can override).

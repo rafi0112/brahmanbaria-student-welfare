@@ -55,6 +55,14 @@ def clean(v):
     return re.sub(r"\s+", " ", str(v)).strip() if v is not None else ""
 
 
+JUNK = {"none", "n/a", "na", "no", "nil", "not yet", "-", ".", "null", "currently not working", "not working"}
+
+
+def job(v):
+    s = clean(v)
+    return "" if s.lower().strip(" .") in JUNK else s
+
+
 def dept(v):
     s = clean(v).lower()
     for rx, name in DEPTS:
@@ -143,8 +151,8 @@ def build_real():
                     seen_a.add(name.lower())
                     alumni.append({
                         "id": sid("a", name, len(alumni)), "name": name, "batch": batch_no(get(r, "batch")),
-                        "department": dept(get(r, "department")), "occupation": clean(get(r, "occupation")),
-                        "workplace": clean(get(r, "work place")), "designation": clean(get(r, "designation")),
+                        "department": dept(get(r, "department")), "occupation": job(get(r, "occupation")),
+                        "workplace": job(get(r, "work place")), "designation": job(get(r, "designation")),
                         "upazila": upazila(get(r, "village")),
                     })
                 else:  # student layouts

@@ -7,6 +7,7 @@ import Heritage, { HeritageDetail } from './pages/Heritage.jsx'
 import { About, Blog, BlogPost, Contact, Gallery, NotFound } from './pages/Content.jsx'
 import Auth, { Verify } from './pages/Auth.jsx'
 import { Admin, Dashboard } from './pages/Dashboards.jsx'
+import { Alumni, Committee, Events, FAQPage, Membership } from './pages/Community.jsx'
 
 export default function App() {
   return (
@@ -23,6 +24,11 @@ export default function App() {
         <Route path="blog" element={<Blog />} />
         <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="gallery" element={<Gallery />} />
+        <Route path="events" element={<Events />} />
+        <Route path="alumni" element={<Alumni />} />
+        <Route path="committee" element={<Committee />} />
+        <Route path="faq" element={<FAQPage />} />
+        <Route path="membership" element={<Membership />} />
         <Route path="contact" element={<Contact />} />
         <Route path="login" element={<Auth mode="login" />} />
         <Route path="register" element={<Auth mode="register" />} />

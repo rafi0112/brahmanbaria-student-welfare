@@ -35,6 +35,15 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/v1/departments", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"items": a.Store.Depts})
 	})
+	m.HandleFunc("GET /api/v1/events", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"items": a.Store.Events})
+	})
+	m.HandleFunc("GET /api/v1/committee", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"items": a.Store.Committee})
+	})
+	m.HandleFunc("GET /api/v1/faq", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"items": a.Store.FAQs})
+	})
 	m.HandleFunc("GET /api/v1/heritage", a.heritage)
 	m.HandleFunc("GET /api/v1/heritage/{slug}", a.heritageOne)
 	m.HandleFunc("GET /api/v1/blog", a.blog)
@@ -160,15 +169,30 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	pg, limit := paging(r, 48)
 	out := []Alumnus{}
+	batch, _ := strconv.Atoi(q.Get("batch"))
 	for _, s := range a.Store.Alumni {
+		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
+			continue
+		}
+		if d := q.Get("department"); d != "" && s.Department != d {
+			continue
+		}
 		if t := strings.TrimSpace(q.Get("q")); t != "" && !contains(s.Name, t) && !contains(s.Occupation, t) && !contains(s.Workplace, t) {
 			continue
 		}
 		out = append(out, s)
 	}
+	batches, depts := map[int]int{}, map[string]int{}
+	for _, s := range a.Store.Alumni {
+		if s.Batch != nil {
+			batches[*s.Batch]++
+		}
+		depts[s.Department]++
+	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, page{out[lo:hi], len(out), pg, pages})
+	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages,
+		"facets": map[string]any{"batches": batches, "departments": depts}})
 }
 
 func (a *App) upazilas(w http.ResponseWriter, r *http.Request) {

@@ -2,14 +2,8 @@
 // so edges wobble very slightly.
 const base = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', filter: 'url(#rough)' }
 
-export function Logo({ size = 34 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-      <circle cx="24" cy="24" r="23" fill="var(--forest)" />
-      <path d="M24 9c-8 6-12 14-8 23 2.6 5.6 8 8 8 10 0-2 5.4-4.4 8-10 4-9 0-17-8-23z" fill="var(--leaf)" />
-      <path d="M24 16v24M24 24l-5-4M24 29l6-5" stroke="var(--forest)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-    </svg>
-  )
+export function Logo({ size = 40 }) {
+  return <img src="/logo-96.webp" srcSet="/logo-96.webp 1x, /logo-256.webp 2x" width={size} height={size} alt="" className="logo-img" />
 }
 
 export function Leaves({ className = '' }) {

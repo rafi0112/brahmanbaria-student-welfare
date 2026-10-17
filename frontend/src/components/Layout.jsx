@@ -6,8 +6,8 @@ import Icon from './Icon.jsx'
 import { PageLeaves } from './ui.jsx'
 
 const NAV = [
-  ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/directory', 'nav.directory'],
-  ['/heritage', 'nav.heritage'], ['/blog', 'nav.blog'], ['/gallery', 'nav.gallery'], ['/contact', 'nav.contact'],
+  ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/events', 'nav.events'], ['/alumni', 'nav.alumni'],
+  ['/committee', 'nav.committee'], ['/gallery', 'nav.gallery'], ['/faq', 'nav.faq'], ['/contact', 'nav.contact'],
 ]
 
 function Header() {
@@ -67,32 +67,34 @@ function Footer() {
   return (
     <footer className="site-footer">
       <svg className="footer-wave" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90V40C160 6 330 0 520 24c200 26 330 46 520 28 150-14 270-38 400-42V90z" /></svg>
-      <div className="wrap footer-grid">
+      <div className="footer-grid">
         <div>
           <Link to="/" className="brand brand-light"><Logo /><span><b>{t('brand')}</b><small>{t('brandSub')}</small></span></Link>
-          <p>{t('footer.tag')}</p>
-          <p className="muted-light">{t('footer.legal')}</p>
+          <p>{t('footer.desc')}</p>
         </div>
         <div>
-          <h2>{t('footer.links')}</h2>
-          {NAV.slice(0, 4).map(([to, k]) => <Link key={to} to={to}>{t(k)}</Link>)}
+          <h2>{t('footer.explore')}</h2>
+          <Link to="/about">{t('footer.about')}</Link>
+          <Link to="/events">{t('nav.events')}</Link>
+          <Link to="/alumni">{t('nav.alumni')}</Link>
+          <Link to="/gallery">{t('nav.gallery')}</Link>
         </div>
         <div>
-          <h2>{t('footer.resources')}</h2>
-          {NAV.slice(4).map(([to, k]) => <Link key={to} to={to}>{t(k)}</Link>)}
+          <h2>{t('footer.members')}</h2>
+          <Link to="/membership">{t('nav.membership')}</Link>
+          <Link to="/committee">{t('nav.committee')}</Link>
+          <Link to="/students">{t('nav.students')}</Link>
+          <Link to="/faq">{t('nav.faq')}</Link>
         </div>
         <div>
-          <h2>{t('nav.login')}</h2>
-          <Link to="/login">{t('nav.login')}</Link>
-          <Link to="/register">{t('nav.register')}</Link>
-          <Link to="/dashboard">{t('dash.title')}</Link>
-          <Link to="/admin">{t('admin.title')}</Link>
+          <h2>{t('footer.contact')}</h2>
+          <span className="footer-line">{t('footer.campus')}</span>
+          <Link to="/contact">{t('footer.send')}</Link>
         </div>
       </div>
-      <div className="wrap footer-bottom">
-        <span>© 2026 {t('brand')} {t('brandSub')}</span>
+      <div className="footer-bottom">
+        <span>© 2026 {t('brand')}</span>
         <span>{t('footer.photos')}</span>
-        <span><Link to="/contact">{t('footer.privacy')}</Link> · <Link to="/contact">{t('footer.terms')}</Link></span>
       </div>
     </footer>
   )

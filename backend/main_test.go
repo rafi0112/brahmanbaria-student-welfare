@@ -85,6 +85,24 @@ func TestDepartmentsAndUnions(t *testing.T) {
 	}
 }
 
+func TestCommunityEndpoints(t *testing.T) {
+	a := testApp(t)
+	for _, path := range []string{"/api/v1/events", "/api/v1/committee", "/api/v1/faq"} {
+		code, v := get(t, a, path)
+		if code != 200 || v["items"] == nil {
+			t.Fatalf("%s: code %d items %v", path, code, v["items"])
+		}
+	}
+	_, f := get(t, a, "/api/v1/faq")
+	if len(f["items"].([]any)) < 5 {
+		t.Fatal("faq should have entries")
+	}
+	_, al := get(t, a, "/api/v1/alumni?batch=1&limit=5")
+	if al["facets"] == nil || int(al["total"].(float64)) == 0 {
+		t.Fatal("alumni filter by batch should return results with facets")
+	}
+}
+
 func TestContactValidationHoneypotAndLimit(t *testing.T) {
 	a := testApp(t)
 	post := func(body string) int {

@@ -84,15 +84,43 @@ type Post struct {
 	BodyEn    []string `json:"bodyEn"`
 }
 
+type Event struct {
+	Slug    string `json:"slug"`
+	TitleBn string `json:"titleBn"`
+	TitleEn string `json:"titleEn"`
+	Date    string `json:"date"`
+	Venue   string `json:"venue"`
+	Summary string `json:"summary"`
+	Image   string `json:"image"`
+}
+
+type CommitteeMember struct {
+	Name       string `json:"name"`
+	Role       string `json:"role"`
+	Department string `json:"department"`
+	Session    string `json:"session"`
+	Term       string `json:"term"`
+}
+
+type FAQ struct {
+	QBn string `json:"qBn"`
+	QEn string `json:"qEn"`
+	ABn string `json:"aBn"`
+	AEn string `json:"aEn"`
+}
+
 type Store struct {
-	Students []Student
-	Alumni   []Alumnus
-	Upazilas []Upazila
-	Places   []Place
-	Posts    []Post
-	Depts    []string
-	Blood    map[string]int
-	Sample   bool // true when synthetic student data is in use
+	Events    []Event
+	Committee []CommitteeMember
+	FAQs      []FAQ
+	Students  []Student
+	Alumni    []Alumnus
+	Upazilas  []Upazila
+	Places    []Place
+	Posts     []Post
+	Depts     []string
+	Blood     map[string]int
+	Sample    bool // true when synthetic student data is in use
 }
 
 func readJSON(path string, v any) error {
@@ -107,7 +135,7 @@ func readJSON(path string, v any) error {
 // when they are absent the synthetic *.sample.json files are used instead.
 func loadStore(dir string) (*Store, error) {
 	s := &Store{Blood: map[string]int{}}
-	for name, dst := range map[string]any{"upazilas": &s.Upazilas, "heritage": &s.Places, "blog": &s.Posts, "departments": &s.Depts} {
+	for name, dst := range map[string]any{"upazilas": &s.Upazilas, "heritage": &s.Places, "blog": &s.Posts, "departments": &s.Depts, "events": &s.Events, "committee": &s.Committee, "faq": &s.FAQs} {
 		if err := readJSON(filepath.Join(dir, "content", name+".json"), dst); err != nil {
 			return nil, fmt.Errorf("content/%s: %w", name, err)
 		}

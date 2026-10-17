@@ -1,4 +1,4 @@
-# Jela Kollan for University
+# BSWA — Brahmanbaria Student's Welfare Association, Jagannath University
 
 Community platform for Brahmanbaria students at university. React + Vite frontend,
 Go API, zero-cost hosting constraints. Full requirements: [jela_kollan_claude_project_context.md](jela_kollan_claude_project_context.md).

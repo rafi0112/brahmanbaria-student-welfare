@@ -1,0 +1,32 @@
+[
+ {
+  "qEn": "Who can join BSWA?",
+  "aEn": "Students of Jagannath University whose home is in Brahmanbaria district. Alumni can take part through the alumni directory.",
+  "qBn": "বিএসডব্লিউএ-তে কারা যোগ দিতে পারেন?",
+  "aBn": "জগন্নাথ বিশ্ববিদ্যালয়ের যেসব শিক্ষার্থীর বাড়ি ব্রাহ্মণবাড়িয়া জেলায়। অ্যালামনাইরা অ্যালামনাই ডিরেক্টরির মাধ্যমে যুক্ত থাকতে পারেন।"
+ },
+ {
+  "qEn": "How do I become a member?",
+  "aEn": "Open the Membership page and register with your name, batch, department, upazila and union. The committee reviews each application before it is approved.",
+  "qBn": "কীভাবে সদস্য হব?",
+  "aBn": "সদস্যপদ পাতা থেকে নাম, ব্যাচ, বিভাগ, উপজেলা ও ইউনিয়ন দিয়ে রেজিস্টার করুন। কমিটি যাচাই করে অনুমোদন দেয়।"
+ },
+ {
+  "qEn": "Which of my details are public?",
+  "aEn": "Only name, batch, department, session and home upazila. Phone number, email, Facebook link, address and blood group are never shown publicly. Contact details appear to verified members only if you choose to share them.",
+  "qBn": "আমার কোন তথ্য সবার জন্য দেখা যায়?",
+  "aBn": "শুধু নাম, ব্যাচ, বিভাগ, সেশন ও নিজ উপজেলা। ফোন নম্বর, ইমেইল, ফেসবুক লিংক, ঠিকানা ও রক্তের গ্রুপ কখনো প্রকাশ্যে দেখানো হয় না। আপনি চাইলে তবেই যাচাইকৃত সদস্যরা যোগাযোগের তথ্য দেখতে পাবেন।"
+ },
+ {
+  "qEn": "Is this an official university website?",
+  "aEn": "No. BSWA is run by students. It is not an official body of Jagannath University.",
+  "qBn": "এটি কি বিশ্ববিদ্যালয়ের অফিসিয়াল ওয়েবসাইট?",
+  "aBn": "না। বিএসডব্লিউএ শিক্ষার্থীদের পরিচালিত সংগঠন, জগন্নাথ বিশ্ববিদ্যালয়ের দাপ্তরিক সংস্থা নয়।"
+ },
+ {
+  "qEn": "How can I correct my information or hide my profile?",
+  "aEn": "Send a message from the Contact page. The committee will update or hide your profile.",
+  "qBn": "তথ্য ঠিক করতে বা প্রোফাইল লুকাতে কী করব?",
+  "aBn": "যোগাযোগ পাতা থেকে বার্তা পাঠান। কমিটি আপনার প্রোফাইল হালনাগাদ বা লুকিয়ে দেবে।"
+ }
+]
