@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 export async function api(path, opts) {
-  const res = await fetch(`${BASE}/api/v1${path}`, { headers: { 'Content-Type': 'application/json' }, ...opts })
+  const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, ...opts })
   let body = null
   try { body = await res.json() } catch { /* empty body */ }
   if (!res.ok) {

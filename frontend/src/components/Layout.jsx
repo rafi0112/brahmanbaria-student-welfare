@@ -4,6 +4,7 @@ import { useApp } from '../lib/app.jsx'
 import { Logo } from './Sketch.jsx'
 import Icon from './Icon.jsx'
 import { PageLeaves } from './ui.jsx'
+import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
   ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/events', 'nav.events'], ['/alumni', 'nav.alumni'],
@@ -12,6 +13,7 @@ const NAV = [
 
 function Header() {
   const { t, toggleLang, toggleTheme, isDark } = useApp()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const loc = useLocation()
   useEffect(() => setOpen(false), [loc.pathname])
@@ -41,7 +43,9 @@ function Header() {
               {isDark() ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></> : <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" />}
             </svg>
           </button>
-          <Link className="btn btn-dark btn-sm hide-sm" to="/login">{t('nav.login')}</Link>
+          {user
+            ? <Link className="btn btn-dark btn-sm hide-sm" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link>
+            : <Link className="btn btn-dark btn-sm hide-sm" to="/login">{t('nav.login')}</Link>}
           <button className="icon-btn menu-btn" aria-expanded={open} aria-controls="drawer" aria-label={open ? t('nav.close') : t('nav.menu')} onClick={() => setOpen(!open)}>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h10" />}
@@ -53,8 +57,9 @@ function Header() {
         <div className="drawer" id="drawer">
           {NAV.map(([to, k]) => <NavLink key={to} to={to} end={to === '/'}>{t(k)}</NavLink>)}
           <div className="drawer-cta">
-            <Link className="btn btn-dark" to="/login">{t('nav.login')}</Link>
-            <Link className="btn btn-ghost" to="/register">{t('nav.register')}</Link>
+            {user
+              ? <Link className="btn btn-dark" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{t('auth.account')}</Link>
+              : <><Link className="btn btn-dark" to="/login">{t('nav.login')}</Link><Link className="btn btn-ghost" to="/register">{t('nav.register')}</Link></>}
           </div>
         </div>
       )}

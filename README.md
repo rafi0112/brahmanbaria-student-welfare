@@ -27,6 +27,16 @@ cd backend && go test ./...
 cd frontend && npm run build
 ```
 
+## Accounts (auth)
+
+Copy `backend/.env.example` to `backend/.env` and fill it in (the file is git-ignored).
+
+- **Local try-out without a database:** `AUTH_DEV_MEMORY=true`, plus optional `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters) to seed an admin. Accounts vanish on restart and emails are printed in the API log. Open the site at `http://localhost:5173` (the API only accepts that origin).
+- **Real use:** set `DATABASE_URL` to the Supabase connection string (pooler, port 6543). Migrations run on start. Create the first admin once with `ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... go run . create-admin`.
+- **Email:** set `BREVO_API_KEY` and `MAIL_FROM` (a verified sender). Required when `APP_ENV=production`.
+- **Different domains for site and API:** `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, `CORS_ORIGIN` and `FRONTEND_URL` set to the site URL.
+- Test the Postgres store against a throwaway database: `TEST_DATABASE_URL=postgres://... go test -run Postgres` (it drops the public schema).
+
 ## Data
 
 Real exports live in `Data/` (git-ignored). Regenerate the API data and the map:

@@ -82,7 +82,13 @@ func openAuthStore() (AuthStore, func()) {
 			log.Fatal("AUTH_DEV_MEMORY must not be used with APP_ENV=production")
 		}
 		log.Printf("WARNING: in-memory auth store, accounts are lost on restart")
-		return newMemStore(), func() {}
+		mem := newMemStore()
+		if os.Getenv("ADMIN_EMAIL") != "" && os.Getenv("ADMIN_PASSWORD") != "" {
+			if err := createAdmin(mem); err != nil {
+				log.Fatalf("dev admin: %v", err)
+			}
+		}
+		return mem, func() {}
 	}
 	return nil, func() {}
 }

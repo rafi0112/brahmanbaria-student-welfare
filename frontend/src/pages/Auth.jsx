@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
-import { useApi } from '../lib/api.js'
+import { api, useApi } from '../lib/api.js'
+import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Logo } from '../components/Sketch.jsx'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
@@ -13,15 +14,29 @@ const MODES = {
   reset: { title: 'auth.reset', sub: 'auth.resetSub', fields: ['password', 'confirm'], submit: 'auth.setPassword' },
 }
 
+function ArtBackdrop() {
+  return (
+    <>
+      <img className="auth-art auth-art-l" src="/art/leaves-bl.webp" alt="" />
+      <img className="auth-art auth-art-r" src="/art/vine-tl.webp" alt="" />
+    </>
+  )
+}
+
 export default function Auth({ mode }) {
   const { t, pick, n } = useApp()
   const nav = useNavigate()
+  const auth = useAuth()
+  const [sp] = useSearchParams()
+  const token = sp.get('token') || ''
   const cfg = MODES[mode]
   const depts = useApi(mode === 'register' ? '/departments' : null)
   const ups = useApi(mode === 'register' ? '/upazilas' : null)
   const [v, setV] = useState({ name: '', batch: '', department: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
   const [errs, setErrs] = useState({})
-  const [done, setDone] = useState(false)
+  const [notice, setNotice] = useState(null) // { tone: 'ok' | 'bad', key }
+  const [busy, setBusy] = useState(false)
+  const [needVerify, setNeedVerify] = useState(false)
 
   const validate = () => {
     const e = {}
@@ -33,15 +48,40 @@ export default function Auth({ mode }) {
     if (cfg.fields.includes('terms') && !v.terms) e.terms = t('auth.e.terms')
     return e
   }
-  const submit = (ev) => {
+
+  const submit = async (ev) => {
     ev.preventDefault()
+    setNotice(null); setNeedVerify(false)
     const e = validate()
     setErrs(e)
     if (Object.keys(e).length) return
-    if (mode === 'register') nav('/verify-email')
-    else setDone(true)
+    if (mode === 'reset' && !token) { setNotice({ tone: 'bad', key: 'auth.noToken' }); return }
+    setBusy(true)
+    try {
+      if (mode === 'register') {
+        await api('/auth/register', { method: 'POST', body: JSON.stringify({ name: v.name, email: v.email, password: v.password, batch: Number(v.batch), department: v.department, upazila: v.upazila, union: v.union }) })
+        nav(`/verify-email?email=${encodeURIComponent(v.email)}`)
+      } else if (mode === 'login') {
+        auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: v.email, password: v.password }) }))
+        nav('/dashboard')
+      } else if (mode === 'forgot') {
+        await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: v.email }) })
+        setNotice({ tone: 'ok', key: 'auth.sentIfExists' })
+      } else {
+        await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password: v.password }) })
+        setNotice({ tone: 'ok', key: 'auth.resetDone' })
+      }
+    } catch (err) {
+      if (err.fields) setErrs(err.fields)
+      if (err.message === 'email_not_verified') { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
+      else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
+      else if (err.status === 400 && mode === 'reset') setNotice({ tone: 'bad', key: 'auth.resetFailed' })
+      else if (err.status !== 422) setNotice({ tone: 'bad', key: errorKey(err) || 'state.error' })
+    } finally {
+      setBusy(false)
+    }
   }
-  const bind = (k) => ({ value: v[k], onChange: (e) => setV({ ...v, [k]: e.target.value }), 'aria-invalid': !!errs[k], 'aria-describedby': errs[k] ? `${k}-err` : undefined })
+
   const upList = ups.data?.items || []
   const unions = upList.find((u) => u.slug === v.upazila)?.unions || []
   const options = {
@@ -51,14 +91,19 @@ export default function Auth({ mode }) {
     union: unions.map((x) => [x, x]),
   }
   const setSel = (k) => (e) => setV({ ...v, [k]: e.target.value, ...(k === 'upazila' ? { union: '' } : {}) })
+  const bind = (k) => ({ value: v[k], onChange: (e) => setV({ ...v, [k]: e.target.value }), 'aria-invalid': !!errs[k], 'aria-describedby': errs[k] ? `${k}-err` : undefined })
   const label = { batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
+
+  const resend = async () => {
+    try { await api('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email: v.email }) }); setNotice({ tone: 'ok', key: 'auth.resent' }) }
+    catch (err) { setNotice({ tone: 'bad', key: errorKey(err) || 'state.error' }) }
+  }
 
   return (
     <section className="auth-wrap">
-      <img className="auth-art auth-art-l" src="/art/leaves-bl.webp" alt="" />
-      <img className="auth-art auth-art-r" src="/art/vine-tl.webp" alt="" />
+      <ArtBackdrop />
       <div className="auth-card">
-        <Logo size={44} />
+        <Logo size={52} />
         <h1>{t(cfg.title)}</h1>
         <p className="muted">{t(cfg.sub)}</p>
         <form onSubmit={submit} noValidate>
@@ -92,34 +137,69 @@ export default function Auth({ mode }) {
               <p className="muted small">{t('auth.approval')}</p>
             </>
           )}
-          <button className="btn btn-dark btn-block" type="submit">{t(cfg.submit)}</button>
-          {done && <p className="notice ok" role="status">{t('auth.preview')}</p>}
+          <button className="btn btn-dark btn-block" type="submit" disabled={busy}>{busy ? t('state.loading') : t(cfg.submit)}</button>
+          <div aria-live="polite">
+            {notice && <p className={`notice ${notice.tone}`} role={notice.tone === 'bad' ? 'alert' : 'status'}>{t(notice.key)}</p>}
+            {needVerify && <button type="button" className="btn btn-ghost btn-sm" onClick={resend}>{t('auth.resend')}</button>}
+          </div>
         </form>
         <p className="muted center">
           {mode === 'login' && <>{t('auth.noAccount')} <Link to="/register">{t('nav.register')}</Link></>}
           {mode === 'register' && <>{t('auth.haveAccount')} <Link to="/login">{t('nav.login')}</Link></>}
           {(mode === 'forgot' || mode === 'reset') && <Link to="/login">← {t('auth.back')}</Link>}
         </p>
-        {mode === 'login' && <p className="muted small center"><Link to="/reset-password">{t('auth.reset')}</Link> · <Link to="/verify-email">{t('auth.verify')}</Link></p>}
       </div>
     </section>
   )
 }
 
+const verifying = new Map()
+
 export function Verify() {
   const { t } = useApp()
-  const [sent, setSent] = useState(false)
+  const [sp] = useSearchParams()
+  const token = sp.get('token')
+  const email = sp.get('email') || ''
+  const [state, setState] = useState(token ? 'verifying' : 'wait') // verifying | ok | bad | err | wait
+  const [notice, setNotice] = useState(null)
+  const [address, setAddress] = useState(email)
+
+  useEffect(() => {
+    if (!token) return undefined
+    let live = true
+    // One request per token: tokens are single-use, so React's dev double-effect must not send it twice.
+    verifying.set(token, verifying.get(token) || api('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }))
+    verifying.get(token)
+      .then(() => live && setState('ok'))
+      .catch((err) => live && setState(err.status === 400 ? 'bad' : 'err'))
+    return () => { live = false }
+  }, [token])
+
+  const resend = async () => {
+    try { await api('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email: address }) }); setNotice({ tone: 'ok', key: 'auth.resent' }) }
+    catch (err) { setNotice({ tone: 'bad', key: errorKey(err) || 'state.error' }) }
+  }
+
   return (
     <section className="auth-wrap">
+      <ArtBackdrop />
       <div className="auth-card center">
-        <Logo size={44} />
-        <svg viewBox="0 0 64 64" width="72" height="72" fill="none" stroke="var(--forest)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: 'url(#rough)' }}>
-          <rect x="8" y="14" width="48" height="36" rx="5" /><path d="m10 18 22 18 22-18" />
-        </svg>
+        <Logo size={52} />
         <h1>{t('auth.verify')}</h1>
-        <p className="muted">{t('auth.verifyBody')}</p>
-        <button className="btn btn-ghost btn-block" onClick={() => setSent(true)}>{t('auth.resend')}</button>
-        {sent && <p className="notice ok" role="status">{t('auth.preview')}</p>}
+        {state === 'verifying' && <p className="muted" role="status">{t('auth.verifying')}</p>}
+        {state === 'ok' && <><p className="notice ok" role="status">{t('auth.verified')}</p><Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link></>}
+        {(state === 'bad' || state === 'err') && <p className="notice bad" role="alert">{state === 'bad' ? t('auth.verifyFailed') : t('state.error')}</p>}
+        {(state === 'wait' || state === 'bad') && (
+          <>
+            {state === 'wait' && <p className="muted">{email ? t('auth.registered') : t('auth.verifyBody')}</p>}
+            <label className="field" style={{ textAlign: 'left' }}>
+              <span>{t('auth.email')}</span>
+              <input type="email" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </label>
+            <button className="btn btn-ghost btn-block" onClick={resend} disabled={!emailOk(address)}>{t('auth.resend')}</button>
+            {notice && <p className={`notice ${notice.tone}`} role="status">{t(notice.key)}</p>}
+          </>
+        )}
         <Link to="/login">← {t('auth.back')}</Link>
       </div>
     </section>

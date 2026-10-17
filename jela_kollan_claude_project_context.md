@@ -867,10 +867,23 @@ checked in the browser at desktop and phone width):
   so confirm usage rights before launch. The mockups' hero photo is an
   AI mockup image and cannot be reused; the real boat-race photo replaces it.
 
+- Accounts: register (batch, department, upazila, union), email verification,
+  login/logout, forgot/reset password, member dashboard (phone, blood group,
+  visibility), admin approval queue. Approved members who allow it appear in
+  the public student directory (name, batch, department, upazila only).
+  Argon2id passwords, hashed single-use tokens, HttpOnly cookie sessions,
+  Origin check, rate limits, identical responses for known/unknown emails.
+  Go tests (auth flow, security checks, store suite) pass on the in-memory
+  store; the browser flow was exercised end to end in dev-memory mode.
+
 **Not done / needs a decision:**
-- Auth is UI only (validation and flow screens). Registration, email
-  verification, sessions and roles need PostgreSQL + Brevo and are the
-  next backend milestone. Dashboard and Admin show preview data.
+- The Postgres store and migration have never run against a real database
+  (no Postgres was available). Run `TestPostgresStoreSuite` with
+  `TEST_DATABASE_URL` on a fresh Supabase project, then try the flow with
+  `DATABASE_URL`. Brevo sending is also untested (no key yet).
+- Admin pages other than the approval queue (students, batches, places,
+  blog, gallery, messages) are menu placeholders. Contact messages are still
+  stored in a local JSONL file, not in Postgres.
 - Union parishad names are the committee-supplied lists (9 upazilas, 100 unions; counts 11/8/5/21/13/10/13/9/10); not yet checked against LGED / BBS. Union names are English only.
 - Population and area figures are Wikipedia's (census year not recorded).
 - The `Data/alumni association.xlsx` sheet stacks several tables (alumni, students, 21st batch); `scripts/build_data.py` maps columns per header row. An earlier import wrongly counted ~170 student rows as alumni; fixed (107 alumni). Batch is only taken from the Batch column (never guessed from session); rows without it show no batch.

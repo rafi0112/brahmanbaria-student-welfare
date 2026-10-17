@@ -13,12 +13,15 @@ import '@fontsource/caveat/600.css'
 import './styles.css'
 import App from './App.jsx'
 import { AppProvider } from './lib/app.jsx'
+import { AuthProvider } from './lib/auth.jsx'
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <AppProvider>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </AppProvider>
     </BrowserRouter>
   </React.StrictMode>,
