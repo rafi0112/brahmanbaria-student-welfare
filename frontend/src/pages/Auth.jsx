@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
-import { Logo, Leaves } from '../components/Sketch.jsx'
+import { Logo } from '../components/Sketch.jsx'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
 
@@ -42,7 +42,8 @@ export default function Auth({ mode }) {
 
   return (
     <section className="auth-wrap">
-      <Leaves className="sketch auth-leaves" />
+      <img className="auth-art auth-art-l" src="/art/leaves-bl.webp" alt="" />
+      <img className="auth-art auth-art-r" src="/art/vine-tl.webp" alt="" />
       <div className="auth-card">
         <Logo size={44} />
         <h1>{t(cfg.title)}</h1>

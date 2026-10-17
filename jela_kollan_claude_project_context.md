@@ -853,6 +853,16 @@ checked in the browser at desktop and phone width):
 - Map: 9 real upazila polygons (geoBoundaries) + heritage pins.
 - 19 licensed Commons photos with author/licence metadata
   (`frontend/src/data/images.json`).
+- Visual refresh to match `design/` and `Jela_Kollan_Design_Assets`: floating
+  pill nav, hero with the Titas boat-race photo (Commons, CC BY-SA 4.0),
+  organic blob photo, wavy edges, rounded banner heroes on inner pages,
+  glass quick-access cards, photo collage section, student sketch card,
+  botanical line art on the page background, near-black green dark theme
+  with a soft glow. Line-art pieces in `frontend/public/art/` were cut from
+  the provided concept sheet (checkerboard removed with a colour key); they
+  are AI-generated concept art from the asset pack, not licensed artwork,
+  so confirm usage rights before launch. The mockups' hero photo is an
+  AI mockup image and cannot be reused; the real boat-race photo replaces it.
 
 **Not done / needs a decision:**
 - Auth is UI only (validation and flow screens). Registration, email

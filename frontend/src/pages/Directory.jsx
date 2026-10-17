@@ -4,6 +4,7 @@ import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import { Badge, Crumbs, Data, Empty, PageHero } from '../components/ui.jsx'
+import Icon from '../components/Icon.jsx'
 import { PlaceCard } from '../components/cards.jsx'
 
 const fmt = (v, n) => (v == null ? null : n(v.toLocaleString('en-US')))
@@ -28,7 +29,12 @@ export default function Directory() {
 
   return (
     <>
-      <PageHero kicker={t('dir.kicker')} title={t('dir.title')} lede={t('dir.lede')} image="bb-sunset" shape="a" />
+      <PageHero kicker={t('dir.kicker')} title={t('dir.title')} lede={t('dir.lede')} image="titas-shahbazpur">
+        <div className="banner-search" role="search">
+          <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('dir.search')} aria-label={t('dir.search')} />
+          <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
+        </div>
+      </PageHero>
       <section className="section wrap">
         <Crumbs items={[{ to: '/', label: t('nav.home') }, { label: t('nav.directory') }]} />
         <p className="hier">{t('dir.country')} <i>›</i> {pick('চট্টগ্রাম বিভাগ', 'Chattogram Division')} <i>›</i> {pick('ব্রাহ্মণবাড়িয়া জেলা', 'Brahmanbaria District')}</p>
@@ -38,7 +44,6 @@ export default function Directory() {
               <>
                 <UpazilaMap upazilas={list} places={places.data?.items || []} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
                 <aside className="dir-side">
-                  <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('dir.search')} aria-label={t('dir.search')} />
                   {term && unionHits.length > 0 && (
                     <ul className="union-hits">
                       {unionHits.slice(0, 8).map(({ un, x }) => (

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
-import { Logo, Wave } from './Sketch.jsx'
+import { Logo } from './Sketch.jsx'
+import Icon from './Icon.jsx'
+import { PageLeaves } from './ui.jsx'
 
 const NAV = [
   ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/directory', 'nav.directory'],
@@ -32,6 +34,7 @@ function Header() {
           {NAV.map(([to, k]) => <NavLink key={to} to={to} end={to === '/'}>{t(k)}</NavLink>)}
         </nav>
         <div className="nav-tools">
+          <Link className="icon-btn hide-sm" to="/students" aria-label={t('common.search')}><Icon name="search" size={18} /></Link>
           <button className="icon-btn txt" onClick={toggleLang} aria-label={t('lang.toggle')}>{t('lang.toggle')}</button>
           <button className="icon-btn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -63,7 +66,7 @@ function Footer() {
   const { t } = useApp()
   return (
     <footer className="site-footer">
-      <Wave from="var(--forest)" />
+      <svg className="footer-wave" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90V40C160 6 330 0 520 24c200 26 330 46 520 28 150-14 270-38 400-42V90z" /></svg>
       <div className="wrap footer-grid">
         <div>
           <Link to="/" className="brand brand-light"><Logo /><span><b>{t('brand')}</b><small>{t('brandSub')}</small></span></Link>
@@ -100,10 +103,11 @@ export default function Layout() {
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   const bare = pathname.startsWith('/admin')
   return (
-    <>
+    <div className={`app ${bare ? 'app-bare' : ''}`}>
+      {!bare && <PageLeaves />}
       <Header />
       <main id="main"><Outlet /></main>
       {!bare && <Footer />}
-    </>
+    </div>
   )
 }

@@ -12,14 +12,17 @@ export function Photo({ id, shape = '', sketch = false, eager = false, sizes = '
   if (!meta || failed) {
     return <div className={`${wrap} photo-fallback`} role="img" aria-label={alt || meta?.alt || 'Photo unavailable'} />
   }
+  const w = Math.min(meta.w, 1280)
+  const set = [`/images/${id}-640.webp 640w`, `/images/${id}-1280.webp 1280w`]
+  if (meta.wide) set.push(`/images/${id}-1920.webp 1920w`)
   return (
     <div className={wrap}>
       <img
         src={`/images/${id}-1280.webp`}
-        srcSet={`/images/${id}-640.webp 640w, /images/${id}-1280.webp 1280w`}
+        srcSet={set.join(', ')}
         sizes={sizes}
-        width={meta.w > 1280 ? 1280 : meta.w}
-        height={Math.round((meta.h / meta.w) * Math.min(meta.w, 1280))}
+        width={w}
+        height={Math.round((meta.h / meta.w) * w)}
         alt={alt ?? meta.alt}
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
@@ -94,17 +97,20 @@ export function Crumbs({ items }) {
   )
 }
 
-export function PageHero({ kicker, title, lede, image, children, shape = 'a' }) {
+// Rounded banner with a photo, dark overlay and white serif title (matches the page mockups).
+// `children` is rendered inside the banner (search box, filter chips).
+export function PageHero({ kicker, title, lede, image, children }) {
   return (
-    <header className="page-hero">
-      <div className="page-hero-inner wrap">
-        <div className="page-hero-copy">
-          {kicker && <p className="kicker">{kicker}</p>}
+    <header className="page-banner-wrap wrap">
+      <div className="page-banner">
+        <Photo id={image} eager className="banner-photo" sizes="(min-width: 1200px) 1180px, 100vw" alt="" />
+        <div className="banner-shade" />
+        <div className="banner-copy">
+          {kicker && <p className="kicker kicker-light">{kicker}</p>}
           <h1>{title}</h1>
           {lede && <p className="lede">{lede}</p>}
           {children}
         </div>
-        {image && <Photo id={image} shape={`shape-${shape}`} sketch eager sizes="(min-width: 900px) 36vw, 90vw" />}
       </div>
     </header>
   )
@@ -126,5 +132,18 @@ export function Avatar({ name, size = 52 }) {
     <span className="avatar" style={{ width: size, height: size, background: `hsl(${(h % 60) + 95} 28% 32%)`, fontSize: size * 0.36 }} aria-hidden="true">
       {initials(name)}
     </span>
+  )
+}
+
+// Soft botanical line art scattered down the page edges (the "leaf" page background).
+export function PageLeaves() {
+  return (
+    <div className="page-bg" aria-hidden="true">
+      <img className="pb pb-1" src="/art/vine-tl.webp" alt="" loading="lazy" />
+      <img className="pb pb-2" src="/art/leaves-bl.webp" alt="" loading="lazy" />
+      <img className="pb pb-3" src="/art/sprig.webp" alt="" loading="lazy" />
+      <img className="pb pb-4" src="/art/flowers-br.webp" alt="" loading="lazy" />
+      <img className="pb pb-5" src="/art/vine-tl.webp" alt="" loading="lazy" />
+    </div>
   )
 }

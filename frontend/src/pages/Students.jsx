@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, Badge, Crumbs, Data, Empty, Pagination, PageHero } from '../components/ui.jsx'
+import Icon from '../components/Icon.jsx'
 import { StudentCard } from '../components/cards.jsx'
-import { Students as StudentsSketch } from '../components/Sketch.jsx'
 
 function useDebounced(v, ms = 250) {
   const [d, setD] = useState(v)
@@ -33,10 +33,14 @@ export default function Students() {
 
   return (
     <>
-      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} image="nabinagar" shape="b" />
+      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} image="kasba-sunset">
+        <div className="banner-search" role="search">
+          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
+          <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
+        </div>
+      </PageHero>
       <section className="section wrap">
         <div className="filters">
-          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
           <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>
             <option value="">{t('students.allBatches')}</option>
             {Object.keys(facets?.batches || {}).sort((a, b) => b - a).map((b) => <option key={b} value={b}>{t('students.batch')} {n(b)} ({n(facets.batches[b])})</option>)}
@@ -93,7 +97,7 @@ export function StudentDetail() {
                   <p className="privacy-note">🔒 {t('students.hidden')}</p>
                   <Link className="link-arrow" to="/students">← {t('students.back')}</Link>
                 </div>
-                <StudentsSketch className="sketch profile-sketch" />
+                <img className="profile-art" src="/art/students.webp" alt="" loading="lazy" />
               </article>
             </>
           )

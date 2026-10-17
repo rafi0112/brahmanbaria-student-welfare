@@ -3,16 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
-import { Photo, Badge } from '../components/ui.jsx'
+import Icon from '../components/Icon.jsx'
+import { Photo, Avatar } from '../components/ui.jsx'
 import { PlaceCard, PostCard } from '../components/cards.jsx'
-import { Leaves, Monument, Students as StudentsSketch, Wave, Waves } from '../components/Sketch.jsx'
 
 const QUICK = [
-  ['/students', 'quick.students', 'M9 8a3 3 0 1 0 0-.1M3 20c.7-3.6 3.2-5.5 6-5.5s5.3 1.9 6 5.5M17 9a2.4 2.4 0 1 0 0-.1M16.5 14.6c2.4.3 4 2 4.5 4.4'],
-  ['/directory', 'quick.directory', 'M12 21s-7-6-7-11.5A7 7 0 0 1 19 9.5C19 15 12 21 12 21zM12 7.5a2.5 2.5 0 1 0 0 .1'],
-  ['/heritage', 'quick.heritage', 'M3 20h18M5 20V10M19 20V10M3 10l9-6 9 6M9 20v-5h6v5'],
-  ['/blog', 'quick.blog', 'M5 4h11l3 3v13H5zM8 10h8M8 14h8M8 17h5'],
-  ['/gallery', 'quick.gallery', 'M3 6h18v13H3zM3 15l5-5 5 5 3-3 5 5M16 9.5a1 1 0 1 0 0-.1'],
+  ['/students', 'quick.students', 'quick.studentsD', 'users'],
+  ['/directory', 'quick.directory', 'quick.directoryD', 'pin'],
+  ['/heritage', 'quick.heritage', 'quick.heritageD', 'landmark'],
+  ['/blog', 'quick.blog', 'quick.blogD', 'book'],
+  ['/gallery', 'quick.gallery', 'quick.galleryD', 'image'],
 ]
 
 function MapPanel({ u }) {
@@ -40,6 +40,7 @@ export default function Home() {
   const ups = useApi('/upazilas')
   const places = useApi('/heritage')
   const posts = useApi('/blog')
+  const students = useApi('/students?limit=5')
   const upazilas = ups.data?.items || []
   const placeList = places.data?.items || []
   const s = stats.data
@@ -48,34 +49,58 @@ export default function Home() {
 
   return (
     <>
+      {/* ---------- hero ---------- */}
       <section className="hero">
-        <Photo id="titas-sunset" eager className="hero-bg" sizes="100vw" alt="" />
+        <Photo id="boat-race" eager className="hero-bg" sizes="100vw" alt="" />
         <div className="hero-shade" />
+        <img className="hero-leaf hero-leaf-r" src="/art/tree-tr.webp" alt="" />
+        <img className="hero-leaf hero-leaf-l" src="/art/vine-tl.webp" alt="" />
         <div className="wrap hero-grid">
           <div className="hero-copy">
-            <p className="pill-note">{t('hero.kicker')}</p>
             <h1>
               {t('hero.title1')}<br />{t('hero.title2')}<br /><em>{t('hero.title3')}</em>
             </h1>
             <p className="lede">{t('hero.lede')}</p>
             <form className="hero-search" onSubmit={submit} role="search">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('hero.search')} aria-label={t('hero.search')} />
-              <button className="btn btn-leaf" type="submit">{t('hero.searchBtn')}</button>
+              <button className="search-go" type="submit" aria-label={t('hero.searchBtn')}><Icon name="search" size={18} /></button>
             </form>
             <dl className="hero-stats">
-              {[['students', s?.students], ['batches', s?.batches], ['upazilas', s?.upazilas], ['places', s?.places]].map(([k, v]) => (
-                <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
+              {[['students', s?.students, 'users'], ['upazilas', s?.upazilas, 'pin'], ['batches', s?.batches, 'grad'], ['places', s?.places, 'landmark']].map(([k, v, ic]) => (
+                <div key={k}><span className="stat-ico"><Icon name={ic} size={18} /></span><span><dd className="num">{v != null ? n(v) : '–'}</dd><dt>{t(`stat.${k}`)}</dt></span></div>
               ))}
             </dl>
           </div>
-          <div className="hero-blob">
-            <Photo id="arifail-01" eager shape="shape-blob" sketch sizes="(min-width: 900px) 32vw, 80vw" />
-            <Leaves className="sketch hero-leaves" />
+          <div className="hero-side">
+            <p className="script-note">{t('hero.script')}</p>
+            <div className="hero-blob">
+              <Photo id="arifail-01" eager shape="shape-blob" sizes="(min-width: 900px) 32vw, 80vw" />
+              <Link to="/heritage" className="blob-go" aria-label={t('heritage.cta')}><Icon name="arrow" size={20} /></Link>
+            </div>
           </div>
         </div>
-        <Wave from="var(--paper)" />
+        <svg className="hero-edge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 120V60C120 20 230 12 360 40c150 32 250 62 430 40 170-20 250-70 420-62 90 4 170 20 230 42v60z" />
+        </svg>
       </section>
 
+      {/* ---------- explore our district ---------- */}
+      <section className="section wrap">
+        <div className="section-head left">
+          <div><h2>{t('quick.title')}</h2><p className="muted">{t('quick.lede')}</p></div>
+        </div>
+        <div className="quick">
+          {QUICK.map(([to, k, d, ic]) => (
+            <Link key={to} to={to} className="quick-item">
+              <span className="ico-circle"><Icon name={ic} size={20} /></span>
+              <b>{t(k)}</b>
+              <small>{t(d)}</small>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------- interactive map ---------- */}
       <section className="section wrap explore">
         <div className="explore-copy">
           <p className="kicker">{t('explore.kicker')}</p>
@@ -83,43 +108,33 @@ export default function Home() {
           <p className="lede">{t('explore.lede')}</p>
           <MapPanel u={upazilas.find((u) => u.slug === sel)} />
           <Link className="link-arrow" to="/directory">{t('explore.cta')} →</Link>
-          <Waves className="sketch waves" />
         </div>
         <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
       </section>
 
-      <section className="section wrap">
-        <div className="section-head">
-          <h2>{t('quick.title')}</h2><p className="muted">{t('quick.lede')}</p>
+      {/* ---------- history, culture and people (photo collage) ---------- */}
+      <section className="section wrap collage-sec">
+        <div className="collage-copy">
+          <p className="kicker">{t('collage.kicker')}</p>
+          <h2>{t('collage.title')}</h2>
+          <p className="lede">{t('collage.body')}</p>
+          <Link className="btn btn-dark" to="/about">{t('collage.cta')} →</Link>
         </div>
-        <div className="quick">
-          {QUICK.map(([to, k, d]) => (
-            <Link key={to} to={to} className="quick-item">
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
-              <span>{t(k)}</span>
-            </Link>
-          ))}
+        <div className="collage" aria-hidden="false">
+          <span className="paper-patch p1" aria-hidden="true" />
+          <span className="paper-patch p2" aria-hidden="true" />
+          <div className="c-main"><Photo id="arifail-01" shape="shape-r" sizes="(min-width: 900px) 40vw, 90vw" /></div>
+          <div className="c-left"><Photo id="titas-boat" shape="shape-r" sizes="(min-width: 900px) 20vw, 50vw" /></div>
+          <div className="c-right"><Photo id="akhaura-water" shape="shape-r" sizes="(min-width: 900px) 16vw, 40vw" /></div>
+          <img className="c-river" src="/art/river.webp" alt="" loading="lazy" />
+          <p className="script-note dark">{t('collage.script')}</p>
         </div>
       </section>
 
-      <section className="feature-band">
-        <Wave from="var(--paper)" flip />
-        <div className="wrap feature-grid">
-          <div className="feature-copy">
-            <p className="kicker kicker-light">{t('heritage.kicker')}</p>
-            <h2>{t('heritage.title')}</h2>
-            <p>{t('heritage.lede')}</p>
-            <Link className="btn btn-light" to="/heritage">{t('heritage.cta')} →</Link>
-            <Monument className="sketch monument" />
-          </div>
-          <Photo id="bariura-bridge" shape="shape-a" sketch sizes="(min-width: 900px) 50vw, 90vw" />
-        </div>
-        <Wave from="var(--paper)" />
-      </section>
-
+      {/* ---------- featured places ---------- */}
       <section className="section wrap">
         <div className="section-head">
-          <h2>{t('heritage.title').split(',')[0]}</h2>
+          <h2>{t('featured.title')}</h2>
           <Link className="link-arrow" to="/heritage">{t('common.viewAll')} →</Link>
         </div>
         <div className="cards-3">
@@ -127,22 +142,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- student community ---------- */}
       <section className="section wrap community">
-        <div>
-          <p className="kicker">{t('students.kicker')}</p>
+        <div className="community-copy">
           <h2>{t('community.title')}</h2>
           <p className="lede">{t('community.body')}</p>
+          <div className="avatar-row">
+            {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={44} />)}
+          </div>
           <Link className="btn btn-dark" to="/students">{t('community.cta')} →</Link>
         </div>
-        <figure className="quote-card">
-          <StudentsSketch className="sketch students-sketch" />
+        <figure className="community-art">
           <blockquote>“{t('community.quote')}”</blockquote>
+          <img src="/art/students.webp" alt="" loading="lazy" />
+          <img className="art-heritage" src="/art/heritage.webp" alt="" loading="lazy" />
         </figure>
       </section>
 
+      {/* ---------- stories ---------- */}
       <section className="section wrap">
         <div className="section-head">
-          <h2>{t('stories.title')}</h2><Link className="link-arrow" to="/blog">{t('stories.all')} →</Link>
+          <div><h2>{t('stories.title')}</h2><p className="muted">{t('stories.lede')}</p></div>
+          <Link className="link-arrow" to="/blog">{t('stories.all')} →</Link>
         </div>
         <div className="cards-3">
           {(posts.data?.items || []).slice(0, 3).map((p) => <PostCard key={p.slug} p={p} />)}
@@ -156,7 +177,8 @@ export default function Home() {
             <p>{t('join.body')}</p>
           </div>
           <Link className="btn btn-leaf" to="/register">{t('join.cta')}</Link>
-          <Badge tone="gold">{pick('শুধু ব্রাহ্মণবাড়িয়ার শিক্ষার্থী', 'Brahmanbaria students only')}</Badge>
+          <img className="join-art" src="/art/leaves-bl.webp" alt="" loading="lazy" />
+          <span className="visually-hidden">{pick('শুধু ব্রাহ্মণবাড়িয়ার শিক্ষার্থী', 'Brahmanbaria students only')}</span>
         </div>
       </section>
     </>
