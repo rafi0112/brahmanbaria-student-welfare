@@ -1,0 +1,22 @@
+[
+  {"slug": "arriving-from-brahmanbria", "sample": true, "titleBn": "ব্রাহ্মণবাড়িয়া থেকে প্রথমবার ঢাকায়: একটি গোছানো চেকলিস্ট", "titleEn": "First time in Dhaka from Brahmanbaria: a checklist",
+   "category": "student-life", "date": "2026-10-01", "readMin": 4, "author": "Editorial team (sample)", "image": "bb-sunset",
+   "excerptBn": "ভর্তির পর যা যা দরকার, এক জায়গায়।", "excerptEn": "Everything you need after admission, in one place.",
+   "bodyEn": ["This is sample copy used to show the article layout.", "Real articles will be written and published by the committee from the admin panel.", "Replace this text before launch."],
+   "bodyBn": ["এটি নমুনা লেখা, শুধু আর্টিকেলের লেআউট দেখানোর জন্য।", "আসল লেখা কমিটি অ্যাডমিন প্যানেল থেকে প্রকাশ করবে।", "লঞ্চের আগে এই লেখা বদলে দিন।"]},
+  {"slug": "titas-and-the-district", "sample": true, "titleBn": "তিতাসের পাড়ে: জেলার নদী ও জনপদ", "titleEn": "Along the Titas: the river and its settlements",
+   "category": "heritage", "date": "2026-09-20", "readMin": 5, "author": "Editorial team (sample)", "image": "titas-morning",
+   "excerptBn": "সরাইল থেকে নবীনগর পর্যন্ত নদীর পথ।", "excerptEn": "Following the river from Sarail to Nabinagar.",
+   "bodyEn": ["The Titas starts in Sarail Upazila and joins the Meghna near Nabinagar.", "This sample article shows how a story page will look with a large image and comfortable reading width."],
+   "bodyBn": ["তিতাস সরাইল উপজেলা থেকে শুরু হয়ে নবীনগরের কাছে মেঘনায় মিশেছে।", "এই নমুনা লেখা দেখায় বড় ছবি ও পড়ার উপযোগী প্রস্থসহ আর্টিকেল পেজ কেমন হবে।"]},
+  {"slug": "blood-donation-how-it-works", "sample": true, "titleBn": "রক্তদাতা তালিকা কীভাবে কাজ করবে", "titleEn": "How the blood donor list will work",
+   "category": "community", "date": "2026-09-05", "readMin": 3, "author": "Editorial team (sample)", "image": "dhoranti-sarail",
+   "excerptBn": "সম্মতি, গোপনীয়তা ও ৯০ দিনের নিয়ম।", "excerptEn": "Consent, privacy and the 90-day rule.",
+   "bodyEn": ["Donors opt in. Contact details are shown only to verified members.", "After a donation the donor is hidden automatically for 90 days."],
+   "bodyBn": ["দাতারা নিজে সম্মতি দেন। যোগাযোগের তথ্য শুধু যাচাইকৃত সদস্যরা দেখতে পারেন।", "রক্তদানের পর ৯০ দিন দাতা স্বয়ংক্রিয়ভাবে লুকিয়ে থাকেন।"]},
+  {"slug": "mentors-for-freshers", "sample": true, "titleBn": "নবীনদের জন্য সিনিয়র মেন্টর", "titleEn": "Senior mentors for freshers",
+   "category": "student-life", "date": "2026-08-18", "readMin": 3, "author": "Editorial team (sample)", "image": "kasba-sunset",
+   "excerptBn": "বিভাগ ধরে সিনিয়র ও অ্যালামনাইদের সাথে পরিচয়।", "excerptEn": "Meet seniors and alumni from your department.",
+   "bodyEn": ["Pick your department and see opted-in seniors and alumni.", "This is sample copy."],
+   "bodyBn": ["নিজের বিভাগ বেছে নিন, সম্মতি দেওয়া সিনিয়র ও অ্যালামনাইদের দেখুন।", "এটি নমুনা লেখা।"]}
+]

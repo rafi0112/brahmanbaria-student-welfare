@@ -1,5 +1,5 @@
 # private source data and generated member data
-Data/
+/Data/
 backend/data/students.json
 backend/data/alumni.json
 backend/data/stats.json

@@ -1,0 +1,82 @@
+[
+  {
+    "slug": "arifail-mosque", "nameBn": "আড়িফাইল মসজিদ", "nameEn": "Arifail Mosque",
+    "category": "mosque", "upazila": "sarail", "lat": 24.07002, "lng": 91.104641,
+    "images": ["arifail-01", "arifail-10", "arifail-06"],
+    "summary": "A mosque in Sarail Upazila listed as a cultural heritage monument in Bangladesh.",
+    "details": "",
+    "facts": [
+      {"label": "Monument ID", "value": "BD-B-04-2 (Wiki Loves Monuments Bangladesh list)"},
+      {"label": "Coordinates", "value": "24.07002, 91.104641 (from the photo's Commons record)"}
+    ],
+    "verified": false,
+    "sources": ["https://commons.wikimedia.org/wiki/Category:Arifil_Mosque"],
+    "lastVerified": "2026-10-17"
+  },
+  {
+    "slug": "bariura-old-bridge", "nameBn": "বাড়িউড়া প্রাচীন পুল (হাতিরপুল)", "nameEn": "Bariura Old Bridge (Hatirpool)",
+    "category": "bridge", "upazila": "sarail", "lat": 24.054209, "lng": 91.151331,
+    "images": ["bariura-bridge"],
+    "summary": "One of the ancient bridges of Sarail Upazila, built during the Mughal period beside the Dhaka–Sylhet highway.",
+    "details": "Located about 15 kilometres north of Brahmanbaria town. The exact construction date and builder are not confirmed in the sources used here.",
+    "facts": [
+      {"label": "Period", "value": "Mughal Empire (as stated on Wikipedia)"},
+      {"label": "Monument ID", "value": "BD-B-04-4 (Wiki Loves Monuments Bangladesh list)"},
+      {"label": "Distance", "value": "About 15 km north of Brahmanbaria"}
+    ],
+    "verified": false,
+    "sources": ["https://en.wikipedia.org/wiki/Bariura_Old_Bridge", "https://commons.wikimedia.org/wiki/Category:Bariura_Old_Bridge"],
+    "lastVerified": "2026-10-17"
+  },
+  {
+    "slug": "kullapathar-martyrs-memorial", "nameBn": "কুল্লাপাথর শহীদ স্মৃতিসৌধ", "nameEn": "Kullapathar Martyrs Memorial",
+    "category": "memorial", "upazila": "kasba", "lat": 23.686312, "lng": 91.175884,
+    "images": ["kullapathar"],
+    "summary": "A cemetery and memorial for freedom fighters of the 1971 Liberation War, in Kasba Upazila.",
+    "details": "Among the freedom fighters associated with Kullapathar, Belayet Hossain (died 14 November 1971) received the Bir Uttam title from the Government of Bangladesh.",
+    "facts": [
+      {"label": "Subject", "value": "Martyrs of the 1971 Liberation War"},
+      {"label": "Coordinates", "value": "23.686312, 91.175884 (from the photo's Commons record)"}
+    ],
+    "verified": false,
+    "sources": ["https://commons.wikimedia.org/wiki/Category:Kasba_Upazila", "https://en.wikipedia.org/wiki/Belayet_Hossain"],
+    "lastVerified": "2026-10-17"
+  },
+  {
+    "slug": "anandamayi-kali-temple", "nameBn": "আনন্দময়ী কালী মন্দির", "nameEn": "Anandamayi Kali Temple",
+    "category": "temple", "upazila": "", "lat": null, "lng": null,
+    "images": ["anandamayi-kali"],
+    "summary": "A Hindu temple in Brahmanbaria town, photographed in 2020.",
+    "details": "",
+    "facts": [],
+    "verified": false,
+    "sources": ["https://commons.wikimedia.org/wiki/Category:Hindu_temples_in_Brahmanbaria"],
+    "lastVerified": "2026-10-17"
+  },
+  {
+    "slug": "akhaura-junction", "nameBn": "আখাউড়া জংশন রেলওয়ে স্টেশন", "nameEn": "Akhaura Junction Railway Station",
+    "category": "railway", "upazila": "akhaura", "lat": null, "lng": null,
+    "images": ["akhaura-station"],
+    "summary": "A railway junction in Akhaura Upazila, on the Akhaura–Agartala international line.",
+    "details": "",
+    "facts": [{"label": "Location", "value": "Akhaura Upazila, Brahmanbaria District"}],
+    "verified": false,
+    "sources": ["https://en.wikipedia.org/wiki/Akhaura_Junction_railway_station"],
+    "lastVerified": "2026-10-17"
+  },
+  {
+    "slug": "titas-river", "nameBn": "তিতাস নদী", "nameEn": "Titas River",
+    "category": "river", "upazila": "sarail", "lat": null, "lng": null,
+    "images": ["titas-sunset", "titas-morning", "titas-boat", "titas-shahbazpur"],
+    "summary": "The 98 km river that starts in Sarail Upazila and meets the Meghna near Nabinagar Upazila.",
+    "details": "The Titas is part of the Surma–Meghna river system. Bangladesh's first Y-shaped bridge crosses it, connecting Comilla and Brahmanbaria.",
+    "facts": [
+      {"label": "Length", "value": "98 km (61 mi)"},
+      {"label": "Source", "value": "Sarail Upazila"},
+      {"label": "Joins", "value": "Meghna, near Nabinagar Upazila"}
+    ],
+    "verified": false,
+    "sources": ["https://en.wikipedia.org/wiki/Titas_River"],
+    "lastVerified": "2026-10-17"
+  }
+]
