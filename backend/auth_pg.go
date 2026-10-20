@@ -21,7 +21,7 @@ type pgStore struct{ db *pgxpool.Pool }
 // openPostgres connects and applies pending migrations.
 // Simple-protocol mode keeps it compatible with Supabase's transaction pooler (port 6543).
 func openPostgres(ctx context.Context, url string) (*pgStore, error) {
-	cfg, err := pgxpool.ParseConfig(url)
+	cfg, err := pgxpool.ParseConfig(normalizeDatabaseURL(url))
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +155,24 @@ func (s *pgStore) UserByID(ctx context.Context, id string) (User, error) {
 	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1::uuid`, id))
 }
 
+func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string) (User, error) {
+	var u User
+	var verified *time.Time
+	err := s.db.QueryRow(ctx, `INSERT INTO users (id, email, password_hash, role, email_verified_at)
+		VALUES ($1::uuid, $2, '', $3, now())
+		ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = now()
+		RETURNING id::text, email, password_hash, role, email_verified_at`, id, email, RoleMember).
+		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verified)
+	if err != nil {
+		if isUnique(err) {
+			return User{}, ErrEmailTaken
+		}
+		return User{}, err
+	}
+	u.EmailVerified = verified != nil
+	return u, nil
+}
+
 func (s *pgStore) SetEmailVerified(ctx context.Context, id string) error {
 	_, err := s.db.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE id = $1::uuid`, id)
 	return err
@@ -229,6 +247,18 @@ func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) 
 	if err == nil && tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
+	return err
+}
+
+func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO profiles
+		(user_id, name, batch, department, upazila, union_name, phone, blood_group, status,
+		 show_in_directory, show_phone, show_email, show_blood)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, COALESCE($7, ''), COALESCE($8, ''),
+			'pending', true, 'hidden', 'members', 'members')
+		ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch,
+			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name`,
+		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup)
 	return err
 }
 

@@ -92,6 +92,8 @@ type AuthStore interface {
 	DeleteUserSessions(ctx context.Context, userID string) error
 
 	ProfileByUser(ctx context.Context, userID string) (*Profile, error)
+	EnsureExternalUser(ctx context.Context, userID, email string) (User, error)
+	UpsertProfile(ctx context.Context, userID string, p Profile) error
 	UpdateProfile(ctx context.Context, userID string, p ProfilePatch) error
 	ListMembers(ctx context.Context, status string) ([]MemberRow, error)
 	ReviewProfile(ctx context.Context, userID, status string) error

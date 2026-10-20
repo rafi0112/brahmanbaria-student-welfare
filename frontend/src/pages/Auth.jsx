@@ -4,6 +4,7 @@ import { useApp } from '../lib/app.jsx'
 import { api, useApi } from '../lib/api.js'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Logo } from '../components/Sketch.jsx'
+import { supabase, supabaseConfigured } from '../lib/supabase.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
 
@@ -58,22 +59,40 @@ export default function Auth({ mode }) {
     if (mode === 'reset' && !token) { setNotice({ tone: 'bad', key: 'auth.noToken' }); return }
     setBusy(true)
     try {
-      if (mode === 'register') {
-        await api('/auth/register', { method: 'POST', body: JSON.stringify({ name: v.name, email: v.email, password: v.password, batch: Number(v.batch), department: v.department, upazila: v.upazila, union: v.union }) })
+      const profile = { name: v.name, batch: Number(v.batch), department: v.department, upazila: v.upazila, union: v.union }
+      if (mode === 'register' && supabaseConfigured) {
+        const { data, error } = await supabase.auth.signUp({ email: v.email, password: v.password, options: { data: profile, emailRedirectTo: `${window.location.origin}/verify-email` } })
+        if (error) throw Object.assign(new Error(error.message), { status: 400 })
+        if (data.session) await api('/me/profile', { method: 'POST', body: JSON.stringify(profile) })
+        nav(`/verify-email?email=${encodeURIComponent(v.email)}`)
+      } else if (mode === 'register') {
+        await api('/auth/register', { method: 'POST', body: JSON.stringify({ ...profile, email: v.email, password: v.password }) })
         nav(`/verify-email?email=${encodeURIComponent(v.email)}`)
       } else if (mode === 'login') {
-        auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: v.email, password: v.password }) }))
+        if (supabaseConfigured) {
+          const { data, error } = await supabase.auth.signInWithPassword({ email: v.email, password: v.password })
+          if (error) throw Object.assign(new Error(error.message), { status: error.message.toLowerCase().includes('confirm') ? 403 : 401, message: error.message })
+          auth.set(await api('/auth/me'))
+        } else {
+          auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: v.email, password: v.password }) }))
+        }
         nav('/dashboard')
       } else if (mode === 'forgot') {
-        await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: v.email }) })
+        if (supabaseConfigured) {
+          const { error } = await supabase.auth.resetPasswordForEmail(v.email, { redirectTo: `${window.location.origin}/reset-password` })
+          if (error) throw Object.assign(new Error(error.message), { status: 400 })
+        } else await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: v.email }) })
         setNotice({ tone: 'ok', key: 'auth.sentIfExists' })
       } else {
-        await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password: v.password }) })
+        if (supabaseConfigured) {
+          const { error } = await supabase.auth.updateUser({ password: v.password })
+          if (error) throw Object.assign(new Error(error.message), { status: 400 })
+        } else await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password: v.password }) })
         setNotice({ tone: 'ok', key: 'auth.resetDone' })
       }
     } catch (err) {
       if (err.fields) setErrs(err.fields)
-      if (err.message === 'email_not_verified') { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
+      if (err.message === 'email_not_verified' || err.status === 403) { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
       else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
       else if (err.status === 400 && mode === 'reset') setNotice({ tone: 'bad', key: 'auth.resetFailed' })
       else if (err.status !== 422) setNotice({ tone: 'bad', key: errorKey(err) || 'state.error' })
@@ -138,6 +157,18 @@ export default function Auth({ mode }) {
             </>
           )}
           <button className="btn btn-dark btn-block" type="submit" disabled={busy}>{busy ? t('state.loading') : t(cfg.submit)}</button>
+          {mode === 'login' && supabaseConfigured && (
+            <div className="row">
+              <button type="button" className="btn btn-ghost" onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/verify-email` } })
+                if (error) setNotice({ tone: 'bad', key: 'state.error' })
+              }}>{t('auth.google')}</button>
+              <button type="button" className="btn btn-ghost" onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: `${window.location.origin}/verify-email` } })
+                if (error) setNotice({ tone: 'bad', key: 'state.error' })
+              }}>{t('auth.facebook')}</button>
+            </div>
+          )}
           <div aria-live="polite">
             {notice && <p className={`notice ${notice.tone}`} role={notice.tone === 'bad' ? 'alert' : 'status'}>{t(notice.key)}</p>}
             {needVerify && <button type="button" className="btn btn-ghost btn-sm" onClick={resend}>{t('auth.resend')}</button>}
@@ -163,6 +194,15 @@ export function Verify() {
   const [state, setState] = useState(token ? 'verifying' : 'wait') // verifying | ok | bad | err | wait
   const [notice, setNotice] = useState(null)
   const [address, setAddress] = useState(email)
+
+  useEffect(() => {
+    if (!supabase || token) return undefined
+    let live = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (live && data.session?.user?.email_confirmed_at) setState('ok')
+    })
+    return () => { live = false }
+  }, [token])
 
   useEffect(() => {
     if (!token) return undefined

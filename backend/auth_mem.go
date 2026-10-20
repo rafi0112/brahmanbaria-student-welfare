@@ -75,6 +75,20 @@ func (m *memStore) UserByID(_ context.Context, id string) (User, error) {
 	return User{}, ErrNotFound
 }
 
+func (m *memStore) EnsureExternalUser(_ context.Context, id, email string) (User, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if u, ok := m.users[id]; ok {
+		return *u, nil
+	}
+	if _, exists := m.byEmail[email]; exists {
+		return User{}, ErrEmailTaken
+	}
+	u := &User{ID: id, Email: email, Role: RoleMember, EmailVerified: true}
+	m.users[id], m.byEmail[email] = u, id
+	return *u, nil
+}
+
 func (m *memStore) SetEmailVerified(_ context.Context, id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -183,6 +197,16 @@ func (m *memStore) UpdateProfile(_ context.Context, id string, c ProfilePatch) e
 	if c.ShowBlood != nil {
 		p.ShowBlood = *c.ShowBlood
 	}
+	return nil
+}
+
+func (m *memStore) UpsertProfile(_ context.Context, id string, p Profile) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p.UserID, p.Status, p.ShowInDirectory = id, StatusPending, true
+	p.ShowPhone, p.ShowEmail, p.ShowBlood = "hidden", "members", "members"
+	p.CreatedAt = time.Now().UTC().Format(time.RFC3339)
+	m.profiles[id] = &p
 	return nil
 }
 

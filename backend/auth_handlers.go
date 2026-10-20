@@ -25,6 +25,8 @@ type Auth struct {
 	FrontendURL  string
 	CookieSecure bool
 	SameSite     http.SameSite
+	Verifier     *supabaseVerifier
+	AdminEmails  map[string]bool // ADMIN_EMAILS: confirmed Supabase accounts with these addresses act as admins
 
 	loginIP, loginEmail, registerIP, mailIP *Limiter
 }
@@ -61,6 +63,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/auth/reset-password", h(a.resetPassword))
 	m.HandleFunc("GET /api/v1/auth/me", h(a.me))
 	m.HandleFunc("PATCH /api/v1/me/profile", h(a.requireUser(a.updateProfile)))
+	m.HandleFunc("POST /api/v1/me/profile", h(a.requireUser(a.createProfile)))
 	m.HandleFunc("GET /api/v1/admin/overview", h(a.requireAdmin(a.adminOverview)))
 	m.HandleFunc("GET /api/v1/admin/members", h(a.requireAdmin(a.adminMembers)))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/approve", h(a.requireAdmin(a.review(StatusApproved))))
@@ -94,6 +97,22 @@ func (a *App) startSession(w http.ResponseWriter, r *http.Request, userID string
 }
 
 func (a *App) currentUser(r *http.Request) (User, bool) {
+	if a.Auth.Verifier != nil {
+		header := strings.TrimSpace(r.Header.Get("Authorization"))
+		if strings.HasPrefix(header, "Bearer ") {
+			external, err := a.Auth.Verifier.verify(r.Context(), strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")))
+			if err == nil {
+				u, ensureErr := a.Auth.Store.EnsureExternalUser(r.Context(), external.ID, normEmail(external.Email))
+				if ensureErr == nil {
+					u.EmailVerified = external.EmailConfirmedAt != ""
+					if u.EmailVerified && a.Auth.AdminEmails[normEmail(u.Email)] {
+						u.Role = RoleAdmin
+					}
+					return u, true
+				}
+			}
+		}
+	}
 	c, err := r.Cookie(cookieName)
 	if err != nil || c.Value == "" {
 		return User{}, false
@@ -107,6 +126,10 @@ func (a *App) requireUser(next func(http.ResponseWriter, *http.Request, User)) f
 		u, ok := a.currentUser(r)
 		if !ok {
 			apiError(w, http.StatusUnauthorized, "sign in required")
+			return
+		}
+		if !u.EmailVerified {
+			apiError(w, http.StatusForbidden, "email_not_verified")
 			return
 		}
 		next(w, r, u)
@@ -154,16 +177,11 @@ type registerReq struct {
 	Union      string `json:"union"`
 }
 
-func (a *App) validateRegister(q *registerReq) map[string]string {
+// validateProfile checks the member details shared by registration and "complete my profile".
+func (a *App) validateProfile(q *registerReq) map[string]string {
 	errs := map[string]string{}
 	if n := utf8.RuneCountInString(strings.TrimSpace(q.Name)); n < 2 || n > 80 {
 		errs["name"] = "Name must be 2-80 characters."
-	}
-	if !emailRx.MatchString(q.Email) || len(q.Email) > 254 {
-		errs["email"] = "Enter a valid email address."
-	}
-	if n := utf8.RuneCountInString(q.Password); n < 8 || n > 128 {
-		errs["password"] = "Password must be 8-128 characters."
 	}
 	if q.Batch < 1 || q.Batch > 60 {
 		errs["batch"] = "Choose your batch."
@@ -188,6 +206,17 @@ func (a *App) validateRegister(q *registerReq) map[string]string {
 		errs["upazila"] = "Choose an upazila from the list."
 	} else if !okUn {
 		errs["union"] = "Choose a union of that upazila."
+	}
+	return errs
+}
+
+func (a *App) validateRegister(q *registerReq) map[string]string {
+	errs := a.validateProfile(q)
+	if !emailRx.MatchString(q.Email) || len(q.Email) > 254 {
+		errs["email"] = "Enter a valid email address."
+	}
+	if n := utf8.RuneCountInString(q.Password); n < 8 || n > 128 {
+		errs["password"] = "Password must be 8-128 characters."
 	}
 	return errs
 }
@@ -404,6 +433,27 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	writeJSON(w, 200, a.meBody(r.Context(), u))
+}
+
+func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
+	var q registerReq
+	if !decode(w, r, &q) {
+		return
+	}
+	q.Name = strings.TrimSpace(q.Name)
+	if errs := a.validateProfile(&q); len(errs) > 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
+		return
+	}
+	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
+		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
+		Upazila: q.Upazila, Union: q.Union,
+	}); err != nil {
+		log.Printf("profile upsert: %v", err)
+		apiError(w, http.StatusInternalServerError, "could not create profile")
+		return
+	}
+	writeJSON(w, http.StatusCreated, a.meBody(r.Context(), u))
 }
 
 func (a *App) adminOverview(w http.ResponseWriter, r *http.Request, _ User) {

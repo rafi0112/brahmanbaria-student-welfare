@@ -15,6 +15,42 @@ const QUICK = [
   ['/gallery', 'quick.gallery', 'quick.galleryD', 'image'],
 ]
 
+const HERITAGE_RAIL = [
+  { id: 'arifail-01', bn: 'মসজিদ ও ইসলামী ঐতিহ্য', en: 'Mosques & Islamic Heritage', icon: 'landmark', to: '/heritage?category=mosque' },
+  { id: 'titas-morning', bn: 'নদী ও প্রকৃতি', en: 'Rivers & Natural Beauty', icon: 'pin', to: '/heritage?category=river' },
+  { id: 'boat-race', bn: 'নৌকাবাইচ ও লোকসংস্কৃতি', en: 'Boat Racing & Folk Culture', icon: 'users', to: '/gallery' },
+  { id: 'bariura-bridge', bn: 'ঐতিহাসিক স্থান', en: 'Historical Places', icon: 'landmark', to: '/heritage?category=bridge' },
+  { id: 'kullapathar', bn: 'স্মৃতিসৌধ ও মুক্তিযুদ্ধ', en: 'Memorials & Liberation War', icon: 'heart', to: '/heritage?category=memorial' },
+  { id: 'alinagar-fair', bn: 'লোকজীবন ও ঐতিহ্য', en: 'Local Life & Traditions', icon: 'leaf', to: '/gallery' },
+]
+
+// Wavy tiles that drift right to left. The list is doubled for a seamless loop; the copy is hidden from
+// assistive tech and the tab order. Hover/focus pauses it, reduced-motion users get a static, scrollable row.
+function HeritageRail() {
+  const { pick } = useApp()
+  const items = [...HERITAGE_RAIL, ...HERITAGE_RAIL]
+  return (
+    <div className="heritage-rail" aria-label={pick('ব্রাহ্মণবাড়িয়ার ঐতিহ্য', 'Brahmanbaria heritage highlights')}>
+      <div className="heritage-rail-track">
+        {items.map((item, index) => {
+          const copy = index >= HERITAGE_RAIL.length
+          return (
+            <Link className="heritage-tile" to={item.to} key={`${item.id}-${index}`} aria-hidden={copy || undefined} tabIndex={copy ? -1 : undefined}>
+              <Photo id={item.id} sizes="(min-width: 900px) 330px, 74vw" alt="" />
+              <span className="heritage-tile-shade" />
+              <span className="heritage-tile-copy">
+                <span className="heritage-tile-icon"><Icon name={item.icon} size={18} /></span>
+                <span>{pick(item.bn, item.en)}</span>
+              </span>
+              <span className="heritage-tile-arrow" aria-hidden="true"><Icon name="arrow" size={13} /></span>
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function MapPanel({ u }) {
   const { t, n, pick } = useApp()
   if (!u) return null
@@ -44,6 +80,7 @@ export default function Home() {
   const upazilas = ups.data?.items || []
   const placeList = places.data?.items || []
   const s = stats.data
+  const unionCount = upazilas.reduce((sum, u) => sum + u.unions.length, 0)
 
   const submit = (e) => { e.preventDefault(); nav(`/students?q=${encodeURIComponent(q)}`) }
 
@@ -51,32 +88,44 @@ export default function Home() {
     <>
       {/* ---------- hero ---------- */}
       <section className="hero">
-        <Photo id="boat-race" eager className="hero-bg" sizes="100vw" alt="" />
-        <div className="hero-shade" />
-        <img className="hero-leaf hero-leaf-r" src="/art/tree-tr.webp" alt="" />
-        <img className="hero-leaf hero-leaf-l" src="/art/vine-tl.webp" alt="" />
-        <div className="wrap hero-grid">
+        <div className="hero-art" aria-hidden="true">
+          <img src="/images/hero-art-1774.webp" srcSet="/images/hero-art-1000.webp 1000w, /images/hero-art-1774.webp 1774w" sizes="100vw" width="1774" height="512" alt="" fetchpriority="high" />
+        </div>
+        <div className="hero-scrim" />
+        <p className="hero-note" aria-hidden="true">{pick('তিতাসের তীরে ঈমানের আলো ব্রাহ্মণবাড়িয়া', 'By the Titas, the light of faith')}</p>
+        <div className="wrap hero-main">
           <div className="hero-copy">
-            <h1>
-              {t('hero.title1')}<br />{t('hero.title2')}<br /><em>{t('hero.title3')}</em>
-            </h1>
-            <p className="lede">{t('hero.lede')}</p>
+            <p className="hero-kicker">{pick('ইতিহাস, ঈমান, সংস্কৃতি, মানুষ', 'History, Faith, Culture, People')}</p>
+            <h1>{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</h1>
+            <p className="hero-subtitle">{pick('আমাদের ঐতিহ্য, আমাদের মানুষ', 'Our Heritage, Our People')}<br />{pick('আরও উজ্জ্বল আগামী', 'A Brighter Tomorrow')}</p>
+            <p className="lede">{pick('বিশ্ববিদ্যালয়-পড়ুয়াদের একটি কমিউনিটি, যারা আমাদের ইসলামী ঐতিহ্য, সমৃদ্ধ সংস্কৃতি ও প্রকৃতির সৌন্দর্য ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of university students, preserving our Islamic heritage, rich culture, natural beauty, and building opportunities together.')}</p>
             <form className="hero-search" onSubmit={submit} role="search">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('hero.search')} aria-label={t('hero.search')} />
               <button className="search-go" type="submit" aria-label={t('hero.searchBtn')}><Icon name="search" size={18} /></button>
             </form>
+          </div>
+        </div>
+      </section>
+
+      <section className="hero-band">
+        <svg className="band-wave" viewBox="0 0 1440 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 150V78C140 30 300 20 470 54S800 118 1010 78 1320 22 1440 60V150Z" fill="#0d3022" />
+          <path d="M0 78C140 30 300 20 470 54S800 118 1010 78 1320 22 1440 60" fill="none" stroke="#e6c277" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <div className="band-body">
+          <div className="band-bg" />
+          <div className="wrap band-inner">
+            <HeritageRail />
             <dl className="hero-stats">
-              {[['students', s?.students, 'users'], ['upazilas', s?.upazilas, 'pin'], ['batches', s?.batches, 'grad'], ['places', s?.places, 'landmark']].map(([k, v, ic]) => (
-                <div key={k}><span className="stat-ico"><Icon name={ic} size={18} /></span><span><dd className="num">{v != null ? n(v) : '–'}</dd><dt>{t(`stat.${k}`)}</dt></span></div>
+              {[
+                ['students', s?.students, 'users', 'শিক্ষার্থী', 'Students'],
+                ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazila'],
+                ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union Parishad'],
+                ['places', s?.places, 'landmark', 'ঐতিহাসিক স্থান', 'Historical Places'],
+              ].map(([k, v, ic, bn, en]) => (
+                <div key={k}><span className="stat-ico"><Icon name={ic} size={20} /></span><span><dd className="num">{v != null ? n(v) : '–'}</dd><dt>{pick(bn, en)}</dt></span></div>
               ))}
             </dl>
-          </div>
-          <div className="hero-side">
-            <p className="script-note">{t('hero.script')}</p>
-            <div className="hero-blob">
-              <Photo id="arifail-01" eager shape="shape-blob" sizes="(min-width: 900px) 32vw, 80vw" />
-              <Link to="/heritage" className="blob-go" aria-label={t('heritage.cta')}><Icon name="arrow" size={20} /></Link>
-            </div>
           </div>
         </div>
         <svg className="hero-edge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">

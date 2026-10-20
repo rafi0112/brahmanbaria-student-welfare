@@ -1,10 +1,11 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
+    'dash.complete': 'সদস্য আবেদন সম্পূর্ণ করুন', 'dash.completeNote': 'কমিটি যাচাই করার জন্য আপনার ব্যাচ, বিভাগ ও এলাকা দিন।',
     'auth.unavailable': 'অ্যাকাউন্ট সেবা এখন চালু নেই। কিছুক্ষণ পরে চেষ্টা করুন।', 'auth.rateLimited': 'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
     'auth.badLogin': 'ইমেইল বা পাসওয়ার্ড ভুল।', 'auth.notVerified': 'আগে ইমেইল যাচাই করুন। যাচাইয়ের লিংক আবার পাঠাতে পারেন।',
     'auth.registered': 'আবেদন জমা হয়েছে। ইমেইলে পাঠানো লিংকে চাপ দিয়ে ইমেইল যাচাই করুন।',
-    'auth.verifying': 'যাচাই করা হচ্ছে…', 'auth.verified': 'ইমেইল যাচাই হয়েছে। এখন লগইন করতে পারেন।', 'auth.verifyFailed': 'লিংকটি ভুল বা মেয়াদোত্তীর্ণ। নতুন লিংক চেয়ে নিন।',
+    'auth.verifying': 'যাচাই করা হচ্ছে…', 'auth.verified': 'ইমেইল যাচাই হয়েছে। এখন লগইন করতে পারেন।', 'auth.verifyFailed': 'লিংকটি ভুল বা মেয়াদোত্তীর্ণ। নতুন লিংক চেয়ে নিন।', 'auth.google': 'Google দিয়ে লগইন', 'auth.facebook': 'Facebook দিয়ে লগইন',
     'auth.sentIfExists': 'এই ইমেইলে অ্যাকাউন্ট থাকলে একটি লিংক পাঠানো হয়েছে।', 'auth.resent': 'এই ইমেইলে যাচাই-না-হওয়া অ্যাকাউন্ট থাকলে লিংক আবার পাঠানো হয়েছে।',
     'auth.resetDone': 'পাসওয়ার্ড বদলানো হয়েছে। নতুন পাসওয়ার্ড দিয়ে লগইন করুন।', 'auth.resetFailed': 'লিংকটি ভুল বা মেয়াদোত্তীর্ণ।', 'auth.noToken': 'লিংকে টোকেন নেই। ইমেইলের লিংক থেকে আসুন।',
     'auth.logout': 'লগআউট', 'auth.needLogin': 'এই পাতা দেখতে লগইন করুন।', 'auth.noAccess': 'এই পাতা শুধু অ্যাডমিনের জন্য।', 'auth.wrongEmailPrompt': 'ইমেইল দিন', 'auth.account': 'অ্যাকাউন্ট',
@@ -116,10 +117,11 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
+    'dash.complete': 'Complete your membership application', 'dash.completeNote': 'Give your batch, department and home area so the committee can verify you.',
     'auth.unavailable': 'The account service is not available right now. Please try again later.', 'auth.rateLimited': 'Too many attempts. Please try again in a while.',
     'auth.badLogin': 'Incorrect email or password.', 'auth.notVerified': 'Verify your email first. You can send the link again.',
     'auth.registered': 'Application received. Open the link we emailed to verify your address.',
-    'auth.verifying': 'Verifying…', 'auth.verified': 'Email verified. You can log in now.', 'auth.verifyFailed': 'This link is wrong or has expired. Ask for a new one.',
+    'auth.verifying': 'Verifying…', 'auth.verified': 'Email verified. You can log in now.', 'auth.verifyFailed': 'This link is wrong or has expired. Ask for a new one.', 'auth.google': 'Continue with Google', 'auth.facebook': 'Continue with Facebook',
     'auth.sentIfExists': 'If an account exists for this email, we sent a link.', 'auth.resent': 'If an unverified account exists for this email, we sent the link again.',
     'auth.resetDone': 'Password changed. Log in with your new password.', 'auth.resetFailed': 'This link is wrong or has expired.', 'auth.noToken': 'The link has no token. Open it from your email.',
     'auth.logout': 'Log out', 'auth.needLogin': 'Log in to see this page.', 'auth.noAccess': 'This page is for admins only.', 'auth.wrongEmailPrompt': 'Enter your email', 'auth.account': 'Account',

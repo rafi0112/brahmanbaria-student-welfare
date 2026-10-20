@@ -29,6 +29,15 @@ func main() {
 
 	authStore, closeAuth := openAuthStore()
 	defer closeAuth()
+	if pg, ok := authStore.(*pgStore); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		dbStore, contentErr := pg.Content(ctx, store)
+		cancel()
+		if contentErr != nil {
+			log.Fatalf("load PostgreSQL content: %v", contentErr)
+		}
+		store = dbStore
+	}
 
 	if len(os.Args) > 1 && os.Args[1] == "create-admin" {
 		if err := createAdmin(authStore); err != nil {
@@ -39,6 +48,11 @@ func main() {
 	if authStore != nil {
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
+		app.Auth.AdminEmails = parseEmailSet(os.Getenv("ADMIN_EMAILS"))
+		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
+		if app.Auth.Verifier == nil {
+			log.Printf("Supabase bearer auth disabled: configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")
+		}
 	} else {
 		log.Printf("auth disabled: set DATABASE_URL (or AUTH_DEV_MEMORY=true for local testing)")
 	}
@@ -107,6 +121,16 @@ func openMailer() Mailer {
 		log.Fatal("MAIL_FROM is required with BREVO_API_KEY")
 	}
 	return newBrevoMailer(key, from, env("MAIL_FROM_NAME", "BSWA"))
+}
+
+func parseEmailSet(v string) map[string]bool {
+	out := map[string]bool{}
+	for _, e := range strings.Split(v, ",") {
+		if e = normEmail(e); e != "" {
+			out[e] = true
+		}
+	}
+	return out
 }
 
 func sameSite(v string) http.SameSite {

@@ -28,6 +28,59 @@ export function Dashboard() {
   return <Gate>{(user) => <DashboardBody user={user} />}</Gate>
 }
 
+function CompleteProfile({ defaultName, onDone }) {
+  const { t, n, pick } = useApp()
+  const depts = useApi('/departments')
+  const ups = useApi('/upazilas')
+  const [v, setV] = useState({ name: defaultName, batch: '', department: '', upazila: '', union: '' })
+  const [errs, setErrs] = useState({})
+  const [msg, setMsg] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const upList = ups.data?.items || []
+  const unions = upList.find((u) => u.slug === v.upazila)?.unions || []
+  const opt = {
+    batch: Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [b, `${t('auth.batch')} ${n(b)}`]),
+    department: (depts.data?.items || []).map((d) => [d, d]),
+    upazila: upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]),
+    union: unions.map((x) => [x, x]),
+  }
+  const lbl = { batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union' }
+  const submit = async (e) => {
+    e.preventDefault()
+    const bad = {}
+    if (v.name.trim().length < 2) bad.name = t('auth.e.name')
+    for (const k of ['batch', 'department', 'upazila', 'union']) if (!v[k]) bad[k] = t('auth.e.select')
+    setErrs(bad); setMsg(null)
+    if (Object.keys(bad).length) return
+    setBusy(true)
+    try { onDone(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, batch: Number(v.batch) }) })) }
+    catch (err) { if (err.fields) setErrs(err.fields); else setMsg(errorKey(err) || 'admin.failed') }
+    finally { setBusy(false) }
+  }
+  return (
+    <form onSubmit={submit} className="card-form" noValidate>
+      <h2>{t('dash.complete')}</h2>
+      <p className="muted">{t('dash.completeNote')}</p>
+      <label className="field"><span>{t('auth.name')}</span>
+        <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} aria-invalid={!!errs.name} />
+        {errs.name && <small className="err">{errs.name}</small>}
+      </label>
+      {Object.keys(opt).map((k) => (
+        <label key={k} className="field"><span>{t(lbl[k])}</span>
+          <select value={v[k]} disabled={k === 'union' && !v.upazila} aria-invalid={!!errs[k]}
+            onChange={(e) => setV({ ...v, [k]: e.target.value, ...(k === 'upazila' ? { union: '' } : {}) })}>
+            <option value="">{t('auth.select')}</option>
+            {opt[k].map(([val, text]) => <option key={val} value={val}>{text}</option>)}
+          </select>
+          {errs[k] && <small className="err">{errs[k]}</small>}
+        </label>
+      ))}
+      <button className="btn btn-dark" disabled={busy}>{busy ? t('state.loading') : t('auth.submitRegister')}</button>
+      {msg && <p className="notice bad" role="alert">{t(msg)}</p>}
+    </form>
+  )
+}
+
 function DashboardBody({ user }) {
   const { t, n, pick } = useApp()
   const auth = useAuth()
@@ -77,7 +130,9 @@ function DashboardBody({ user }) {
         <button className="btn btn-ghost btn-sm" onClick={auth.logout}>{t('auth.logout')}</button>
       </header>
       {!p ? (
-        <Empty>{t('dash.noProfile')} {user.role === 'admin' && <Link to="/admin">{t('admin.title')} →</Link>}</Empty>
+        user.role === 'admin'
+          ? <Empty>{t('dash.noProfile')} <Link to="/admin">{t('admin.title')} →</Link></Empty>
+          : <CompleteProfile defaultName={user.email.split('@')[0]} onDone={auth.set} />
       ) : (
         <>
           {p.status === 'pending' && <p className="notice">{t('dash.pendingNote')}</p>}

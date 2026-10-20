@@ -1,18 +1,25 @@
-# private source data and generated member data
+# Private source data and generated member data
 /Data/
 backend/data/students.json
 backend/data/alumni.json
 backend/data/stats.json
 backend/data/contact_messages.jsonl
+
+# Private environment variables and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Spreadsheets and archives
 *.xlsx
 *.zip
 
-# downloads and builds
+# Downloads and builds
 images/brahmanbaria_images/
 frontend/public/images/*.jpg
 frontend/node_modules/
 frontend/dist/
 backend/*.exe
-.env
-.env.*
-!.env.example

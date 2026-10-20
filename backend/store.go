@@ -157,6 +157,11 @@ func loadStore(dir string) (*Store, error) {
 	if readJSON(filepath.Join(dir, "stats.json"), &st) == nil && st.Blood != nil {
 		s.Blood = st.Blood
 	}
+	rebuildStoreDerived(s)
+	return s, nil
+}
+
+func rebuildStoreDerived(s *Store) {
 	sort.Slice(s.Posts, func(i, j int) bool { return s.Posts[i].Date > s.Posts[j].Date })
 	for i := range s.Upazilas {
 		u := &s.Upazilas[i]
@@ -176,7 +181,6 @@ func loadStore(dir string) (*Store, error) {
 			}
 		}
 	}
-	return s, nil
 }
 
 func contains(hay, needle string) bool {

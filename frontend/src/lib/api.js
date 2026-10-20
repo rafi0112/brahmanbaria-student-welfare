@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { supabase } from './supabase.js'
 
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 export async function api(path, opts) {
-  const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, ...opts })
+  const session = supabase ? (await supabase.auth.getSession()).data.session : null
+  const headers = { 'Content-Type': 'application/json', ...(opts?.headers || {}) }
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
+  const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', ...opts, headers })
   let body = null
   try { body = await res.json() } catch { /* empty body */ }
   if (!res.ok) {
