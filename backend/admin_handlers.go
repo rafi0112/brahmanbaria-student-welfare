@@ -338,6 +338,9 @@ func (a *App) studentAction(w http.ResponseWriter, r *http.Request, u User) {
 		a.memberFail(w, err)
 		return
 	}
+	if action == "approve" {
+		a.afterApproved(r.Context(), u.ID, id)
+	}
 	row, err := a.Auth.Store.MemberAdmin(r.Context(), id)
 	if err != nil {
 		a.memberFail(w, err)
@@ -372,6 +375,9 @@ func (a *App) studentsBulk(w http.ResponseWriter, r *http.Request, u User) {
 			}
 			failed = append(failed, bulkFailure{ID: id, Error: code})
 			continue
+		}
+		if status == StatusApproved {
+			a.afterApproved(r.Context(), u.ID, id)
 		}
 		done++
 	}

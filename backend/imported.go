@@ -116,6 +116,7 @@ type importedView struct {
 	Note       string `json:"note,omitempty"`
 	AddedAt    string `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
 	Verified   bool   `json:"verified"`
+	Auto       bool   `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
 	VerifiedAt string `json:"verifiedAt,omitempty"`
 	VerifiedBy string `json:"verifiedBy,omitempty"`
 	Invite     map[string]any `json:"invite,omitempty"` // saved email and the real outcome of inviting it (admin view only)
@@ -169,6 +170,19 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	if err != nil {
 		return nil, nil, err
 	}
+	// A record is verified once its person has activated an invitation and an admin approved their membership. This is
+	// derived on every read, so the tab counts and the lists always agree and nothing needs to be written.
+	approvedVia := map[string]bool{}
+	for id, inv := range invites {
+		for _, uid := range []string{inv.CompletedUser, inv.ReplacesUser} { // the earlier account keeps the record verified while a move to a new email is pending
+			if uid == "" {
+				continue
+			}
+			if p, err := a.Auth.Store.ProfileByUser(ctx, uid); err == nil && p != nil && p.Status == StatusApproved {
+				approvedVia[id] = true
+			}
+		}
+	}
 	type rec struct {
 		Student
 		src, phone, note, added string
@@ -193,7 +207,8 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		if b > 0 && (s.Batch == nil || *s.Batch != b) {
 			continue
 		}
-		rv, verified := reviews[s.ID]
+		rv, reviewed := reviews[s.ID]
+		verified := reviewed || approvedVia[s.ID]
 		if verified {
 			counts["verified"]++
 		} else {
@@ -203,8 +218,10 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 			continue
 		}
 		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Note: r0.note, AddedAt: r0.added, Verified: verified}
-		if verified {
+		if reviewed {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
+		} else if verified {
+			iv.Auto = true
 		}
 		if inv, ok := invites[s.ID]; ok {
 			iv.Invite = a.inviteView(inv)

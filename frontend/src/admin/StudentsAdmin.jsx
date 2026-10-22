@@ -45,13 +45,14 @@ export default function StudentsAdmin() {
 /* ---------------------------------------------------------------- registered members */
 
 function Members({ mode }) {
+  const requests0 = mode === 'requests'
   const { t, n, lang, pick } = useApp()
   const { user: me } = useAuth()
   const errText = useErrText()
   const when = useWhen(lang)
-  const [f, set] = useFilters({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: '', sort: 'newest', page: '1', limit: '20' })
+  const [f, set] = useFilters({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: requests0 ? '' : 'no', sort: 'newest', page: '1', limit: '20' })
   const requests = mode === 'requests'
-  const eff = requests ? { ...f, status: 'pending', view: '' } : f // the request queue is always the pending members
+  const eff = requests ? { ...f, status: 'pending', view: '' } : { ...f, status: 'approved', view: '' } // Registered members are exactly the approved ones
   const depts = useApi('/departments')
   const counts = useApi('/admin/student-counts')
   const audit = useApi(requests ? null : '/admin/directory-audit')
@@ -77,7 +78,7 @@ function Members({ mode }) {
   }
   const bulk = (action) => setConfirm({
     text: t('ad.stu.confirmBulk').replace('{n}', n(picked.length)).replace('{action}', t(`ad.stu.act.${action}`).toLowerCase()), label: t(`ad.stu.act.${action}`),
-    run: () => act('/admin/students/bulk', { ids: picked.filter((id) => rows.find((r) => r.id === id)?.kind !== 'update'), action }, (r) => `${t('ad.stu.bulkDone').replace('{n}', n(r.done))}${r.failed?.length ? ` ${t('ad.stu.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`).then((r) => r && setPicked(r.failed?.map((x) => x.id) || [])),
+    run: () => act('/admin/students/bulk', { ids: picked.filter((id) => { const x = rows.find((r) => r.id === id); return !(x?.kind === 'update' && !x.replaces) }), action }, (r) => `${t('ad.stu.bulkDone').replace('{n}', n(r.done))}${r.failed?.length ? ` ${t('ad.stu.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`).then((r) => r && setPicked(r.failed?.map((x) => x.id) || [])),
   })
   const exportCsv = (contact) => {
     const run = async () => {
@@ -92,13 +93,13 @@ function Members({ mode }) {
   }
   const allOnPage = rows.length > 0 && rows.every((r) => picked.includes(r.id))
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
-  const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit'].includes(k))
-  const clearAll = () => set({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: '' })
+  const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit'].includes(k) && !(k === 'disabled' && v === 'no' && !requests))
+  const clearAll = () => set({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: requests ? '' : 'no' })
   const c = counts.data || {}
   const num = (v) => (v == null ? '' : ` ${n(v)}`)
   const key = (r) => (r.kind === 'update' ? `u-${r.id}` : r.id)
   const reasons = (r) => {
-    if (r.kind === 'update') return []
+    if (r.kind === 'update' && !r.replaces) return []
     if (r.status === 'rejected') return []
     const out = []
     if (r.status === 'pending') out.push(t('ad.rv.pending'))
@@ -109,21 +110,16 @@ function Members({ mode }) {
 
   return (
     <>
-      <ListToolbar section={requests ? 'requests' : 'members'} values={f} set={set} defaults={{ sort: 'newest', limit: '20' }} total={list.data?.total} loading={list.loading}
+      <ListToolbar section={requests ? 'requests' : 'members'} values={f} set={set} defaults={{ sort: 'newest', limit: '20', ...(requests ? {} : { disabled: 'no' }) }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.search') }}
         views={requests ? [
           { id: 'all', label: `${t('ad.req.all')}${num(c.pending)}`, patch: { complete: '' } },
           { id: 'complete', label: `${t('ad.req.complete')}${num(c.pendingComplete)}`, patch: { complete: 'yes' } },
           { id: 'incomplete', label: `${t('ad.stu.view.incomplete')}${num(c.pendingIncomplete)}`, patch: { complete: 'no' } },
-        ] : [
-          { id: 'all', label: `${t('ad.stu.view.all')}${num(c.all)}`, patch: { view: '', status: '', complete: '' } },
-          { id: 'review', label: `${t('ad.mem.review')}${num(c.review)}`, patch: { view: 'review' } },
-          { id: 'verified', label: `${t('ad.mem.verified')}${num(c.verified)}`, patch: { view: 'verified' } },
-        ]}
+        ] : undefined}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
           { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
-          ...(requests ? [] : [{ key: 'status', label: t('ad.stu.col.status'), all: t('ad.stu.anyStatus'), advanced: true, options: [['pending', t('ad.status.pending')], ['approved', t('ad.status.approved')], ['rejected', t('ad.status.rejected')]] }]),
           { key: 'verified', label: t('ad.stu.verified'), all: t('ad.stu.anyVerified'), advanced: true, options: [['yes', t('ad.stu.verifiedYes')], ['no', t('ad.stu.verifiedNo')]] },
           ...(requests ? [] : [{ key: 'complete', label: t('ad.stu.complete'), all: t('ad.stu.anyComplete'), advanced: true, options: [['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]] }]),
           { key: 'disabled', label: t('ad.stu.account'), all: t('ad.stu.anyAccount'), advanced: true, options: [['no', t('ad.stu.active')], ['yes', t('ad.stu.deactivated')]] },
@@ -169,7 +165,7 @@ function Members({ mode }) {
                       {r.diff.map((d) => <li key={d.field}><b>{t(`ad.rv.f.${d.field}`)}</b> <s>{d.from || '—'}</s> → <em>{d.to || '—'}</em></li>)}
                     </ul>
                   )}
-                  {r.kind !== 'update' && <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>}
+                  {(r.kind !== 'update' || r.replaces) && <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>}
                   {reasons(r).length > 0 && <small className="dt-sub is-warn">{reasons(r).join(' · ')}</small>}
                   <small className={`dt-sub ${r.emailVerified ? '' : 'is-warn'}`}>{r.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')}</small>
                   <small className="dt-sub">{when(r.createdAt)}</small>
@@ -177,9 +173,9 @@ function Members({ mode }) {
               ) },
               { id: 'actions', srLabel: t('ad.actions'), width: requests ? '190px' : '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  {r.kind === 'update' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/profile-changes/${r.id}/approve`, null, t('ad.req.changeApproved'))}>{t('ad.req.approveChange')}</button>
+                  {r.kind === 'update' && !r.replaces && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/profile-changes/${r.id}/approve`, null, t('ad.req.changeApproved'))}>{t('ad.req.approveChange')}</button>
                     <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setConfirm({ text: t('ad.req.confirmDecline'), label: t('ad.req.declineChange'), run: () => act(`/admin/profile-changes/${r.id}/reject`, null, t('ad.req.changeDeclined')) })}>{t('ad.req.declineChange')}</button></>}
-                  {r.kind !== 'update' && r.status === 'pending' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>
+                  {(r.kind !== 'update' || r.replaces) && r.status === 'pending' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>
                     <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setRejecting(r)}>{t('ad.stu.act.reject')}</button></>}
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
                 </div>
@@ -379,7 +375,7 @@ function Imported() {
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
         views={[
-          { id: 'all', label: t('ad.status.allShort'), patch: { status: '' } },
+          { id: 'all', label: `${t('ad.status.allShort')} ${n((counts.verified || 0) + (counts.awaiting || 0))}`, patch: { status: '' } },
           { id: 'awaiting', label: `${t('ad.imp.awaiting')}${counts.awaiting != null ? ` ${n(counts.awaiting)}` : ''}`, patch: { status: 'awaiting' } },
           { id: 'verified', label: `${t('ad.imp.verified')}${counts.verified != null ? ` ${n(counts.verified)}` : ''}`, patch: { status: 'verified' } },
         ]}
@@ -404,7 +400,7 @@ function Imported() {
               { id: 'review', label: t('ad.imp.review'), width: '22%', cell: (r) => (
                 r.verified ? (
                   <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
-                    <small className="dt-sub">{r.verifiedBy} · {when(r.verifiedAt)}</small>
+                    <small className="dt-sub">{r.autoVerified ? t('ad.imp.autoVerified') : `${r.verifiedBy} · ${when(r.verifiedAt)}`}</small>
                   </div>
                 ) : <span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
               ) },
@@ -412,7 +408,7 @@ function Imported() {
                 <div className="dt-actions">
                   {!r.verified && <button type="button" className="btn btn-outline btn-sm" onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
                   <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
-                    r.verified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
+                    r.verified && !r.autoVerified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
                     { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => sendInvite(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', danger: true, onClick: () => setDropEmail(r) },
@@ -519,7 +515,7 @@ function EmailDialog({ row, onClose, onSaved, onRemove }) {
   return (
     <Modal title={t('ad.inv.emailTitle')} onClose={onClose} busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
       <p><strong>{row.name}</strong> <span className="muted">· {row.department}</span></p>
-      <p className="muted small">{t('ad.inv.emailHelp')}</p>
+      <p className="muted small">{t(row.invite?.status === 'completed' ? 'ad.inv.moveHelp' : 'ad.inv.emailHelp')}</p>
       <form onSubmit={save} noValidate className="ad-form">
         <Field label={t('auth.email')} required error={err}>{(id, bad) => <input id={id} type="email" autoFocus value={email} maxLength={120} aria-invalid={bad} onChange={(e) => setEmail(e.target.value)} />}</Field>
         <div className="row">

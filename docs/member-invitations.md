@@ -51,3 +51,9 @@ Messages arriving in Spam ("similar to messages that were identified as spam") a
 ## Profile change requests
 
 Approved members cannot edit name, batch, department, session or location directly. They send a change request from their dashboard (`POST /me/profile/request`); it waits in Membership Requests as a "Profile update" row showing old → new values. Approve applies the details (`POST /admin/profile-changes/{id}/approve`), Decline discards them. The member stays approved and verified throughout. Stored in `profile_changes` (migration 012), one open request per member.
+
+## Registered members, directory verification and moving to a new email
+
+- **Registered members** lists exactly the approved, active members (no sub-tabs). Approving a request moves the person there.
+- **Directory records** keep All / Needs verification / Verified, each with a count. A record becomes **Verified automatically** once its person activated the invitation and an admin approved their membership (derived on every read, so counts always agree). Manual verification still works.
+- **Moving a verified person to a new email:** *Edit email* on the record, save the new address, send the invitation. The record stays verified. The new account's request arrives in Membership Requests marked as an update (old → new email). Approving it makes the new account the registered member and **deactivates** the earlier account (never deletes it; an administrator's account is never moved this way). Stored in `directory_invites.replaces_user` (migration 013).

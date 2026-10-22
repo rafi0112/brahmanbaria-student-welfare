@@ -18,6 +18,7 @@ func (a *App) memberCounts(ctx context.Context) (map[string]int, error) {
 	out := map[string]int{}
 	for k, q := range map[string]MemberQuery{
 		"all":               {},
+		"approved":          {Status: StatusApproved, Disabled: "no"},
 		"pending":           {Status: StatusPending},
 		"pendingComplete":   {Status: StatusPending, Complete: "yes"},
 		"pendingIncomplete": {Status: StatusPending, Complete: "no"},

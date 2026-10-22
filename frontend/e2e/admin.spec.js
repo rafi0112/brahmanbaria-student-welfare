@@ -335,7 +335,7 @@ test('students: a dropdown of two pages, each with its own tabs', async ({ page 
   await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(2)
   const pages = [
     ['Membership Requests', /tab=requests/, ['All pending requests', 'Complete profiles', 'Incomplete profiles'], [/complete=yes/, /complete=no/]],
-    ['Membership Directory', /tab=members/, ['All', 'Needs review', 'Verified'], [/view=review/, /view=verified/]],
+    ['Membership Directory', /tab=members/, [], []], // Registered members: approved members only, no sub-tabs
   ]
   for (const [label, url, tabs, urls] of pages) {
     await side(page).getByRole('link', { name: label, exact: true }).click()
@@ -348,6 +348,7 @@ test('students: a dropdown of two pages, each with its own tabs', async ({ page 
       await expect(side(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page')
     }
   }
+  await expect(page.locator('[role=group].ad-views .ad-view')).toHaveCount(0)
   // the directory page also holds the original directory records, with their own three tabs
   await page.getByRole('tab', { name: 'Directory records' }).click()
   await expect(page).toHaveURL(/tab=imported/)

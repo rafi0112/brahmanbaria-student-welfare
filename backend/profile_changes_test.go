@@ -127,3 +127,77 @@ func TestProfileChangeRequestFlow(t *testing.T) {
 		t.Fatalf("withdrawn request must leave the queue: %d", q.Total)
 	}
 }
+
+func TestVerifiedMemberMovesToANewEmail(t *testing.T) {
+	e := authApp(t)
+	admin := e.admin(t)
+	ctx := context.Background()
+	rec := e.app.Store.Students[0].ID
+	oldID := newMember(t, e, "old@example.com", "Moving Person", "2019-20", true)
+
+	counts := func() (all, awaiting, verified int) {
+		var out struct {
+			Counts map[string]int
+		}
+		decodeBody(t, e.do("GET", "/api/v1/admin/imported-students?limit=1", nil, admin), &out)
+		return out.Counts["verified"] + out.Counts["awaiting"], out.Counts["awaiting"], out.Counts["verified"]
+	}
+	all0, aw0, v0 := counts()
+
+	// the person activated an invitation and was approved: the record becomes verified by itself, the other counts follow
+	if err := e.mem.SetInviteEmail(ctx, rec, "old@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.mem.CompleteInvite(ctx, rec, oldID); err != nil {
+		t.Fatal(err)
+	}
+	if _, aw, v := counts(); v != v0 || aw != aw0 {
+		t.Fatalf("a pending member must not verify the record: awaiting %d verified %d", aw, v)
+	}
+	if rc := e.do("POST", "/api/v1/admin/students/"+oldID+"/approve", nil, admin); rc.Code != 200 {
+		t.Fatalf("approve: %d", rc.Code)
+	}
+	if all, aw, v := counts(); all != all0 || aw != aw0-1 || v != v0+1 {
+		t.Fatalf("after approval: all %d awaiting %d verified %d (was %d/%d/%d)", all, aw, v, all0, aw0, v0)
+	}
+
+	// the admin moves the verified person to a new address; the record stays verified while the move is pending
+	if rc := e.do("PATCH", "/api/v1/admin/imported-students/"+rec+"/email", map[string]string{"email": "new@example.com"}, admin); rc.Code != 200 {
+		t.Fatalf("change email: %d %s", rc.Code, rc.Body)
+	}
+	if _, aw, v := counts(); v != v0+1 || aw != aw0-1 {
+		t.Fatalf("moving must keep the record verified: awaiting %d verified %d", aw, v)
+	}
+	if rc := e.do("PATCH", "/api/v1/admin/imported-students/"+rec+"/email", map[string]string{"email": "new@example.com"}, admin); rc.Code != 200 {
+		t.Fatalf("saving the same address again: %d", rc.Code)
+	}
+
+	// the new account activates and appears in the queue as an update of the earlier member
+	newID := newMember(t, e, "new@example.com", "Moving Person", "2019-20", true)
+	if err := e.mem.CompleteInvite(ctx, rec, newID); err != nil {
+		t.Fatal(err)
+	}
+	var q struct{ Items []requestItem }
+	decodeBody(t, e.do("GET", "/api/v1/admin/membership-requests", nil, admin), &q)
+	if len(q.Items) != 1 || q.Items[0].ID != newID || q.Items[0].Kind != "update" || q.Items[0].Replaces != "old@example.com" {
+		t.Fatalf("queue: %+v", q.Items)
+	}
+	if rc := e.do("POST", "/api/v1/admin/students/"+newID+"/approve", nil, admin); rc.Code != 200 {
+		t.Fatalf("approve new: %d", rc.Code)
+	}
+	var reg struct{ Items []MemberAdminRow }
+	decodeBody(t, e.do("GET", "/api/v1/admin/students?status=approved&disabled=no", nil, admin), &reg)
+	seen := map[string]bool{}
+	for _, r := range reg.Items {
+		seen[r.ID] = true
+	}
+	if !seen[newID] || seen[oldID] {
+		t.Fatalf("Registered members must list the new account only: %v", seen)
+	}
+	if iv, _ := e.mem.InviteFor(ctx, rec); iv.ReplacesUser != "" {
+		t.Fatal("the replacement must be finished")
+	}
+	if _, aw, v := counts(); v != v0+1 || aw != aw0-1 {
+		t.Fatalf("final counts: awaiting %d verified %d", aw, v)
+	}
+}

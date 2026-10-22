@@ -188,6 +188,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig10, _ := migrationFS.ReadFile("migrations/010_member_fields.sql")
 	mig11, _ := migrationFS.ReadFile("migrations/011_directory_invites.sql")
 	mig12, _ := migrationFS.ReadFile("migrations/012_profile_changes.sql")
+	mig13, _ := migrationFS.ReadFile("migrations/013_invite_replaces.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -209,7 +210,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12))} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12)), string(mig13)} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}

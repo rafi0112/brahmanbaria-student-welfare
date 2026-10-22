@@ -281,6 +281,7 @@ type requestItem struct {
 	Kind        string       `json:"kind"` // new (a pending registration) | update (an approved member asking to change their details)
 	SubmittedAt string       `json:"submittedAt,omitempty"`
 	Diff        []changeDiff `json:"diff,omitempty"`
+	Replaces    string       `json:"replaces,omitempty"` // the earlier email of a verified member who moved to a new address
 }
 
 func itoa(n int) string {
@@ -342,6 +343,14 @@ func (a *App) membershipRequests(w http.ResponseWriter, r *http.Request, _ User)
 		items = append(items, requestItem{MemberAdminRow: cur, Kind: "update", SubmittedAt: c.SubmittedAt, Diff: diffOf(cur, c.Data)})
 	}
 
+	moved := map[string]string{} // new account -> the earlier account it replaces
+	if invs, err := s.Invites(ctx); err == nil {
+		for _, iv := range invs {
+			if iv.CompletedUser != "" && iv.ReplacesUser != "" {
+				moved[iv.CompletedUser] = iv.ReplacesUser
+			}
+		}
+	}
 	pq := q
 	pq.Status, pq.View, pq.Page, pq.Limit = StatusPending, "", 1, 100
 	for pg := 1; pg <= 30; pg++ {
@@ -353,7 +362,14 @@ func (a *App) membershipRequests(w http.ResponseWriter, r *http.Request, _ User)
 			return
 		}
 		for _, m := range rows {
-			items = append(items, requestItem{MemberAdminRow: m, Kind: "new"})
+			it := requestItem{MemberAdminRow: m, Kind: "new"}
+			if old := moved[m.ID]; old != "" { // a verified member signing up again with a new email is an update, not a new person
+				if u, err := s.UserByID(ctx, old); err == nil {
+					it.Kind, it.Replaces = "update", u.Email
+					it.Diff = []changeDiff{{"email", u.Email, m.Email}}
+				}
+			}
+			items = append(items, it)
 		}
 		if len(rows) < 100 {
 			break
@@ -362,4 +378,27 @@ func (a *App) membershipRequests(w http.ResponseWriter, r *http.Request, _ User)
 	total := len(items)
 	lo, hi, pages := window(total, q.Page, q.Limit)
 	writeJSON(w, 200, page{Items: items[lo:hi], Total: total, Page: q.Page, Pages: pages})
+}
+
+// afterApproved finishes a move to a new email: once the new account is approved, the member's earlier account is deactivated
+// (never deleted, and an administrator's account is never touched) so the member appears once in Registered members.
+func (a *App) afterApproved(ctx context.Context, actorID, userID string) {
+	s := a.Auth.Store
+	invs, err := s.Invites(ctx)
+	if err != nil {
+		return
+	}
+	for id, iv := range invs {
+		if iv.CompletedUser != userID || iv.ReplacesUser == "" {
+			continue
+		}
+		if old, err := s.UserByID(ctx, iv.ReplacesUser); err == nil && old.Role != RoleAdmin {
+			if err := s.SetAccountDisabled(ctx, actorID, old.ID, true); err != nil {
+				log.Printf("deactivate earlier account: %v", err)
+				return
+			}
+			_ = s.Audit(ctx, actorID, "member.email.moved", "user", userID, nil)
+		}
+		_ = s.ClearReplaced(ctx, id)
+	}
 }

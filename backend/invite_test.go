@@ -245,7 +245,7 @@ func TestInvitedPersonSeesPrefilledProfileOnlyWhenVerifiedAndCompletesOnce(t *te
 	if r := sendInviteReq(e, admin, rec.ID); r.Code != 409 || !strings.Contains(r.Body.String(), "already_completed") {
 		t.Fatalf("resend after completion: %d %s", r.Code, r.Body)
 	}
-	if r := setEmail(e, admin, rec.ID, "other@example.org"); r.Code != 409 {
+	if r := setEmail(e, admin, rec.ID, "other@example.org"); r.Code != 200 { // a verified person can be moved to a new address
 		t.Fatalf("email change after completion: %d", r.Code)
 	}
 }
@@ -309,10 +309,11 @@ func inviteStoreSuite(t *testing.T, s AuthStore) {
 	if err := s.CompleteInvite(ctx, "d-1", u.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetInviteEmail(ctx, "d-1", "later@example.org"); err != ErrInviteCompleted {
-		t.Fatalf("completed invites are final: %v", err)
+	cur, _ := s.InviteFor(ctx, "d-1")
+	if err := s.SetInviteEmail(ctx, "d-1", cur.Email); err != ErrInviteCompleted {
+		t.Fatalf("saving the activated address again changes nothing: %v", err)
 	}
-	if all, _ := s.Invites(ctx); all["d-1"].Status != "completed" || all["d-1"].CompletedAt == "" {
+	if all, _ := s.Invites(ctx); all["d-1"].Status != "completed" || all["d-1"].CompletedAt == "" || all["d-1"].CompletedUser != u.ID {
 		t.Fatalf("list: %+v", all)
 	}
 	// deleting an address frees it for another record; an activated person's address cannot be deleted
@@ -330,6 +331,19 @@ func inviteStoreSuite(t *testing.T, s AuthStore) {
 	}
 	if err := s.DeleteInviteEmail(ctx, "d-1"); err != ErrInviteCompleted {
 		t.Fatalf("an activated person keeps their address: %v", err)
+	}
+	// moving an activated person to a new address resets the invitation and remembers the earlier account
+	if err := s.SetInviteEmail(ctx, "d-1", "later@example.org"); err != nil {
+		t.Fatalf("move: %v", err)
+	}
+	if mv, _ := s.InviteFor(ctx, "d-1"); mv.Status != "saved" || mv.ReplacesUser != u.ID || mv.CompletedUser != "" || mv.CompletedAt != "" {
+		t.Fatalf("moved: %+v", mv)
+	}
+	if err := s.DeleteInviteEmail(ctx, "d-1"); err != ErrInviteCompleted {
+		t.Fatalf("a pending move keeps its record: %v", err)
+	}
+	if err := s.ClearReplaced(ctx, "d-1"); err != nil {
+		t.Fatal(err)
 	}
 	_ = admin
 }

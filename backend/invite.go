@@ -44,6 +44,8 @@ type DirectoryInvite struct {
 	SendCount   int    `json:"sendCount"`
 	LastError   string `json:"lastError,omitempty"`
 	CompletedAt string `json:"completedAt,omitempty"`
+	CompletedUser string `json:"-"` // the account that activated through this record
+	ReplacesUser  string `json:"-"` // the member's earlier account while a move to a new email awaits approval
 }
 
 type InviteStore interface {
@@ -59,6 +61,8 @@ type InviteStore interface {
 	// DeleteInviteEmail forgets the saved address (ErrInviteCompleted once the person has activated; ErrNotFound if none is saved).
 	// It never touches the Supabase Auth user an earlier invitation may have created.
 	DeleteInviteEmail(ctx context.Context, importedID string) error
+	// ClearReplaced forgets the earlier account once the move to the new email has been approved.
+	ClearReplaced(ctx context.Context, importedID string) error
 }
 
 // ---------------------------------------------------------------- Supabase Auth admin client
@@ -283,6 +287,12 @@ func (a *App) inviteSetEmail(w http.ResponseWriter, r *http.Request, u User) {
 	if _, err := a.Auth.Store.UserByEmail(r.Context(), email); err == nil {
 		apiError(w, http.StatusConflict, "email_in_use") // a registered account already uses it; that person signs in or resets their password
 		return
+	}
+	if cur, err := a.Auth.Store.InviteFor(r.Context(), id); err == nil && cur.Status == "completed" && !strings.EqualFold(cur.Email, email) && cur.CompletedUser != "" {
+		if owner, err := a.Auth.Store.UserByID(r.Context(), cur.CompletedUser); err == nil && owner.Role == RoleAdmin {
+			apiError(w, http.StatusConflict, "admin_account") // an administrator's sign-in is never moved by this flow
+			return
+		}
 	}
 	switch err := a.Auth.Store.SetInviteEmail(r.Context(), id, email); {
 	case err == nil:
@@ -545,11 +555,14 @@ func (m *memStore) SetInviteEmail(_ context.Context, importedID, email string) e
 		}
 	}
 	if cur, ok := m.invites[importedID]; ok {
-		if cur.Status == "completed" {
+		if cur.Status == "completed" && strings.EqualFold(cur.Email, email) {
 			return ErrInviteCompleted
 		}
 		if !strings.EqualFold(cur.Email, email) {
-			cur.Status, cur.AuthUserID, cur.LastError = "saved", "", ""
+			if cur.ReplacesUser == "" {
+				cur.ReplacesUser = cur.CompletedUser
+			}
+			cur.Status, cur.AuthUserID, cur.LastError, cur.CompletedUser, cur.CompletedAt = "saved", "", "", "", ""
 		}
 		cur.Email = email
 		return nil
@@ -629,28 +642,40 @@ func (m *memStore) DeleteInviteEmail(_ context.Context, importedID string) error
 	if iv.Status == "completed" {
 		return ErrInviteCompleted
 	}
+	if iv.ReplacesUser != "" {
+		return ErrInviteCompleted
+	}
 	delete(m.invites, importedID)
 	return nil
 }
 
-func (m *memStore) CompleteInvite(_ context.Context, importedID, _ string) error {
+func (m *memStore) ClearReplaced(_ context.Context, importedID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if iv, ok := m.invites[importedID]; ok {
+		iv.ReplacesUser = ""
+	}
+	return nil
+}
+
+func (m *memStore) CompleteInvite(_ context.Context, importedID, userID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	iv, ok := m.invites[importedID]
 	if !ok {
 		return ErrNotFound
 	}
-	iv.Status, iv.CompletedAt = "completed", time.Now().UTC().Format(time.RFC3339)
+	iv.Status, iv.CompletedAt, iv.CompletedUser = "completed", time.Now().UTC().Format(time.RFC3339), userID
 	return nil
 }
 
 // ---------------------------------------------------------------- PostgreSQL store
 
-const inviteCols = `imported_id, email, status, auth_user_id, COALESCE(to_char(last_sent_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), send_count, last_error, COALESCE(to_char(completed_at AT TIME ZONE 'UTC', ` + tsFmt + `), '')`
+const inviteCols = `imported_id, email, status, auth_user_id, COALESCE(to_char(last_sent_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), send_count, last_error, COALESCE(to_char(completed_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), COALESCE(completed_user::text, ''), COALESCE(replaces_user::text, '')`
 
 func scanInvite(r rowScanner) (DirectoryInvite, error) {
 	var v DirectoryInvite
-	err := r.Scan(&v.ImportedID, &v.Email, &v.Status, &v.AuthUserID, &v.LastSentAt, &v.SendCount, &v.LastError, &v.CompletedAt)
+	err := r.Scan(&v.ImportedID, &v.Email, &v.Status, &v.AuthUserID, &v.LastSentAt, &v.SendCount, &v.LastError, &v.CompletedAt, &v.CompletedUser, &v.ReplacesUser)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return v, ErrNotFound
 	}
@@ -667,16 +692,20 @@ func (s *pgStore) SetInviteEmail(ctx context.Context, importedID, email string) 
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-	if err == nil && cur.Status == "completed" {
+	if err == nil && cur.Status == "completed" && strings.EqualFold(cur.Email, email) {
 		return ErrInviteCompleted
 	}
 	if errors.Is(err, ErrNotFound) {
 		_, err = tx.Exec(ctx, `INSERT INTO directory_invites (imported_id, email) VALUES ($1, $2)`, importedID, email)
 	} else {
+		// a changed address resets the invitation; if the person had already activated, the earlier account is remembered
 		_, err = tx.Exec(ctx, `UPDATE directory_invites SET email = $2, updated_at = now(),
+			replaces_user = CASE WHEN lower(email) = lower($2) THEN replaces_user ELSE COALESCE(replaces_user, completed_user) END,
 			status = CASE WHEN lower(email) = lower($2) THEN status ELSE 'saved' END,
 			auth_user_id = CASE WHEN lower(email) = lower($2) THEN auth_user_id ELSE '' END,
-			last_error = CASE WHEN lower(email) = lower($2) THEN last_error ELSE '' END WHERE imported_id = $1`, importedID, email)
+			last_error = CASE WHEN lower(email) = lower($2) THEN last_error ELSE '' END,
+			completed_at = CASE WHEN lower(email) = lower($2) THEN completed_at ELSE NULL END,
+			completed_user = CASE WHEN lower(email) = lower($2) THEN completed_user ELSE NULL END WHERE imported_id = $1`, importedID, email)
 	}
 	if err != nil {
 		if isUnique(err) {
@@ -752,7 +781,7 @@ func (s *pgStore) InviteEvents(ctx context.Context, since time.Time) (int, error
 }
 
 func (s *pgStore) DeleteInviteEmail(ctx context.Context, importedID string) error {
-	t, err := s.db.Exec(ctx, `DELETE FROM directory_invites WHERE imported_id = $1 AND status <> 'completed'`, importedID)
+	t, err := s.db.Exec(ctx, `DELETE FROM directory_invites WHERE imported_id = $1 AND status <> 'completed' AND replaces_user IS NULL`, importedID)
 	if err != nil {
 		return err
 	}
@@ -761,11 +790,16 @@ func (s *pgStore) DeleteInviteEmail(ctx context.Context, importedID string) erro
 		if err != nil {
 			return err // ErrNotFound when nothing is saved
 		}
-		if cur.Status == "completed" {
+		if cur.Status == "completed" || cur.ReplacesUser != "" {
 			return ErrInviteCompleted
 		}
 	}
 	return nil
+}
+
+func (s *pgStore) ClearReplaced(ctx context.Context, importedID string) error {
+	_, err := s.db.Exec(ctx, `UPDATE directory_invites SET replaces_user = NULL, updated_at = now() WHERE imported_id = $1`, importedID)
+	return err
 }
 
 func (s *pgStore) CompleteInvite(ctx context.Context, importedID, userID string) error {
