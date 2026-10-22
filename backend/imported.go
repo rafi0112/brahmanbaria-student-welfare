@@ -118,6 +118,7 @@ type importedView struct {
 	Verified   bool   `json:"verified"`
 	VerifiedAt string `json:"verifiedAt,omitempty"`
 	VerifiedBy string `json:"verifiedBy,omitempty"`
+	Invite     map[string]any `json:"invite,omitempty"` // saved email and the real outcome of inviting it (admin view only)
 }
 
 func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
@@ -164,6 +165,10 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	if err != nil {
 		return nil, nil, err
 	}
+	invites, err := a.Auth.Store.Invites(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	type rec struct {
 		Student
 		src, phone, note, added string
@@ -200,6 +205,9 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Note: r0.note, AddedAt: r0.added, Verified: verified}
 		if verified {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
+		}
+		if inv, ok := invites[s.ID]; ok {
+			iv.Invite = a.inviteView(inv)
 		}
 		out = append(out, iv)
 	}

@@ -186,6 +186,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig8, _ := migrationFS.ReadFile("migrations/008_imported_reviews.sql")
 	mig9, _ := migrationFS.ReadFile("migrations/009_imported_members.sql")
 	mig10, _ := migrationFS.ReadFile("migrations/010_member_fields.sql")
+	mig11, _ := migrationFS.ReadFile("migrations/011_directory_invites.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -207,18 +208,18 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10)} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11))} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}
 		}
 		_ = mig4 // the last-admin trigger is exercised by the auth suite, not needed here
 		var n int
-		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'sessions', 'committees', 'executives', 'committee_audit', 'role_changes', 'cms_entries', 'admin_audit', 'contact_messages', 'contact_replies', 'imported_reviews', 'imported_members')`).Scan(&n); err != nil {
+		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'sessions', 'committees', 'executives', 'committee_audit', 'role_changes', 'cms_entries', 'admin_audit', 'contact_messages', 'contact_replies', 'imported_reviews', 'imported_members', 'directory_invites', 'invite_log')`).Scan(&n); err != nil {
 			return err
 		}
-		if n != 13 {
-			t.Fatalf("expected 13 temp tables on this connection, found %d; refusing to continue", n)
+		if n != 15 {
+			t.Fatalf("expected 15 temp tables on this connection, found %d; refusing to continue", n)
 		}
 		return nil
 	}
@@ -234,6 +235,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	importedStoreSuite(t, pg)
 	manualStoreSuite(t, pg)
 	memberViewsSuite(t, pg)
+	inviteStoreSuite(t, pg)
 }
 
 // ---------------------------------------------------------------- HTTP layer

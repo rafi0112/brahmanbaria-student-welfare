@@ -36,6 +36,8 @@ type memStore struct {
 	contacts []*memContact
 	reviews  map[string]memReview
 	manual   []*ManualImported
+	invites  map[string]*memInvite
+	inviteLog []time.Time
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).

@@ -26,6 +26,8 @@ type Auth struct {
 	CookieSecure bool
 	SameSite     http.SameSite
 	Verifier     *supabaseVerifier
+	Inviter      Inviter      // Supabase Auth admin client; nil until SUPABASE_SERVICE_ROLE_KEY is set
+	Invite       InviteConfig // application-level invitation limits
 
 	// Executive photos: Images stores them, PhotoBase is the public URL prefix, Drive* are overridable for tests.
 	Images         ImageStore
@@ -40,7 +42,7 @@ type Auth struct {
 }
 
 func newAuth(store AuthStore, mailer Mailer, frontendURL string, secure bool, same http.SameSite) *Auth {
-	return &Auth{
+	return &Auth{Invite: loadInviteConfig(frontendURL),
 		Store: store, Mailer: mailer, FrontendURL: strings.TrimRight(frontendURL, "/"), CookieSecure: secure, SameSite: same,
 		loginIP: newLimiter(30, 10*time.Minute), loginEmail: newLimiter(10, 15*time.Minute),
 		registerIP: newLimiter(8, time.Hour), mailIP: newLimiter(8, time.Hour), uploadUser: newLimiter(60, time.Hour), replyUser: newLimiter(60, time.Hour),
@@ -95,6 +97,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)
 	a.memberViewRoutes(m, h)
+	a.inviteRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 
@@ -510,6 +513,7 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		apiError(w, http.StatusInternalServerError, "could not create profile")
 		return
 	}
+	a.completeInviteFor(r.Context(), u)
 	writeJSON(w, http.StatusCreated, a.meBody(r.Context(), u))
 }
 
