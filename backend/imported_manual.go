@@ -87,6 +87,7 @@ func (m *memStore) DeleteManualImported(_ context.Context, id string) error {
 		if r.ID == id {
 			m.manual = append(m.manual[:i], m.manual[i+1:]...)
 			delete(m.reviews, id)
+			delete(m.invites, id)
 			return nil
 		}
 	}
@@ -163,6 +164,9 @@ func (s *pgStore) DeleteManualImported(ctx context.Context, id string) error {
 		return ErrNotFound
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM imported_reviews WHERE imported_id = $1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM directory_invites WHERE imported_id = $1 AND status <> 'completed'`, id); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

@@ -483,3 +483,5 @@
 .adm .pm-why { grid-column: 2 / -1; color: var(--a-warn); font-size: .75rem; }
 
 .adm .ad-subhead { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; } .adm .ad-subhead .notice { flex: 1 1 360px; margin: 0; }
+
+.adm .ad-push { margin-left: auto; }

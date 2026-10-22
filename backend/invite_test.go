@@ -314,6 +314,22 @@ func inviteStoreSuite(t *testing.T, s AuthStore) {
 	if all, _ := s.Invites(ctx); all["d-1"].Status != "completed" || all["d-1"].CompletedAt == "" {
 		t.Fatalf("list: %+v", all)
 	}
+	// deleting an address frees it for another record; an activated person's address cannot be deleted
+	if err := s.SetInviteEmail(ctx, "d-3", "free@example.org"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteInviteEmail(ctx, "d-3"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteInviteEmail(ctx, "d-3"); err != ErrNotFound {
+		t.Fatalf("second delete: %v", err)
+	}
+	if err := s.SetInviteEmail(ctx, "d-4", "free@example.org"); err != nil {
+		t.Fatalf("a deleted address can be used again: %v", err)
+	}
+	if err := s.DeleteInviteEmail(ctx, "d-1"); err != ErrInviteCompleted {
+		t.Fatalf("an activated person keeps their address: %v", err)
+	}
 	_ = admin
 }
 
@@ -466,5 +482,43 @@ func TestInviteReportsARefusedKeyAndMapsEachFailureForTheAdmin(t *testing.T) {
 	inviteStatus, inviteReply = 200, `{"id":"22222222-2222-2222-2222-222222222222"}`
 	if rec := sendInviteReq(e, admin, id); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"status":"sent"`) {
 		t.Fatalf("success: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestAdminCanRemoveASavedEmailExceptAfterActivation(t *testing.T) {
+	e, f, admin := inviteEnv(t)
+	a, b := e.app.Store.Students[0].ID, e.app.Store.Students[1].ID
+	setEmail(e, admin, a, "remove.me@example.org")
+	member := e.member(t, "plain2@example.org")
+	del := func(ck *http.Cookie, id string) *httptest.ResponseRecorder {
+		return e.do("DELETE", "/api/v1/admin/imported-students/"+id+"/email", nil, ck)
+	}
+	for _, ck := range []*http.Cookie{nil, member} {
+		if r := del(ck, a); r.Code != 401 && r.Code != 403 {
+			t.Fatalf("only admins may delete: %d", r.Code)
+		}
+	}
+	if r := del(admin, b); r.Code != 404 {
+		t.Fatalf("nothing saved: %d", r.Code)
+	}
+	// an address that was already invited can still be removed; nothing is sent and the old address is forgotten
+	sendInviteReq(e, admin, a)
+	if r := del(admin, a); r.Code != 200 {
+		t.Fatalf("delete: %d %s", r.Code, r.Body)
+	}
+	if _, err := e.mem.InviteFor(context.Background(), a); err != ErrNotFound {
+		t.Fatal("the address should be gone")
+	}
+	if r := sendInviteReq(e, admin, a); r.Code != 422 || len(f.calls) != 1 {
+		t.Fatalf("without an address nothing can be sent: %d calls=%d", r.Code, len(f.calls))
+	}
+	// the address is free for another record
+	if r := setEmail(e, admin, b, "remove.me@example.org"); r.Code != 200 {
+		t.Fatalf("reuse: %d %s", r.Code, r.Body)
+	}
+	// once the person has activated, it is final
+	_ = e.mem.CompleteInvite(context.Background(), b, "")
+	if r := del(admin, b); r.Code != 409 || !strings.Contains(r.Body.String(), "already_completed") {
+		t.Fatalf("activated: %d %s", r.Code, r.Body)
 	}
 }

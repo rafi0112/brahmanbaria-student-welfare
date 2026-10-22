@@ -56,6 +56,9 @@ type InviteStore interface {
 	RecordInvite(ctx context.Context, importedID string, sent bool, authUserID, note string) error
 	InviteEvents(ctx context.Context, since time.Time) (int, error)
 	CompleteInvite(ctx context.Context, importedID, userID string) error
+	// DeleteInviteEmail forgets the saved address (ErrInviteCompleted once the person has activated; ErrNotFound if none is saved).
+	// It never touches the Supabase Auth user an earlier invitation may have created.
+	DeleteInviteEmail(ctx context.Context, importedID string) error
 }
 
 // ---------------------------------------------------------------- Supabase Auth admin client
@@ -242,6 +245,7 @@ var inviteMu sync.Mutex // one send at a time, so two clicks cannot slip past th
 func (a *App) inviteRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *http.Request)) http.HandlerFunc) {
 	adm := func(f func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc { return h(a.requireAdmin(f)) }
 	m.HandleFunc("PATCH /api/v1/admin/imported-students/{id}/email", adm(a.inviteSetEmail))
+	m.HandleFunc("DELETE /api/v1/admin/imported-students/{id}/email", adm(a.inviteDeleteEmail))
 	m.HandleFunc("POST /api/v1/admin/imported-students/{id}/invite", adm(a.inviteSend))
 	m.HandleFunc("POST /api/v1/admin/invitations/send", adm(a.inviteBulk))
 	m.HandleFunc("GET /api/v1/admin/invitations/status", adm(a.inviteStatus))
@@ -296,6 +300,31 @@ func (a *App) inviteSetEmail(w http.ResponseWriter, r *http.Request, u User) {
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "invite.email", "imported", id, nil) // never the address itself
 	inv, _ := a.Auth.Store.InviteFor(r.Context(), id)
 	writeJSON(w, 200, a.inviteView(inv))
+}
+
+func (a *App) inviteDeleteEmail(w http.ResponseWriter, r *http.Request, u User) {
+	id := r.PathValue("id")
+	if _, ok := a.importedFind(r.Context(), id); !ok {
+		apiError(w, http.StatusNotFound, "imported record not found")
+		return
+	}
+	inviteMu.Lock()
+	defer inviteMu.Unlock()
+	switch err := a.Auth.Store.DeleteInviteEmail(r.Context(), id); {
+	case err == nil:
+	case errors.Is(err, ErrNotFound):
+		apiError(w, http.StatusNotFound, "no_email")
+		return
+	case errors.Is(err, ErrInviteCompleted):
+		apiError(w, http.StatusConflict, "already_completed") // the person already owns an account through this address
+		return
+	default:
+		log.Printf("invite email delete: %v", err)
+		apiError(w, 500, "could not delete")
+		return
+	}
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, "invite.email.delete", "imported", id, nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
 // sendInvite runs every check and the provider call for one record. code is the API error to report ("" on success).
@@ -590,6 +619,20 @@ func (m *memStore) InviteEvents(_ context.Context, since time.Time) (int, error)
 	return n, nil
 }
 
+func (m *memStore) DeleteInviteEmail(_ context.Context, importedID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	iv, ok := m.invites[importedID]
+	if !ok {
+		return ErrNotFound
+	}
+	if iv.Status == "completed" {
+		return ErrInviteCompleted
+	}
+	delete(m.invites, importedID)
+	return nil
+}
+
 func (m *memStore) CompleteInvite(_ context.Context, importedID, _ string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -706,6 +749,23 @@ func (s *pgStore) InviteEvents(ctx context.Context, since time.Time) (int, error
 	var n int
 	err := s.db.QueryRow(ctx, `SELECT count(*) FROM invite_log WHERE at > $1`, since.UTC()).Scan(&n)
 	return n, err
+}
+
+func (s *pgStore) DeleteInviteEmail(ctx context.Context, importedID string) error {
+	t, err := s.db.Exec(ctx, `DELETE FROM directory_invites WHERE imported_id = $1 AND status <> 'completed'`, importedID)
+	if err != nil {
+		return err
+	}
+	if t.RowsAffected() == 0 {
+		cur, err := scanInvite(s.db.QueryRow(ctx, `SELECT `+inviteCols+` FROM directory_invites WHERE imported_id = $1`, importedID))
+		if err != nil {
+			return err // ErrNotFound when nothing is saved
+		}
+		if cur.Status == "completed" {
+			return ErrInviteCompleted
+		}
+	}
+	return nil
 }
 
 func (s *pgStore) CompleteInvite(ctx context.Context, importedID, userID string) error {

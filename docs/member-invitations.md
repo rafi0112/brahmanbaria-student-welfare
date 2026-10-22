@@ -29,3 +29,9 @@ Missing key (`invite_not_configured`), refused key (`invite_key_invalid`), Supab
 
 ## Not verified in this build
 No real invitation was sent because no controlled test recipient is configured (set `INVITE_TEST_RECIPIENT` only if you want a scripted send; the admin screen can also send one by hand). The Supabase client is covered against a fake Auth server, and the whole workflow against an in-memory store and PostgreSQL temporary tables. Still to verify by hand once the key exists: delivery through the Google SMTP, the template in Gmail, Outlook and mobile clients, the redirect, and expired or already-used links.
+
+## Messages landing in Spam
+Supabase accepting the request only means it handed the message to the SMTP server. Mail sent through a personal Gmail account with a custom sender often lands in the recipient's Spam or Promotions folder. The admin screen says so after every send and under each "accepted" invitation. Ways to improve it: ask recipients to mark the message "Not spam", keep the subject and sender name stable, use one real sender address, and for the best result send from an address on your own domain with SPF, DKIM and DMARC set up (Gmail's personal SMTP cannot do that for a custom domain).
+
+## Removing an address
+Admins can remove a saved address (row menu, or the red button inside the address dialog) unless the person has already activated their account. Nothing is sent. An earlier invitation's link may still work until it expires, and the pending user Supabase created is not deleted (that would be a destructive Auth operation); remove it from the Supabase dashboard (Authentication, Users) if needed.

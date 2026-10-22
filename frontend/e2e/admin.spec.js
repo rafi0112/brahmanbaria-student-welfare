@@ -371,6 +371,16 @@ test('activation emails: addresses can be saved, sending is honestly unavailable
   await page.getByRole('menuitem', { name: 'Send activation email' }).click()
   await expect(page.getByText(/Invitations are not configured on the server/)).toBeVisible() // never a false success
   await expect(saved).toContainText('Email saved, not sent')
+  // removing the address: a red action with a confirmation, and the record goes back to "no email saved"
+  await saved.getByRole('button', { name: /Actions/ }).click()
+  const remove = page.getByRole('menuitem', { name: 'Remove email address' })
+  await expect(remove).toHaveClass(/danger/)
+  await remove.click()
+  const confirm = page.getByRole('dialog')
+  await expect(confirm.getByRole('button', { name: 'Remove email address' })).toHaveClass(/btn-danger/)
+  await confirm.getByRole('button', { name: 'Remove email address' }).click()
+  await expect(page.getByText('Email address removed.')).toBeVisible()
+  await expect(page.locator('.dt tbody tr', { hasText: name }).first()).toContainText('No email saved')
 })
 
 test('activation page: an unusable link explains what to do and never shows success', async ({ page }) => {

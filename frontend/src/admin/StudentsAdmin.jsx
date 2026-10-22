@@ -312,6 +312,7 @@ function Imported() {
   const [drop, setDrop] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [emailRow, setEmailRow] = useState(null)
+  const [dropEmail, setDropEmail] = useState(null)
   const quota = useApi('/admin/invitations/status')
   const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
@@ -333,6 +334,10 @@ function Imported() {
       if (r.stopped && r.stopped !== 'batch_size') bad(`${text} ${t('ad.inv.stoppedBecause')} ${t(`ad.e.${r.stopped}`)}`); else ok(text)
       list.retry(); quota.retry()
     } catch (e) { bad(errText(e)) } finally { setBusy(false) }
+  }
+  const removeEmail = async () => {
+    setBusy(true); clear()
+    try { await api(`/admin/imported-students/${dropEmail.id}/email`, { method: 'DELETE' }); ok(t('ad.inv.emailRemoved')); list.retry(); quota.retry() } catch (e) { bad(errText(e)) } finally { setBusy(false); setDropEmail(null) }
   }
   const doVerify = async () => {
     setBusy(true); clear()
@@ -393,6 +398,7 @@ function Imported() {
                     r.verified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
                     { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => sendInvite(r) },
+                    r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', danger: true, onClick: () => setDropEmail(r) },
                     r.source === 'manual' && { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
                     r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
                   ]} />
@@ -404,7 +410,8 @@ function Imported() {
       ))}
       {form && <ImportedForm row={form.id ? form : null} depts={depts.data?.items || []} onClose={() => setForm(null)} onSaved={() => { const edit = !!form.id; setForm(null); ok(t(edit ? 'ad.imp.saved' : 'ad.imp.created')); list.retry() }} />}
       {drop && <Confirm tone="danger" text={t('ad.imp.deleteText').replace('{who}', drop.name)} label={t('ad.imp.delete')} busy={busy} onYes={remove} onNo={() => setDrop(null)} />}
-      {emailRow && <EmailDialog row={emailRow} onClose={() => setEmailRow(null)} onSaved={() => { setEmailRow(null); ok(t('ad.inv.emailSaved')); list.retry(); quota.retry() }} />}
+      {emailRow && <EmailDialog row={emailRow} onClose={() => setEmailRow(null)} onSaved={() => { setEmailRow(null); ok(t('ad.inv.emailSaved')); list.retry(); quota.retry() }} onRemove={() => { setDropEmail(emailRow); setEmailRow(null) }} />}
+      {dropEmail && <Confirm tone="danger" title={t('ad.inv.removeEmail')} text={t('ad.inv.removeText').replace('{who}', dropEmail.name)} label={t('ad.inv.removeEmail')} busy={busy} onYes={removeEmail} onNo={() => setDropEmail(null)} />}
       {verify && <Confirm text={t('ad.imp.verifyConfirm').replace('{who}', verify.name)} label={t('ad.imp.verify')} busy={busy} onYes={doVerify} onNo={() => setVerify(null)} />}
       {undo && <Confirm tone="danger" text={t('ad.imp.unverifyText').replace('{who}', undo.name)} label={t('ad.imp.unverify')} busy={busy} onYes={unverify} onNo={() => setUndo(null)} />}
     </>
@@ -472,13 +479,14 @@ function InviteCell({ r, t, when }) {
       <small className="dt-sub dt-trunc" title={inv.email}>{inv.email}</small>
       <span className={`st ${inv.status === 'completed' ? 'st-approved' : inv.status === 'failed' || inv.expired ? 'st-rejected' : 'st-pending'}`}><span className="st-dot" aria-hidden="true" />{label}</span>
       {inv.status === 'sent' && inv.lastSentAt && <small className="dt-sub">{when(inv.lastSentAt)}</small>}
+      {inv.status === 'sent' && <small className="dt-sub">{t('ad.inv.spamHint')}</small>}
       {inv.status === 'failed' && inv.lastError && <small className="dt-sub is-warn">{inv.lastError}</small>}
     </div>
   )
 }
 
 // Save the address an activation email will go to. Nothing is sent here.
-function EmailDialog({ row, onClose, onSaved }) {
+function EmailDialog({ row, onClose, onSaved, onRemove }) {
   const { t } = useApp()
   const errText = useErrText()
   const [email, setEmail] = useState(row.invite?.email || '')
@@ -500,6 +508,7 @@ function EmailDialog({ row, onClose, onSaved }) {
         <div className="row">
           <button className="btn btn-dark btn-sm" disabled={busy || !dirty || !email.trim()}>{busy ? t('state.loading') : t('ad.save')}</button>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{t('admin.roles.cancel')}</button>
+          {row.invite && row.invite.status !== 'completed' && <button type="button" className="btn btn-danger btn-sm ad-push" disabled={busy} onClick={onRemove}>{t('ad.inv.removeEmail')}</button>}
         </div>
       </form>
     </Modal>
