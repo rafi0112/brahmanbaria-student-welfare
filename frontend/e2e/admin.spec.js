@@ -264,9 +264,18 @@ test('contact inbox: a public message arrives, can be opened, answered and archi
 test('member directory: verify a record, see the mark, and it persists', async ({ page }) => {
   await login(page)
   await page.goto('/admin/students?tab=imported&status=awaiting')
-  const first = page.locator('.dt tbody tr').first()
+  const first = page.locator('.dt tbody tr').nth(5)
   const name = (await first.locator('strong').first().innerText()).trim()
-  await first.getByRole('button', { name: 'Verify', exact: true }).click()
+  // a record without an email cannot be verified: the button is disabled and says why
+  await expect(first.getByRole('button', { name: 'Verify', exact: true })).toBeDisabled()
+  await expect(first).toContainText('Add an email before verifying.')
+  await first.getByRole('button', { name: /Actions/ }).click()
+  await page.getByRole('menuitem', { name: 'Add email address' }).click()
+  const ed = page.getByRole('dialog', { name: 'Email address for activation' })
+  await ed.locator('input[type=email]').fill('verify.person@example.test')
+  await ed.locator('form button').first().click()
+  await expect(ed).toBeHidden()
+  await page.locator('.dt tbody tr', { hasText: name }).first().getByRole('button', { name: 'Verify', exact: true }).click()
   const dlg = page.getByRole('dialog')
   await expect(dlg).toContainText(name)
   await expect(dlg).toContainText('does not create an account')
@@ -275,9 +284,10 @@ test('member directory: verify a record, see the mark, and it persists', async (
   // it left "awaiting" and is in "verified", with the mark that explains itself
   await page.getByRole('button', { name: /^Verified/ }).click()
   const row = page.locator('.dt tbody tr', { hasText: name }).first()
-  await expect(row.locator('.vmark')).toHaveAttribute('title', /directory record, not an account/)
+  await expect(row.locator('.vmark').first()).toHaveAttribute('title', /directory record, not an account/)
+  await expect(row.locator('.vmark').nth(1)).toHaveAttribute('title', 'Email confirmed by an admin') // the saved address is marked too
   await page.reload()
-  await expect(page.locator('.dt tbody tr', { hasText: name }).first().locator('.vmark')).toBeVisible()
+  await expect(page.locator('.dt tbody tr', { hasText: name }).first().locator('.vmark').first()).toBeVisible()
   // removing the verification puts it back
   await page.locator('.dt tbody tr', { hasText: name }).first().getByRole('button', { name: /Actions/ }).click()
   await page.getByRole('menuitem', { name: 'Remove verification' }).click()

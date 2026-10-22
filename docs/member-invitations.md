@@ -57,3 +57,8 @@ Approved members cannot edit name, batch, department, session or location direct
 - **Registered members** lists exactly the approved, active members (no sub-tabs). Approving a request moves the person there.
 - **Directory records** keep All / Needs verification / Verified, each with a count. A record becomes **Verified automatically** once its person activated the invitation and an admin approved their membership (derived on every read, so counts always agree). Manual verification still works.
 - **Moving a verified person to a new email:** *Edit email* on the record, save the new address, send the invitation. The record stays verified. The new account's request arrives in Membership Requests marked as an update (old → new email). Approving it makes the new account the registered member and **deactivates** the earlier account (never deletes it; an administrator's account is never moved this way). Stored in `directory_invites.replaces_user` (migration 013).
+
+## Completing and verifying directory records
+
+- *Edit* works on every record. Bundled (file) records stay read-only files; the admin's completed name, batch, department, session and upazila are stored beside them (`imported_edits`, migration 014) and replace the file values everywhere.
+- **Verify needs an email.** The button is disabled until an address is saved on the record, and the API refuses with `email_required`. Verifying also marks that address as confirmed by the admin (`directory_invites.email_verified_at`); both the person and the email then show the verified icon. Changing the address clears the email mark. Note this is the admin's confirmation, not a mailbox check: the person's own Supabase email confirmation still happens when they activate.

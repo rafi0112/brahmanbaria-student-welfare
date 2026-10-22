@@ -201,3 +201,44 @@ func TestVerifiedMemberMovesToANewEmail(t *testing.T) {
 		t.Fatalf("final counts: awaiting %d verified %d", aw, v)
 	}
 }
+
+func directoryEmailStoreSuite(t *testing.T, s AuthStore) {
+	ctx := context.Background()
+	if err := s.SetInviteEmailVerified(ctx, "de-1", true); err != ErrNotFound {
+		t.Fatalf("no address saved: %v", err)
+	}
+	if err := s.SetInviteEmail(ctx, "de-1", "dir.email@example.org"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetInviteEmailVerified(ctx, "de-1", true); err != nil {
+		t.Fatal(err)
+	}
+	if iv, _ := s.InviteFor(ctx, "de-1"); !iv.EmailVerified {
+		t.Fatal("the address must be marked verified")
+	}
+	if err := s.SetInviteEmail(ctx, "de-1", "dir.email@example.org"); err != nil { // same address keeps the mark
+		t.Fatal(err)
+	}
+	if iv, _ := s.InviteFor(ctx, "de-1"); !iv.EmailVerified {
+		t.Fatal("saving the same address must keep the mark")
+	}
+	if err := s.SetInviteEmail(ctx, "de-1", "other.dir.email@example.org"); err != nil {
+		t.Fatal(err)
+	}
+	if iv, _ := s.InviteFor(ctx, "de-1"); iv.EmailVerified {
+		t.Fatal("a different address must not inherit the mark")
+	}
+	batch := 12
+	if err := s.SetImportedEdit(ctx, "", "de-file-1", ManualImportedInput{Name: "Completed Person", Batch: &batch, Department: "Finance", Session: "2019-20", Upazila: "kasba"}); err != nil {
+		t.Fatal(err)
+	}
+	batch = 13
+	if err := s.SetImportedEdit(ctx, "", "de-file-1", ManualImportedInput{Name: "Completed Again", Batch: &batch, Department: "Finance", Session: "2019-20", Upazila: "kasba"}); err != nil {
+		t.Fatal(err)
+	}
+	if e, _ := s.ImportedEdits(ctx); e["de-file-1"].Name != "Completed Again" || *e["de-file-1"].Batch != 13 {
+		t.Fatalf("edits: %+v", e["de-file-1"])
+	}
+}
+
+func TestDirectoryEmailStoreMemory(t *testing.T) { directoryEmailStoreSuite(t, newMemStore()) }

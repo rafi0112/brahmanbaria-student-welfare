@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -90,13 +91,13 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, _ User) {
 	if fail("imported", err) {
 		return
 	}
-	reviews, err := s.ImportedReviews(ctx)
+	_, ic, err := a.importedAll(ctx, url.Values{}) // the same derived verification as the directory tabs
 	if fail("imported reviews", err) {
 		return
 	}
 	totalImported := len(a.Store.Students) + len(manual)
 	out["importedStudents"] = totalImported
-	out["imported"] = map[string]any{"total": totalImported, "verified": len(reviews), "awaiting": totalImported - len(reviews), "addedByAdmins": len(manual)}
+	out["imported"] = map[string]any{"total": totalImported, "verified": ic["verified"], "awaiting": ic["awaiting"], "addedByAdmins": len(manual)}
 
 	committees, err := s.ListCommittees(ctx)
 	if fail("committees", err) {

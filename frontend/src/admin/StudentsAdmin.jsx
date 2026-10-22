@@ -402,17 +402,18 @@ function Imported() {
                   <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
                     <small className="dt-sub">{r.autoVerified ? t('ad.imp.autoVerified') : `${r.verifiedBy} · ${when(r.verifiedAt)}`}</small>
                   </div>
-                ) : <span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
+                ) : <div className="dt-stack"><span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
+                  {!r.invite?.email && <small className="dt-sub is-warn">{t('ad.imp.needEmail')}</small>}</div>
               ) },
               { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  {!r.verified && <button type="button" className="btn btn-outline btn-sm" onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
+                  {!r.verified && <button type="button" className="btn btn-outline btn-sm" disabled={!r.invite?.email} title={r.invite?.email ? undefined : t('ad.imp.needEmail')} onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
                   <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
                     r.verified && !r.autoVerified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
                     { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => sendInvite(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', danger: true, onClick: () => setDropEmail(r) },
-                    r.source === 'manual' && { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
+                    { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
                     r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
                   ]} />
                 </div>
@@ -468,9 +469,9 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
           <Field label={t('students.session')} error={errs.session} hint="2026-27">{(id, bad) => <input id={id} value={v.session} onChange={text('session')} maxLength={7} aria-invalid={bad} />}</Field>
           <Field label={t('auth.upazila')} error={errs.upazila}>{(id, bad) => (
             <select id={id} value={v.upazila} onChange={text('upazila')} aria-invalid={bad}><option value="">—</option>{(ups.data?.items || []).map((u) => <option key={u.slug} value={u.slug}>{u.nameEn}</option>)}</select>)}</Field>
-          <Field label={t('ad.stu.phone')} error={errs.phone} hint="01XXXXXXXXX">{(id, bad) => <input id={id} value={v.phone} onChange={text('phone')} inputMode="tel" maxLength={11} aria-invalid={bad} />}</Field>
+          {row?.source !== 'file' && <Field label={t('ad.stu.phone')} error={errs.phone} hint="01XXXXXXXXX">{(id, bad) => <input id={id} value={v.phone} onChange={text('phone')} inputMode="tel" maxLength={11} aria-invalid={bad} />}</Field>}
         </div>
-        <Field label={t('ad.imp.noteLabel')} error={errs.note} max={300} count={v.note.length}>{(id, bad) => <textarea id={id} rows={3} value={v.note} onChange={text('note')} maxLength={300} aria-invalid={bad} />}</Field>
+        {row?.source !== 'file' && <Field label={t('ad.imp.noteLabel')} error={errs.note} max={300} count={v.note.length}>{(id, bad) => <textarea id={id} rows={3} value={v.note} onChange={text('note')} maxLength={300} aria-invalid={bad} />}</Field>}
         {msg && <p className="notice bad" role="alert">{msg}</p>}
         <div className="row">
           <button className="btn btn-dark btn-sm" disabled={busy || !dirty}>{busy ? t('state.loading') : t('ad.save')}</button>
@@ -489,7 +490,7 @@ function InviteCell({ r, t, when }) {
   const label = inv.status === 'completed' ? t('ad.inv.completed') : inv.status === 'failed' ? t('ad.inv.failed') : inv.status === 'sent' ? (inv.expired ? t('ad.inv.expired') : t('ad.inv.sent')) : t('ad.inv.saved')
   return (
     <div className="dt-stack">
-      <small className="dt-sub dt-trunc" title={inv.email}>{inv.email}</small>
+      <small className="dt-sub dt-trunc" title={inv.email}>{inv.email}{inv.emailVerified && <VerifiedMark label={t('ad.imp.emailVerified')} />}</small>
       <span className={`st ${inv.status === 'completed' ? 'st-approved' : inv.status === 'failed' || inv.expired ? 'st-rejected' : 'st-pending'}`}><span className="st-dot" aria-hidden="true" />{label}</span>
       {inv.status === 'sent' && inv.lastSentAt && <small className="dt-sub">{when(inv.lastSentAt)}</small>}
       {inv.status === 'sent' && <small className="dt-sub">{t('ad.inv.spamHint')}</small>}

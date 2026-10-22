@@ -116,6 +116,7 @@ type importedView struct {
 	Note       string `json:"note,omitempty"`
 	AddedAt    string `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
 	Verified   bool   `json:"verified"`
+	Edited     bool   `json:"edited,omitempty"`
 	Auto       bool   `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
 	VerifiedAt string `json:"verifiedAt,omitempty"`
 	VerifiedBy string `json:"verifiedBy,omitempty"`
@@ -126,6 +127,16 @@ func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
 	id := r.PathValue("id")
 	if _, ok := a.importedFind(r.Context(), id); !ok {
 		apiError(w, http.StatusNotFound, "imported record not found")
+		return
+	}
+	// A record cannot be verified without an email: verifying also marks that address as confirmed by the admin.
+	if inv, err := a.Auth.Store.InviteFor(r.Context(), id); err != nil || inv.Email == "" {
+		apiError(w, http.StatusUnprocessableEntity, "email_required")
+		return
+	}
+	if err := a.Auth.Store.SetInviteEmailVerified(r.Context(), id, true); err != nil {
+		log.Printf("imported verify email: %v", err)
+		apiError(w, 500, "could not save")
 		return
 	}
 	if err := a.Auth.Store.VerifyImported(r.Context(), u.ID, id); err != nil {
@@ -143,6 +154,7 @@ func (a *App) importedUnverify(w http.ResponseWriter, r *http.Request, u User) {
 		apiError(w, http.StatusNotFound, "imported record not found")
 		return
 	}
+	_ = a.Auth.Store.SetInviteEmailVerified(r.Context(), id, false)
 	if err := a.Auth.Store.UnverifyImported(r.Context(), u.ID, id); err != nil {
 		log.Printf("imported unverify: %v", err)
 		apiError(w, 500, "could not save")
@@ -170,6 +182,10 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	if err != nil {
 		return nil, nil, err
 	}
+	edits, err := a.Auth.Store.ImportedEdits(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	// A record is verified once its person has activated an invitation and an admin approved their membership. This is
 	// derived on every read, so the tab counts and the lists always agree and nothing needs to be written.
 	approvedVia := map[string]bool{}
@@ -192,6 +208,9 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		all = append(all, rec{Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "manual", m.Phone, m.Note, m.CreatedAt})
 	}
 	for _, s := range a.Store.Students {
+		if x, has := edits[s.ID]; has { // the admin completed this record
+			s.Name, s.Batch, s.Department, s.Session, s.Upazila = x.Name, x.Batch, x.Department, x.Session, x.Upazila
+		}
 		all = append(all, rec{Student: s, src: "file"})
 	}
 	out := []importedView{}
@@ -223,8 +242,12 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		} else if verified {
 			iv.Auto = true
 		}
+		_, iv.Edited = edits[s.ID]
 		if inv, ok := invites[s.ID]; ok {
 			iv.Invite = a.inviteView(inv)
+			if iv.Auto {
+				iv.Invite["emailVerified"] = true // the person confirmed it by activating the invitation
+			}
 		}
 		out = append(out, iv)
 	}

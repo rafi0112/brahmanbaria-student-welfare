@@ -50,6 +50,12 @@ func TestDirectoryStartsUnverifiedAndVerificationPersists(t *testing.T) {
 	}
 	pre, _ := e.mem.MemberAdmin(ctx, mid)
 
+	if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, admin); rec.Code != 422 || !strings.Contains(rec.Body.String(), "email_required") {
+		t.Fatalf("verifying without an email must be refused: %d %s", rec.Code, rec.Body)
+	}
+	if rec := setEmail(e, admin, s1.ID, "verified.person@example.org"); rec.Code != 200 {
+		t.Fatalf("save email: %d", rec.Code)
+	}
 	for i := 0; i < 2; i++ { // idempotent
 		if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, admin); rec.Code != 200 {
 			t.Fatalf("verify: %d %s", rec.Code, rec.Body)
@@ -95,6 +101,7 @@ func TestDirectoryExportFollowsFiltersAndIsSafe(t *testing.T) {
 	}
 	admin := e.admin(t)
 	s1 := e.app.Store.Students[0]
+	setEmail(e, admin, s1.ID, "export.person@example.org")
 	e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, admin)
 	// a hand-added record with a spreadsheet-formula name, and phone/notes that must not be exported
 	e.do("POST", "/api/v1/admin/imported-students", map[string]any{"name": "=SUM(A1) Evil", "batch": 5, "department": e.app.Store.Depts[0], "phone": "01712345678", "note": "private note"}, admin)
@@ -232,9 +239,15 @@ func TestManualImportedRecordsCrudWithoutAccounts(t *testing.T) {
 	if rec := e.do("PATCH", "/api/v1/admin/imported-students/"+made.ID, good, admin); rec.Code != 200 {
 		t.Fatalf("edit: %d %s", rec.Code, rec.Body)
 	}
-	if rec := e.do("PATCH", "/api/v1/admin/imported-students/"+e.app.Store.Students[0].ID, good, admin); rec.Code != 409 {
-		t.Fatalf("bundled records are read-only: %d", rec.Code)
+	// a bundled record stays a file, but the admin can complete its details; the edit shows in the directory
+	fid := e.app.Store.Students[0].ID
+	if rec := e.do("PATCH", "/api/v1/admin/imported-students/"+fid, good, admin); rec.Code != 200 {
+		t.Fatalf("completing a bundled record: %d %s", rec.Code, rec.Body)
 	}
+	if lst := importedList(t, e, admin, "?q=Zqxv"); len(lst["items"].([]any)) < 1 {
+		t.Fatal("the completed details must show in the directory")
+	}
+	setEmail(e, admin, made.ID, "manual.person@example.org")
 	if rec := e.do("POST", "/api/v1/admin/imported-students/"+made.ID+"/verify", map[string]string{}, admin); rec.Code != 200 {
 		t.Fatalf("verify manual: %d", rec.Code)
 	}
@@ -311,6 +324,7 @@ func TestDashboardCountsContactAndImportedFromTheDatabase(t *testing.T) {
 	}
 	e.do("POST", "/api/v1/contact", goodContact, nil)
 	e.do("POST", "/api/v1/admin/imported-students", map[string]any{"name": "Dash Person", "batch": 3, "department": e.app.Store.Depts[0]}, admin)
+	setEmail(e, admin, e.app.Store.Students[0].ID, "dash.person@example.org")
 	e.do("POST", "/api/v1/admin/imported-students/"+e.app.Store.Students[0].ID+"/verify", map[string]string{}, admin)
 	d = get()
 	imp := d["imported"].(map[string]any)

@@ -40,6 +40,9 @@ type ManualImportedStore interface {
 	CreateManualImported(ctx context.Context, actorID string, in ManualImportedInput) (ManualImported, error)
 	UpdateManualImported(ctx context.Context, id string, in ManualImportedInput) (ManualImported, error)
 	DeleteManualImported(ctx context.Context, id string) error
+	// Edits to the read-only bundled records: the admin's completed details replace the file's values everywhere.
+	ImportedEdits(ctx context.Context) (map[string]ManualImportedInput, error)
+	SetImportedEdit(ctx context.Context, actorID, importedID string, in ManualImportedInput) error
 }
 
 const manualPrefix = "i-"
@@ -94,7 +97,52 @@ func (m *memStore) DeleteManualImported(_ context.Context, id string) error {
 	return ErrNotFound
 }
 
+func (m *memStore) ImportedEdits(_ context.Context) (map[string]ManualImportedInput, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := map[string]ManualImportedInput{}
+	for k, v := range m.edits {
+		out[k] = v
+	}
+	return out, nil
+}
+
+func (m *memStore) SetImportedEdit(_ context.Context, _, importedID string, in ManualImportedInput) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.edits == nil {
+		m.edits = map[string]ManualImportedInput{}
+	}
+	m.edits[importedID] = in
+	return nil
+}
+
 // ---- PostgreSQL store ----
+
+func (s *pgStore) ImportedEdits(ctx context.Context) (map[string]ManualImportedInput, error) {
+	rows, err := s.db.Query(ctx, `SELECT imported_id, name, batch, department, session, upazila FROM imported_edits`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]ManualImportedInput{}
+	for rows.Next() {
+		var id string
+		var in ManualImportedInput
+		if err := rows.Scan(&id, &in.Name, &in.Batch, &in.Department, &in.Session, &in.Upazila); err != nil {
+			return nil, err
+		}
+		out[id] = in
+	}
+	return out, rows.Err()
+}
+
+func (s *pgStore) SetImportedEdit(ctx context.Context, actorID, importedID string, in ManualImportedInput) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO imported_edits (imported_id, name, batch, department, session, upazila, updated_by) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::uuid)
+		ON CONFLICT (imported_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch, department = EXCLUDED.department, session = EXCLUDED.session,
+			upazila = EXCLUDED.upazila, updated_by = EXCLUDED.updated_by, updated_at = now()`, importedID, in.Name, in.Batch, in.Department, in.Session, in.Upazila, actorID)
+	return err
+}
 
 const manualCols = `m.id::text, m.name, m.batch, m.department, m.session, m.upazila, m.phone, m.note, to_char(m.created_at AT TIME ZONE 'UTC', ` + tsFmt + `)`
 
@@ -261,7 +309,7 @@ func (a *App) manualUpdate(w http.ResponseWriter, r *http.Request, u User) {
 	id := r.PathValue("id")
 	if !strings.HasPrefix(id, manualPrefix) {
 		if _, ok := a.fileImported(id); ok {
-			apiError(w, http.StatusConflict, "read_only_record") // bundled records come from the directory files
+			a.fileEdit(w, r, u, id) // bundled records stay as files; the admin's completed details are stored beside them
 			return
 		}
 		apiError(w, http.StatusNotFound, "imported record not found")
@@ -288,6 +336,27 @@ func (a *App) manualUpdate(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "imported.update", "imported", id, nil)
 	writeJSON(w, 200, rec)
+}
+
+// fileEdit stores completed details for a bundled record (name, batch, department, session, upazila).
+func (a *App) fileEdit(w http.ResponseWriter, r *http.Request, u User, id string) {
+	var b manualBody
+	if !decode(w, r, &b) {
+		return
+	}
+	in, errs := a.validateManual(b)
+	if len(errs) > 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
+		return
+	}
+	if err := a.Auth.Store.SetImportedEdit(r.Context(), u.ID, id, in); err != nil {
+		log.Printf("imported edit: %v", err)
+		apiError(w, 500, "could not save")
+		return
+	}
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, "imported.update", "imported", id, nil)
+	s, _ := a.importedFind(r.Context(), id)
+	writeJSON(w, 200, s)
 }
 
 func (a *App) manualDelete(w http.ResponseWriter, r *http.Request, u User) {
@@ -325,6 +394,11 @@ func (a *App) fileImported(id string) (Student, bool) {
 // importedFind looks a record up among the bundled files and the hand-added ones.
 func (a *App) importedFind(ctx context.Context, id string) (Student, bool) {
 	if s, ok := a.fileImported(id); ok {
+		if e, err := a.Auth.Store.ImportedEdits(ctx); err == nil {
+			if x, has := e[id]; has {
+				s.Name, s.Batch, s.Department, s.Session, s.Upazila = x.Name, x.Batch, x.Department, x.Session, x.Upazila
+			}
+		}
 		return s, true
 	}
 	if strings.HasPrefix(id, manualPrefix) {
