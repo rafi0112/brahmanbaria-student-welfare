@@ -13,7 +13,7 @@ const origin = () => window.location.origin
 
 const MODES = {
   login: { title: 'auth.login', sub: 'auth.loginSub', fields: ['email', 'password'], submit: 'auth.submitLogin' },
-  register: { title: 'auth.register', sub: 'auth.registerSub', fields: ['name', 'batch', 'department', 'upazila', 'union', 'email', 'password', 'confirm', 'terms'], submit: 'auth.submitRegister' },
+  register: { title: 'auth.register', sub: 'auth.registerSub', fields: ['name', 'batch', 'department', 'session', 'upazila', 'union', 'gender', 'bloodGroup', 'email', 'password', 'confirm', 'terms'], submit: 'auth.submitRegister' },
   forgot: { title: 'auth.forgot', sub: 'auth.forgotSub', fields: ['email'], submit: 'auth.sendLink' },
   reset: { title: 'auth.reset', sub: 'auth.resetSub', fields: ['password', 'confirm'], submit: 'auth.setPassword' },
 }
@@ -46,7 +46,7 @@ export default function Auth({ mode }) {
   const cfg = MODES[mode]
   const depts = useApi(mode === 'register' ? '/departments' : null)
   const ups = useApi(mode === 'register' ? '/upazilas' : null)
-  const [v, setV] = useState({ name: '', batch: '', department: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
+  const [v, setV] = useState({ name: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
   const [errs, setErrs] = useState({})
   const [notice, setNotice] = useState(null) // { tone: 'ok' | 'bad', key }
   const [busy, setBusy] = useState(false)
@@ -67,6 +67,7 @@ export default function Auth({ mode }) {
     const e = {}
     if (cfg.fields.includes('name') && v.name.trim().length < 2) e.name = t('auth.e.name')
     for (const k of ['batch', 'department', 'upazila', 'union']) if (cfg.fields.includes(k) && !v[k]) e[k] = t('auth.e.select')
+    if (cfg.fields.includes('session') && !/^\d{4}-\d{2}$/.test(v.session.trim())) e.session = t('auth.sessionHint')
     if (cfg.fields.includes('email') && !emailOk(v.email)) e.email = t('auth.e.email')
     if (cfg.fields.includes('password') && v.password.length < (mode === 'login' ? 1 : 8)) e.password = t('auth.e.pass')
     if (cfg.fields.includes('confirm') && v.confirm !== v.password) e.confirm = t('auth.e.match')
@@ -83,7 +84,7 @@ export default function Auth({ mode }) {
     if (mode === 'reset' && !supabaseConfigured && !token) { setNotice({ tone: 'bad', key: 'auth.noToken' }); return }
     setBusy(true)
     try {
-      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, upazila: v.upazila, union: v.union }
+      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, session: v.session.trim(), upazila: v.upazila, union: v.union, gender: v.gender, bloodGroup: v.bloodGroup }
       const email = v.email.trim()
       if (mode === 'register' && supabaseConfigured) {
         // The member details travel as user metadata; the profile is created at first sign-in (see AuthProvider).
@@ -138,10 +139,13 @@ export default function Auth({ mode }) {
     department: (depts.data?.items || []).map((d) => [d, d]),
     upazila: upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]),
     union: unions.map((x) => [x, x]),
+    gender: [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]],
+    bloodGroup: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => [b, b]),
   }
+  const optional = { gender: true, bloodGroup: true }
   const setSel = (k) => (e) => setV({ ...v, [k]: e.target.value, ...(k === 'upazila' ? { union: '' } : {}) })
   const bind = (k) => ({ value: v[k], onChange: (e) => setV({ ...v, [k]: e.target.value }), 'aria-invalid': !!errs[k], 'aria-describedby': errs[k] ? `${k}-err` : undefined })
-  const label = { batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
+  const label = { session: 'auth.session', gender: 'auth.gender', bloodGroup: 'auth.blood', batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
 
   const resend = async () => {
     try { await resendConfirmation(v.email); setNotice({ tone: 'ok', key: 'auth.resent' }) }
@@ -173,7 +177,7 @@ export default function Auth({ mode }) {
               <label key={f} className="field">
                 <span>{t(label[f])}</span>
                 <select id={f} value={v[f]} onChange={setSel(f)} aria-invalid={!!errs[f]} disabled={f === 'union' && !v.upazila}>
-                  <option value="">{t('auth.select')}</option>
+                  <option value="">{t(optional[f] ? 'auth.genderNone' : 'auth.select')}</option>
                   {options[f].map(([val, text]) => <option key={val} value={val}>{text}</option>)}
                 </select>
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
@@ -183,7 +187,7 @@ export default function Auth({ mode }) {
                 <span>{t(label[f])}</span>
                 {(() => {
                   const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
-                  return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : 'text'} {...props} />
+                  return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : 'text'} placeholder={f === 'session' ? '2020-21' : undefined} {...props} />
                 })()}
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>

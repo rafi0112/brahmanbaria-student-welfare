@@ -31,8 +31,8 @@ export default function Dashboard() {
 
   const attention = d && [
     d.messages?.new > 0 && { to: '/admin/contact?status=new', text: `${n(d.messages.new)} ${t('ad.dash.attMessages')}`, tone: 'warn' },
-    d.members.pending > 0 && { to: '/admin/students?status=pending', text: `${n(d.members.pending)} ${t('ad.dash.attPending')}`, tone: 'warn' },
-    d.members.incomplete > 0 && { to: '/admin/students?complete=no', text: `${n(d.members.incomplete)} ${t('ad.dash.attIncomplete')}` },
+    d.members.pending > 0 && { to: '/admin/students?tab=requests', text: `${n(d.members.pending)} ${t('ad.dash.attPending')}`, tone: 'warn' },
+    d.members.incomplete > 0 && { to: '/admin/students?tab=members&complete=no', text: `${n(d.members.incomplete)} ${t('ad.dash.attIncomplete')}` },
     d.imported?.awaiting > 0 && { to: '/admin/students?tab=imported&status=awaiting', text: `${n(d.imported.awaiting)} ${t('ad.dash.attImported')}` },
     d.blog.draft > 0 && { to: '/admin/blog?status=draft', text: `${n(d.blog.draft)} ${t('ad.dash.attDrafts')}` },
     d.places.draft > 0 && { to: '/admin/heritage?status=draft', text: `${n(d.places.draft)} ${t('ad.dash.attPlaces')}` },
@@ -49,8 +49,8 @@ export default function Dashboard() {
       {d && (
         <>
           <div className="dash-stats" role="list">
-            <Stat to="/admin/students" label={t('ad.dash.members')} value={n(d.members.total)} sub={`${n(d.members.approved)} ${t('ad.status.approved')}`} />
-            <Stat to="/admin/students?status=pending" label={t('ad.dash.pending')} value={n(d.members.pending)} sub={t('ad.dash.needsReview')} warn={d.members.pending > 0} />
+            <Stat to="/admin/students?tab=members" label={t('ad.dash.members')} value={n(d.members.total)} sub={`${n(d.members.approved)} ${t('ad.status.approved')}`} />
+            <Stat to="/admin/students?tab=requests" label={t('ad.dash.pending')} value={n(d.members.pending)} sub={t('ad.dash.needsReview')} warn={d.members.pending > 0} />
             <Stat to="/admin/contact?status=new" label={t('ad.dash.messages')} value={n(d.messages?.new || 0)} sub={`${n(d.messages?.total || 0)} ${t('ad.dash.messagesKept')}`} warn={d.messages?.new > 0} />
             <Stat to="/admin/blog?status=published" label={t('ad.dash.postsPublished')} value={n(d.blog.published)} sub={`${n(d.blog.draft)} ${t('ad.status.draft')}`} />
             <Stat to="/admin/heritage" label={t('ad.dash.places')} value={n(d.places.published)} sub={`${n(d.places.draft)} ${t('ad.status.draft')} · ${n(d.places.archived)} ${t('ad.status.archived')}`} />
@@ -75,7 +75,7 @@ export default function Dashboard() {
                 )}
               <h3 className="dash-h">{t('ad.dash.quick')}</h3>
               <div className="dash-quick">
-                <Link className="btn btn-outline btn-sm" to="/admin/students?status=pending"><Icon name="users" size={15} /> {t('ad.dash.reviewPending')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/students?tab=requests"><Icon name="users" size={15} /> {t('ad.dash.reviewPending')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/students?tab=imported"><Icon name="directory" size={15} /> {t('ad.imp.add')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/contact"><Icon name="mail" size={15} /> {t('ad.dash.openInbox')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/blog/new"><Icon name="blog" size={15} /> {t('ad.dash.addPost')}</Link>

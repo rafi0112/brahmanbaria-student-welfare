@@ -49,6 +49,7 @@ function CompleteProfile({ defaultName, onDone }) {
     const bad = {}
     if (v.name.trim().length < 2) bad.name = t('auth.e.name')
     for (const k of ['batch', 'department', 'upazila', 'union']) if (!v[k]) bad[k] = t('auth.e.select')
+    if (!/^\d{4}-\d{2}$/.test((v.session || '').trim())) bad.session = t('auth.sessionHint')
     setErrs(bad); setMsg(null)
     if (Object.keys(bad).length) return
     setBusy(true)
@@ -63,6 +64,10 @@ function CompleteProfile({ defaultName, onDone }) {
       <label className="field"><span>{t('auth.name')}</span>
         <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} aria-invalid={!!errs.name} />
         {errs.name && <small className="err">{errs.name}</small>}
+      </label>
+      <label className="field"><span>{t('auth.session')}</span>
+        <input value={v.session || ''} placeholder="2020-21" onChange={(e) => setV({ ...v, session: e.target.value })} aria-invalid={!!errs.session} />
+        {errs.session && <small className="err">{errs.session}</small>}
       </label>
       {Object.keys(opt).map((k) => (
         <label key={k} className="field"><span>{t(lbl[k])}</span>

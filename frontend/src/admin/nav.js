@@ -13,19 +13,17 @@ export const NAV = [
     { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
   ] },
-  // Students has two primary sections. Member Directory is the existing directory (needs verification / verified);
-  // Membership Requests is registered accounts and their approval workflow.
-  { id: 'directory', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.directory', group: 'people', watch: ['status'], children: [
-    { id: 'all', label: 'ad.status.allShort', query: {} },
-    { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
-    { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
-  ] },
-  { id: 'requests', to: '/admin/students', icon: 'users', label: 'ad.nav.requests', group: 'people', watch: ['status', 'complete'], children: [
-    { id: 'all', label: 'ad.status.allShort', query: {} },
-    { id: 'pending', label: 'ad.status.pending', query: { status: 'pending' } },
-    { id: 'approved', label: 'ad.status.approved', query: { status: 'approved' } },
-    { id: 'rejected', label: 'ad.status.rejected', query: { status: 'rejected' } },
+  // Students has two sections over the same registered accounts. Membership Requests is the pending queue (split by profile
+  // completeness); Members is everyone, those needing review and the verified (approved with a confirmed email).
+  { id: 'requests', to: '/admin/students?tab=requests', icon: 'users', label: 'ad.nav.requests', group: 'people', watch: ['complete'], children: [
+    { id: 'all', label: 'ad.req.all', query: {} },
+    { id: 'complete', label: 'ad.req.complete', query: { complete: 'yes' } },
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
+  ] },
+  { id: 'members', to: '/admin/students?tab=members', icon: 'directory', label: 'ad.nav.members', group: 'people', watch: ['view'], children: [
+    { id: 'all', label: 'ad.stu.view.all', query: {} },
+    { id: 'review', label: 'ad.mem.review', query: { view: 'review' } },
+    { id: 'verified', label: 'ad.mem.verified', query: { view: 'verified' } },
   ] },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
@@ -65,7 +63,13 @@ export function navFor(pathname, search = '') {
     const tab = new URLSearchParams(search).get('tab')
     return NAV.find((n) => n.id === (tab === 'roles' ? 'roles' : tab === 'committee' ? 'committee' : 'dash'))
   }
-  if (pathname === '/admin/students' && new URLSearchParams(search).get('tab') === 'imported') return NAV.find((n) => n.id === 'directory')
+  if (pathname === '/admin/students') {
+    const p = new URLSearchParams(search)
+    const tab = p.get('tab')
+    const st = p.get('status')
+    const members = tab === 'members' || tab === 'imported' || (!tab && st && st !== 'pending')
+    return NAV.find((n) => n.id === (members ? 'members' : 'requests'))
+  }
   return NAV.find((n) => !n.to.includes('?') && n.to !== '/admin' && (pathname === n.to || pathname.startsWith(`${n.to}/`)))
 }
 

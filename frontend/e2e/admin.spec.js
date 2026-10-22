@@ -39,7 +39,7 @@ test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   for (const label of ['Dashboard', 'Activity', 'Admin management', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label })).toBeVisible()
   }
-  for (const label of ['Member Directory', 'Membership Requests', 'Blog', 'Heritage places', 'Gallery']) {
+  for (const label of ['Membership Requests', 'Members', 'Blog', 'Heritage places', 'Gallery']) {
     await expect(side(page).getByRole('button', { name: label, exact: true })).toBeVisible() // sections with filtered views
   }
 })
@@ -72,7 +72,9 @@ test('favorites: star a page, make a folder, move it in, and everything survives
   await expect(folder).toBeVisible()
   await expect(folder.getByText('Empty folder')).toBeVisible()
 
-  await side(page).locator('.fav-row', { hasText: 'Membership Requests' }).last().getByRole('button', { name: /Actions/ }).click({ force: true })
+  const favRow = side(page).locator('.fav-row', { hasText: 'Membership Requests' }).last()
+  await favRow.hover()
+  await favRow.getByRole('button', { name: /Actions/ }).click()
   await page.getByRole('menuitem', { name: 'Move to Weekly review' }).click()
   await expect(folder.locator('.fav-link', { hasText: 'Membership Requests' })).toBeVisible()
 
@@ -80,10 +82,12 @@ test('favorites: star a page, make a folder, move it in, and everything survives
   await expect(side(page).locator('.fav-folder', { hasText: 'Weekly review' }).locator('.fav-link', { hasText: 'Membership Requests' })).toBeVisible()
 
   // removing the shortcut does not touch any data
-  await side(page).locator('.fav-row', { hasText: 'Membership Requests' }).last().getByRole('button', { name: /Actions/ }).click({ force: true })
+  const favRow2 = side(page).locator('.fav-row', { hasText: 'Membership Requests' }).last()
+  await favRow2.hover()
+  await favRow2.getByRole('button', { name: /Actions/ }).click()
   await page.getByRole('menuitem', { name: 'Remove from favorites' }).click()
   await expect(side(page).locator('.fav-link', { hasText: 'Membership Requests' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Students' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Membership Requests' })).toBeVisible()
 })
 
 test('a bad stored favorite is ignored instead of breaking the sidebar', async ({ page }) => {
@@ -136,10 +140,10 @@ test('blog: a new draft is saved and listed', async ({ page }) => {
 test('nested views: each child opens its filtered list, marks itself current, and survives refresh and back/forward', async ({ page }) => {
   await login(page)
   const cases = [
-    ['Member Directory', 'Needs verification', /\/admin\/students\?tab=imported&status=awaiting$/],
-    ['Member Directory', 'Verified', /\/admin\/students\?tab=imported&status=verified$/],
-    ['Membership Requests', 'Pending', /\/admin\/students\?status=pending$/],
-    ['Membership Requests', 'Incomplete profiles', /\/admin\/students\?complete=no$/],
+    ['Membership Requests', 'Complete profiles', /\/admin\/students\?tab=requests&complete=yes$/],
+    ['Membership Requests', 'Incomplete profiles', /\/admin\/students\?tab=requests&complete=no$/],
+    ['Members', 'Needs review', /\/admin\/students\?tab=members&view=review$/],
+    ['Members', 'Verified', /\/admin\/students\?tab=members&view=verified$/],
     ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
     ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
     ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],
@@ -167,7 +171,7 @@ test('navigating to a view only filters: no write requests are sent', async ({ p
   await login(page)
   const writes = []
   page.on('request', (r) => { if (!['GET', 'HEAD'].includes(r.method()) && r.url().includes('/api/')) writes.push(`${r.method()} ${r.url()}`) })
-  for (const [parent, child] of [['Member Directory', 'Verified'], ['Membership Requests', 'Pending'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
+  for (const [parent, child] of [['Members', 'Verified'], ['Membership Requests', 'Complete profiles'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
     const btn = side(page).getByRole('button', { name: parent, exact: true })
     if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click()
     await kid(page, parent, child).click()
@@ -264,9 +268,7 @@ test('contact inbox: a public message arrives, can be opened, answered and archi
 
 test('member directory: verify a record, see the mark, and it persists', async ({ page }) => {
   await login(page)
-  await side(page).getByRole('button', { name: 'Member Directory', exact: true }).click()
-  await kid(page, 'Member Directory', 'Needs verification').click()
-  await expect(page).toHaveURL(/tab=imported&status=awaiting$/)
+  await page.goto('/admin/students?tab=imported&status=awaiting')
   const first = page.locator('.dt tbody tr').first()
   const name = (await first.locator('strong').first().innerText()).trim()
   await first.getByRole('button', { name: 'Verify', exact: true }).click()
@@ -276,7 +278,7 @@ test('member directory: verify a record, see the mark, and it persists', async (
   await dlg.getByRole('button', { name: 'Verify', exact: true }).click()
   await expect(dlg).toBeHidden()
   // it left "awaiting" and is in "verified", with the mark that explains itself
-  await kid(page, 'Member Directory', 'Verified').click()
+  await page.getByRole('button', { name: /^Verified/ }).click()
   const row = page.locator('.dt tbody tr', { hasText: name }).first()
   await expect(row.locator('.vmark')).toHaveAttribute('title', /directory record, not an account/)
   await page.reload()
@@ -327,4 +329,21 @@ test('imported directory: add a record by hand, edit it, delete it; no account i
   await page.getByRole('dialog').getByRole('button', { name: 'Delete record' }).click()
   await expect(page.getByText('Record deleted.')).toBeVisible()
   await expect(page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Person' })).toHaveCount(0)
+})
+
+test('students: two sections, honest empty states and the directory note', async ({ page }) => {
+  await login(page)
+  await side(page).getByRole('button', { name: 'Membership Requests', exact: true }).click()
+  await kid(page, 'Membership Requests', 'All pending requests').click()
+  await expect(page).toHaveURL(/tab=requests$/)
+  await expect(page.getByRole('heading', { name: 'Membership Requests' })).toBeVisible()
+  await expect(page.getByText('No members match').or(page.getByText(/no members yet|nobody/i)).first()).toBeVisible()
+  await kid(page, 'Members', 'All').or(side(page).getByRole('button', { name: 'Members', exact: true })).first().click()
+  await side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Members', exact: true }) }).getByRole('link', { name: 'All', exact: true }).click()
+  await expect(page).toHaveURL(/tab=members$/)
+  // the only account is the admin and it has no member profile, so the list is honestly empty; the directory records have no email
+  await expect(page.locator('.dt tbody tr')).toHaveCount(0)
+  await expect(page.getByText(/have no email address, so no account can be created/)).toBeVisible()
+  await page.getByRole('link', { name: 'View directory records' }).click()
+  await expect(page).toHaveURL(/tab=imported/)
 })

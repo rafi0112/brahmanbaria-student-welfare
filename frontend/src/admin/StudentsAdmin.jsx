@@ -11,48 +11,59 @@ import DataTable, { Trunc } from './DataTable.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
 
+// Students has two sections, both over the same registered accounts: Membership Requests (pending decisions, split by profile
+// completeness) and Members (everyone, those needing review, the verified). The sidebar chooses between them.
+export function studentsMode(sp) {
+  const tab = sp.get('tab')
+  if (tab === 'imported') return 'imported'
+  if (tab === 'members') return 'members'
+  if (tab === 'requests') return 'requests'
+  const st = sp.get('status')
+  return st && st !== 'pending' ? 'members' : 'requests' // older links without a tab
+}
+
 export default function StudentsAdmin() {
   const { t } = useApp()
-  const [sp, setSp] = useSearchParams()
-  const f = { tab: sp.get('tab') === 'imported' ? 'imported' : 'members' }
-  const switchTab = (k) => setSp(k === 'members' ? {} : { tab: k }) // each tab starts with clean filters
+  const [sp] = useSearchParams()
+  const mode = studentsMode(sp)
   return (
     <section aria-labelledby="stu-h">
-      <PageHeader title={<span id="stu-h">{t('ad.stu.title')}</span>} desc={t('ad.stu.desc')} />
-      <div className="chips" role="tablist" aria-label={t('ad.stu.title')}>
-        {['members', 'imported'].map((k) => (
-          <button key={k} role="tab" aria-selected={f.tab === k} className={`chip ${f.tab === k ? 'on' : ''}`} onClick={() => switchTab(k)}>{t(`ad.stu.tab.${k}`)}</button>
-        ))}
-      </div>
-      {f.tab === 'imported' ? <Imported /> : <Members />}
+      <PageHeader title={<span id="stu-h">{t(mode === 'imported' ? 'ad.stu.tab.imported' : mode === 'members' ? 'ad.nav.members' : 'ad.nav.requests')}</span>}
+        desc={t(mode === 'imported' ? 'ad.stu.desc' : mode === 'members' ? 'ad.mem.desc' : 'ad.req.desc')} />
+      {mode === 'imported' ? <Imported /> : <Members mode={mode} key={mode} />}
     </section>
   )
 }
 
 /* ---------------------------------------------------------------- registered members */
 
-function Members() {
+function Members({ mode }) {
   const { t, n, lang, pick } = useApp()
   const { user: me } = useAuth()
   const errText = useErrText()
   const when = useWhen(lang)
-  const [f, set] = useFilters({ q: '', status: '', department: '', batch: '', verified: '', complete: '', disabled: '', sort: 'newest', page: '1', limit: '20' })
+  const [f, set] = useFilters({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: '', sort: 'newest', page: '1', limit: '20' })
+  const requests = mode === 'requests'
+  const eff = requests ? { ...f, status: 'pending', view: '' } : f // the request queue is always the pending members
   const depts = useApi('/departments')
-  const list = useApi(`/admin/students${qs({ ...f, page: f.page === '1' ? '' : f.page })}`)
+  const counts = useApi('/admin/student-counts')
+  const audit = useApi(requests ? null : '/admin/directory-audit')
+  const list = useApi(`/admin/students${qs({ ...eff, page: f.page === '1' ? '' : f.page })}`)
+  const [rejecting, setRejecting] = useState(null)
   const { notice, ok, bad, clear } = useNotice()
   const [picked, setPicked] = useState([])
   const [edit, setEdit] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
-  useEffect(() => setPicked([]), [f.q, f.status, f.department, f.batch, f.verified, f.complete, f.disabled, f.sort, f.page, f.limit])
+  useEffect(() => setPicked([]), [f.q, f.status, f.view, f.department, f.batch, f.verified, f.complete, f.disabled, f.sort, f.page, f.limit])
 
   const act = async (path, body, doneText, opts = {}) => {
     setBusy(true); clear()
     try {
       const r = await api(path, { method: opts.method || 'POST', body: body ? JSON.stringify(body) : undefined })
       ok(typeof doneText === 'function' ? doneText(r) : doneText)
-      list.retry()
+      list.retry(); counts.retry()
       return r
     } catch (e) { bad(errText(e)) } finally { setBusy(false); setConfirm(null) }
     return undefined
@@ -65,7 +76,7 @@ function Members() {
     const run = async () => {
       setBusy(true); clear()
       try {
-        await downloadFile(`/admin/export/students${qs({ ...f, page: '', limit: '', contact: contact ? '1' : '' })}`, 'members.csv')
+        await downloadFile(`/admin/export/students${qs({ ...eff, page: '', limit: '', contact: contact ? '1' : '' })}`, requests ? 'membership-requests.csv' : 'members.csv')
         ok(t('ad.stu.exported'))
       } catch (e) { bad(errText(e)) } finally { setBusy(false); setConfirm(null) }
     }
@@ -75,22 +86,37 @@ function Members() {
   const allOnPage = rows.length > 0 && rows.every((r) => picked.includes(r.id))
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit'].includes(k))
-  const clearAll = () => set({ q: '', status: '', department: '', batch: '', verified: '', complete: '', disabled: '' })
+  const clearAll = () => set({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: '' })
+  const c = counts.data || {}
+  const num = (v) => (v == null ? '' : ` ${n(v)}`)
+  const reasons = (r) => {
+    if (r.status === 'rejected') return []
+    const out = []
+    if (r.status === 'pending') out.push(t('ad.rv.pending'))
+    if (r.status === 'approved' && !r.emailVerified) out.push(t('ad.rv.unverified'))
+    if (r.missing?.length) out.push(`${t('ad.rv.missing')}: ${r.missing.map((k) => t(`ad.rv.f.${k}`)).join(', ')}`)
+    return out
+  }
 
   return (
     <>
-      <ListToolbar section="students" values={f} set={set} defaults={{ sort: 'newest', limit: '20' }} total={list.data?.total} loading={list.loading}
+      <ListToolbar section={requests ? 'requests' : 'members'} values={f} set={set} defaults={{ sort: 'newest', limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.search') }}
-        views={[
-          { id: 'all', label: t('ad.stu.view.all'), patch: { status: '', complete: '' } }, { id: 'pending', label: t('ad.status.pending'), patch: { status: 'pending' } },
-          { id: 'approved', label: t('ad.status.approved'), patch: { status: 'approved' } }, { id: 'rejected', label: t('ad.status.rejected'), patch: { status: 'rejected' } },
-          { id: 'incomplete', label: t('ad.stu.view.incomplete'), patch: { complete: 'no' } },
+        views={requests ? [
+          { id: 'all', label: `${t('ad.req.all')}${num(c.pending)}`, patch: { complete: '' } },
+          { id: 'complete', label: `${t('ad.req.complete')}${num(c.pendingComplete)}`, patch: { complete: 'yes' } },
+          { id: 'incomplete', label: `${t('ad.stu.view.incomplete')}${num(c.pendingIncomplete)}`, patch: { complete: 'no' } },
+        ] : [
+          { id: 'all', label: `${t('ad.stu.view.all')}${num(c.all)}`, patch: { view: '', status: '', complete: '' } },
+          { id: 'review', label: `${t('ad.mem.review')}${num(c.review)}`, patch: { view: 'review' } },
+          { id: 'verified', label: `${t('ad.mem.verified')}${num(c.verified)}`, patch: { view: 'verified' } },
         ]}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
           { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
+          ...(requests ? [] : [{ key: 'status', label: t('ad.stu.col.status'), all: t('ad.stu.anyStatus'), advanced: true, options: [['pending', t('ad.status.pending')], ['approved', t('ad.status.approved')], ['rejected', t('ad.status.rejected')]] }]),
           { key: 'verified', label: t('ad.stu.verified'), all: t('ad.stu.anyVerified'), advanced: true, options: [['yes', t('ad.stu.verifiedYes')], ['no', t('ad.stu.verifiedNo')]] },
-          { key: 'complete', label: t('ad.stu.complete'), all: t('ad.stu.anyComplete'), advanced: true, options: [['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]] },
+          ...(requests ? [] : [{ key: 'complete', label: t('ad.stu.complete'), all: t('ad.stu.anyComplete'), advanced: true, options: [['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]] }]),
           { key: 'disabled', label: t('ad.stu.account'), all: t('ad.stu.anyAccount'), advanced: true, options: [['no', t('ad.stu.active')], ['yes', t('ad.stu.deactivated')]] },
         ]}
         sorts={[['newest', t('ad.stu.sort.newest')], ['oldest', t('ad.stu.sort.oldest')], ['name', t('ad.stu.sort.name')], ['batch', t('ad.stu.sort.batch')], ['status', t('ad.stu.sort.status')]]}
@@ -129,13 +155,15 @@ function Members() {
               { id: 'status', label: t('ad.stu.col.status'), width: '30%', cell: (r) => (
                 <div className="dt-stack">
                   <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>
-                  <small className={`dt-sub ${r.emailVerified ? '' : 'is-warn'}`}>{r.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {r.complete ? t('ad.stu.completeYes') : t('ad.stu.completeNo')}</small>
+                  {reasons(r).length > 0 && <small className="dt-sub is-warn">{reasons(r).join(' · ')}</small>}
+                  <small className={`dt-sub ${r.emailVerified ? '' : 'is-warn'}`}>{r.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')}</small>
                   <small className="dt-sub">{when(r.createdAt)}</small>
                 </div>
               ) },
               { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  {r.status === 'pending' && <button type="button" className="btn btn-ok btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>}
+                  {r.status === 'pending' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setRejecting(r)}>{t('ad.stu.act.reject')}</button></>}
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
                 </div>
               ) },
@@ -145,24 +173,32 @@ function Members() {
       ))}
 
       {edit && <MemberModal row={edit} me={me} depts={depts.data?.items || []} pick={pick}
-        onClose={() => setEdit(null)} onSaved={(r, text) => { setEdit(r); ok(text); list.retry() }} />}
+        onClose={() => setEdit(null)} onSaved={(r, text) => { setEdit(r); ok(text); list.retry(); counts.retry() }} />}
+      {!requests && audit.data && audit.data.unresolved > 0 && (
+        <p className="muted small">{t('ad.mem.auditNote').replace('{n}', n(audit.data.unresolved))} <Link to="/admin/students?tab=imported">{t('ad.mem.auditLink')}</Link></p>
+      )}
       {confirm && <Confirm text={confirm.text} label={confirm.label} busy={busy} onYes={confirm.run} onNo={() => setConfirm(null)} />}
+      {rejecting && <RejectDialog row={rejecting} busy={busy} onNo={() => setRejecting(null)} onYes={(reason) => act(`/admin/students/${rejecting.id}/reject`, { reason }, t('ad.stu.rejected')).then(() => setRejecting(null))} />}
     </>
   )
 }
 
 function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
-  const { t, n } = useApp()
+  const { t, n, lang } = useApp()
+  const when = useWhen(lang)
   const errText = useErrText()
   const ups = useApi('/upazilas')
-  const [v, setV] = useState({ name: row.name, batch: String(row.batch), department: row.department, upazila: row.upazila, union: row.union, phone: row.phone, bloodGroup: row.bloodGroup, showInDirectory: row.showInDirectory })
+  const snap = (r) => ({ name: r.name, batch: String(r.batch), department: r.department, session: r.session || '', upazila: r.upazila, union: r.union, phone: r.phone, bloodGroup: r.bloodGroup, gender: r.gender || '', showInDirectory: r.showInDirectory })
+  const hist = useApi(`/admin/students/${row.id}/history`)
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [v, setV] = useState(snap(row))
   const [errs, setErrs] = useState({})
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [confirm, setConfirm] = useState(null)
-  useEffect(() => setV({ name: row.name, batch: String(row.batch), department: row.department, upazila: row.upazila, union: row.union, phone: row.phone, bloodGroup: row.bloodGroup, showInDirectory: row.showInDirectory }), [row])
+  useEffect(() => { setV(snap(row)); hist.retry() }, [row]) // eslint-disable-line react-hooks/exhaustive-deps
   const unions = useMemo(() => (ups.data?.items || []).find((u) => u.slug === v.upazila)?.unions || [], [ups.data, v.upazila])
-  const dirty = v.name !== row.name || v.batch !== String(row.batch) || v.department !== row.department || v.upazila !== row.upazila || v.union !== row.union || v.phone !== row.phone || v.bloodGroup !== row.bloodGroup || v.showInDirectory !== row.showInDirectory
+  const dirty = JSON.stringify(v) !== JSON.stringify(snap(row))
   const self = row.id === me?.id
 
   const save = async (e) => {
@@ -198,6 +234,9 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
               {(ups.data?.items || []).map((u) => <option key={u.slug} value={u.slug}>{pick(u.nameBn, u.nameEn)}</option>)}</select>)}</Field>
           <Field label={t('auth.union')} required error={errs.union}>{(id, bad) => (
             <select id={id} value={v.union} onChange={text('union')} aria-invalid={bad}><option value="">{t('auth.select')}</option>{unions.map((u) => <option key={u} value={u}>{u}</option>)}</select>)}</Field>
+          <Field label={t('students.session')} required error={errs.session} hint="2020-21">{(id, bad) => <input id={id} value={v.session} onChange={text('session')} maxLength={7} aria-invalid={bad} />}</Field>
+          <Field label={t('ad.mem.gender')} error={errs.gender}>{(id, bad) => (
+            <select id={id} value={v.gender} onChange={text('gender')} aria-invalid={bad}><option value="">{t('ad.mem.genderNone')}</option><option value="female">{t('ad.mem.female')}</option><option value="male">{t('ad.mem.male')}</option><option value="other">{t('ad.mem.other')}</option></select>)}</Field>
           <Field label={t('ad.stu.phone')} error={errs.phone} hint="01XXXXXXXXX">{(id, bad) => <input id={id} value={v.phone} onChange={text('phone')} inputMode="tel" maxLength={11} aria-invalid={bad} />}</Field>
           <Field label={t('ad.stu.blood')} error={errs.bloodGroup}>{(id, bad) => (
             <select id={id} value={v.bloodGroup} onChange={text('bloodGroup')} aria-invalid={bad}><option value="">—</option>{['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => <option key={b}>{b}</option>)}</select>)}</Field>
@@ -214,9 +253,14 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
       <h4>{t('ad.stu.membership')}</h4>
       <div className="row">
         {row.status !== 'approved' && <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => action('approve', t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>}
-        {row.status !== 'rejected' && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => action('reject', t('ad.stu.rejected'))}>{t('ad.stu.act.reject')}</button>}
+        {row.status !== 'rejected' && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setRejectOpen(true)}>{t('ad.stu.act.reject')}</button>}
         {row.status !== 'pending' && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => action('reset', t('ad.stu.reset'))}>{t('ad.stu.act.reset')}</button>}
       </div>
+      {row.reviewedAt && <p className="muted small">{t('ad.mem.decided')}: {row.reviewedBy || '—'} · {when(row.reviewedAt)}{row.reviewNote ? ` · ${row.reviewNote}` : ''}</p>}
+      <h4>{t('ad.mem.history')}</h4>
+      {hist.data && (hist.data.items.length === 0 ? <p className="muted small">{t('ad.mem.historyNone')}</p> : (
+        <ul className="ad-list">{hist.data.items.map((h, i) => <li key={i}><span>{t(`ad.act.${h.action}`) === `ad.act.${h.action}` ? h.action : t(`ad.act.${h.action}`)}{h.detail?.reason ? ` — ${h.detail.reason}` : ''}</span><span className="muted small">{h.actor || '—'} · {when(h.at)}</span></li>)}</ul>
+      ))}
       <h4>{t('ad.stu.account')}</h4>
       <p className="muted small">{row.disabled ? t('ad.stu.deactivatedNote') : t('ad.stu.deactivateNote')}</p>
       <div className="row">
@@ -226,6 +270,23 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
             onClick={() => setConfirm({ text: t('ad.stu.confirmDeactivate').replace('{who}', row.name), label: t('ad.stu.act.deactivate') })}>{t('ad.stu.act.deactivate')}</button>}
       </div>
       {confirm && <Confirm tone="danger" text={confirm.text} label={confirm.label} busy={busy} onYes={() => action('deactivate', t('ad.stu.deactivatedDone'))} onNo={() => setConfirm(null)} />}
+      {rejectOpen && <RejectDialog row={row} busy={busy} onNo={() => setRejectOpen(false)} onYes={async (reason) => { setBusy(true); setMsg(null); try { onSaved(await api(`/admin/students/${row.id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }), t('ad.stu.rejected')); setRejectOpen(false) } catch (err) { setMsg(errText(err)); setRejectOpen(false) } finally { setBusy(false) } }} />}
+    </Modal>
+  )
+}
+
+// Reject a membership. The reason is optional, kept with the decision and shown to admins; the account itself is never deleted.
+function RejectDialog({ row, busy, onYes, onNo }) {
+  const { t } = useApp()
+  const [reason, setReason] = useState('')
+  return (
+    <Modal title={t('ad.rej.title')} onClose={onNo} busy={busy}>
+      <p>{t('ad.rej.text').replace('{who}', row.name)}</p>
+      <Field label={t('ad.rej.reason')} max={300} count={reason.length} hint={t('ad.rej.hint')}>{(id) => <textarea id={id} rows={3} autoFocus value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />}</Field>
+      <div className="row">
+        <button type="button" className="btn btn-danger" disabled={busy} onClick={() => onYes(reason.trim())}>{busy ? t('state.loading') : t('ad.stu.act.reject')}</button>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={onNo}>{t('admin.roles.cancel')}</button>
+      </div>
     </Modal>
   )
 }
