@@ -1,0 +1,48 @@
+<!-- Supabase Auth -> Email Templates -> "Invite user".
+     Subject: Activate your Jela Kollan for University account
+     Only Supabase's own variable is used. No name or profile detail is placed in the message or the link. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Activate your Jela Kollan for University account</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f2;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f2;">
+ <tr><td align="center" style="padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:10px;border:1px solid #e3e3df;">
+   <tr><td style="padding:28px 28px 8px 28px;font-family:-apple-system,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Arial,sans-serif;color:#1a1b1f;font-size:16px;line-height:1.55;">
+    <p style="margin:0 0 4px 0;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#6b6e75;">Jela Kollan for University</p>
+    <h1 style="margin:0 0 16px 0;font-size:22px;line-height:1.3;font-weight:650;">Activate your account</h1>
+    <p style="margin:0 0 12px 0;">Hello,</p>
+    <p style="margin:0 0 12px 0;">A member profile for your email address already exists in the Jela Kollan for University directory. You have been invited to activate your account and review your existing profile information.</p>
+    <p style="margin:0 0 6px 0;font-weight:600;">What you need to do</p>
+    <ol style="margin:0 0 20px 20px;padding:0;">
+     <li style="margin:0 0 4px 0;">Open the secure link below.</li>
+     <li style="margin:0 0 4px 0;">Confirm your email address and complete the account setup.</li>
+     <li style="margin:0 0 4px 0;">Set your own password.</li>
+     <li style="margin:0 0 4px 0;">Review your existing profile information and correct any outdated or incomplete details.</li>
+     <li style="margin:0 0 4px 0;">Complete the required fields and submit your membership request.</li>
+    </ol>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0;"><tr><td style="border-radius:8px;background:#1f2025;">
+     <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 22px;font-family:inherit;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Activate Account &amp; Verify Email</a>
+    </td></tr></table>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#44464c;">If the button does not work, copy this address into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#3a43b0;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+    <p style="margin:0 0 12px 0;"><strong>After activation.</strong> After opening the secure invitation link, you will be taken to the Jela Kollan for University website to complete your account setup and review your existing profile. Your membership will remain pending until an authorized administrator approves your request. Confirming your email alone does not grant membership approval or administrator access. You will receive the verified member indicator only when the application's defined conditions are satisfied: genuine email verification and approved membership.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#44464c;"><strong>Security note.</strong> If you were not expecting this invitation, you can safely ignore this email. Do not share your invitation link or password with anyone.</p>
+    <p style="margin:0 0 20px 0;">Regards,<br>Jela Kollan for University</p>
+   </td></tr>
+   <tr><td style="padding:0 28px;"><div style="border-top:1px solid #e3e3df;"></div></td></tr>
+   <tr><td style="padding:18px 28px 28px 28px;font-family:-apple-system,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Arial,sans-serif;color:#1a1b1f;font-size:15px;line-height:1.6;">
+    <p style="margin:0 0 8px 0;font-weight:600;">বাংলায় সংক্ষেপে</p>
+    <p style="margin:0 0 8px 0;">জেলা কল্যাণ ফর ইউনিভার্সিটির সদস্য ডিরেক্টরিতে আপনার ইমেইল ঠিকানায় একটি প্রোফাইল আগে থেকেই আছে। অ্যাকাউন্ট চালু করে প্রোফাইল দেখে নিতে আপনাকে আমন্ত্রণ জানানো হয়েছে।</p>
+    <p style="margin:0 0 8px 0;">উপরের নিরাপদ লিংক খুলুন, ইমেইল নিশ্চিত করুন, নিজের পাসওয়ার্ড দিন, পুরনো বা অসম্পূর্ণ তথ্য ঠিক করুন এবং সদস্যপদের আবেদন জমা দিন। অ্যাডমিন অনুমোদন না করা পর্যন্ত আপনার সদস্যপদ অপেক্ষমাণ থাকবে; শুধু ইমেইল নিশ্চিত করলে সদস্যপদ বা অ্যাডমিন অধিকার মেলে না। ইমেইল সত্যিই নিশ্চিত এবং সদস্যপদ অনুমোদিত হলেই যাচাইকৃত সদস্যের চিহ্ন পাবেন।</p>
+    <p style="margin:0;font-size:14px;color:#44464c;">এই আমন্ত্রণ আপনি আশা না করলে ইমেইলটি উপেক্ষা করুন। লিংক বা পাসওয়ার্ড কাউকে দেবেন না।</p>
+   </td></tr>
+  </table>
+ </td></tr>
+</table>
+</body>
+</html>

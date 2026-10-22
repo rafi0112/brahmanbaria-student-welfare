@@ -6,6 +6,7 @@ import Directory, { UpazilaDetail } from './pages/Directory.jsx'
 import Heritage, { HeritageDetail } from './pages/Heritage.jsx'
 import { About, Blog, BlogPost, Contact, Gallery, NotFound } from './pages/Content.jsx'
 import Auth, { Verify } from './pages/Auth.jsx'
+import Activate from './pages/Activate.jsx'
 import { Dashboard } from './pages/Dashboards.jsx'
 import { AdminHome, AdminShell } from './admin/Shell.jsx'
 import StudentsAdmin from './admin/StudentsAdmin.jsx'
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="forgot-password" element={<Auth mode="forgot" />} />
         <Route path="reset-password" element={<Auth mode="reset" />} />
         <Route path="verify-email" element={<Verify />} />
+        <Route path="activate" element={<Activate />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="*" element={<NotFound />} />
       </Route>

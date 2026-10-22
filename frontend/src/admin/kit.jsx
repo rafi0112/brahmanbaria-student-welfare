@@ -397,8 +397,8 @@ export function RowMenu({ label, items, className = '', icon }) {
   const list = useRef(null)
   const live = items.filter(Boolean)
   // place the menu under its button, flip above when there is no room, and keep it inside the viewport
-  useLayoutEffect(() => {
-    if (!open || !btn.current || !list.current) return
+  const place = useCallback(() => {
+    if (!btn.current || !list.current) return
     const r = btn.current.getBoundingClientRect()
     const h = list.current.offsetHeight
     const w = list.current.offsetWidth
@@ -406,7 +406,8 @@ export function RowMenu({ label, items, className = '', icon }) {
     const top = below + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : below
     const left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8)
     setPos({ top, left })
-  }, [open])
+  }, [])
+  useLayoutEffect(() => { if (open) place() }, [open, place])
   useEffect(() => {
     if (!open) return undefined
     list.current?.querySelector('[role^=menuitem]:not([disabled])')?.focus()
@@ -421,10 +422,10 @@ export function RowMenu({ label, items, className = '', icon }) {
     const onDown = (e) => { if (!list.current?.contains(e.target) && !btn.current?.contains(e.target)) close() }
     addEventListener('keydown', onKey)
     addEventListener('mousedown', onDown)
-    addEventListener('scroll', close, true)
-    addEventListener('resize', close)
-    return () => { removeEventListener('keydown', onKey); removeEventListener('mousedown', onDown); removeEventListener('scroll', close, true); removeEventListener('resize', close) }
-  }, [open])
+    addEventListener('scroll', place, true) // the page may shift while it loads: follow the button instead of closing
+    addEventListener('resize', place)
+    return () => { removeEventListener('keydown', onKey); removeEventListener('mousedown', onDown); removeEventListener('scroll', place, true); removeEventListener('resize', place) }
+  }, [open, place])
   if (live.length === 0) return null
   return (
     <>

@@ -311,6 +311,8 @@ function Imported() {
   const [form, setForm] = useState(null) // null | {} (new) | a manual record (edit)
   const [drop, setDrop] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [emailRow, setEmailRow] = useState(null)
+  const quota = useApi('/admin/invitations/status')
   const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
   const counts = list.data?.counts || {}
@@ -318,6 +320,19 @@ function Imported() {
   const exportCsv = async () => { // the same filters as the list on screen
     setExporting(true); clear()
     try { await downloadFile(`/admin/export/imported${qs({ q: f.q, department: f.department, batch: f.batch, status: f.status })}`, 'member-directory.csv') } catch (e) { bad(errText(e)) } finally { setExporting(false) }
+  }
+  const sendInvite = async (r) => {
+    setBusy(true); clear()
+    try { await api(`/admin/imported-students/${r.id}/invite`, { method: 'POST', body: '{}' }); ok(t('ad.inv.sentOk')); list.retry(); quota.retry() } catch (e) { bad(errText(e)); list.retry(); quota.retry() } finally { setBusy(false) }
+  }
+  const sendBatch = async () => {
+    setBusy(true); clear()
+    try {
+      const r = await api('/admin/invitations/send', { method: 'POST', body: '{}' })
+      const text = t('ad.inv.batchDone').replace('{sent}', n(r.sent)).replace('{failed}', n(r.failed)).replace('{skipped}', n(r.skipped))
+      if (r.stopped && r.stopped !== 'batch_size') bad(`${text} ${t('ad.inv.stoppedBecause')} ${t(`ad.e.${r.stopped}`)}`); else ok(text)
+      list.retry(); quota.retry()
+    } catch (e) { bad(errText(e)) } finally { setBusy(false) }
   }
   const doVerify = async () => {
     setBusy(true); clear()
@@ -336,6 +351,9 @@ function Imported() {
       <div className="ad-subhead"><p className="notice">{t('ad.imp.note')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
         <span className="row"><button type="button" className="btn btn-outline btn-sm" disabled={exporting} onClick={exportCsv}><Icon name="download" size={15} /> {t('ad.imp.export')}</button>
           <button type="button" className="btn btn-dark btn-sm" onClick={() => setForm({})}><Icon name="plus" size={15} /> {t('ad.imp.add')}</button></span></div>
+      {quota.data && (quota.data.configured
+        ? <p className="muted small">{t('ad.inv.quota').replace('{h}', n(quota.data.usedHour)).replace('{hl}', n(quota.data.perHour)).replace('{d}', n(quota.data.usedDay)).replace('{dl}', n(quota.data.perDay))} <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !(quota.data.counts?.saved > 0)} onClick={sendBatch}>{t('ad.inv.sendBatch')} ({n(quota.data.counts?.saved || 0)})</button></p>
+        : <p className="notice bad" role="status">{t('ad.inv.off')}</p>)}
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
         views={[
@@ -360,7 +378,8 @@ function Imported() {
               { id: 'dept', label: t('students.dept'), width: '26%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
               { id: 'batch', label: t('students.batch'), width: '80px', cell: (r) => (r.batch ? n(r.batch) : '—') },
               { id: 'added', label: t('ad.imp.addedDate'), width: '140px', cell: (r) => <small className="dt-sub">{r.addedAt ? when(r.addedAt) : t('ad.imp.noDate')}</small> },
-              { id: 'review', label: t('ad.imp.review'), width: '24%', cell: (r) => (
+              { id: 'invite', label: t('ad.inv.col'), width: '22%', cell: (r) => <InviteCell r={r} t={t} when={when} /> },
+              { id: 'review', label: t('ad.imp.review'), width: '22%', cell: (r) => (
                 r.verified ? (
                   <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
                     <small className="dt-sub">{r.verifiedBy} · {when(r.verifiedAt)}</small>
@@ -372,6 +391,8 @@ function Imported() {
                   {!r.verified && <button type="button" className="btn btn-outline btn-sm" onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
                   <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
                     r.verified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
+                    { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
+                    r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => sendInvite(r) },
                     r.source === 'manual' && { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
                     r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
                   ]} />
@@ -383,6 +404,7 @@ function Imported() {
       ))}
       {form && <ImportedForm row={form.id ? form : null} depts={depts.data?.items || []} onClose={() => setForm(null)} onSaved={() => { const edit = !!form.id; setForm(null); ok(t(edit ? 'ad.imp.saved' : 'ad.imp.created')); list.retry() }} />}
       {drop && <Confirm tone="danger" text={t('ad.imp.deleteText').replace('{who}', drop.name)} label={t('ad.imp.delete')} busy={busy} onYes={remove} onNo={() => setDrop(null)} />}
+      {emailRow && <EmailDialog row={emailRow} onClose={() => setEmailRow(null)} onSaved={() => { setEmailRow(null); ok(t('ad.inv.emailSaved')); list.retry(); quota.retry() }} />}
       {verify && <Confirm text={t('ad.imp.verifyConfirm').replace('{who}', verify.name)} label={t('ad.imp.verify')} busy={busy} onYes={doVerify} onNo={() => setVerify(null)} />}
       {undo && <Confirm tone="danger" text={t('ad.imp.unverifyText').replace('{who}', undo.name)} label={t('ad.imp.unverify')} busy={busy} onYes={unverify} onNo={() => setUndo(null)} />}
     </>
@@ -432,6 +454,51 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
         {msg && <p className="notice bad" role="alert">{msg}</p>}
         <div className="row">
           <button className="btn btn-dark btn-sm" disabled={busy || !dirty}>{busy ? t('state.loading') : t('ad.save')}</button>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{t('admin.roles.cancel')}</button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+// What an admin can truthfully say about a person's activation: an address is saved, Supabase accepted the invitation request
+// (which is not proof it reached an inbox), it failed, or the person finished activating.
+function InviteCell({ r, t, when }) {
+  const inv = r.invite
+  if (!inv) return <small className="dt-sub">{t('ad.inv.none')}</small>
+  const label = inv.status === 'completed' ? t('ad.inv.completed') : inv.status === 'failed' ? t('ad.inv.failed') : inv.status === 'sent' ? (inv.expired ? t('ad.inv.expired') : t('ad.inv.sent')) : t('ad.inv.saved')
+  return (
+    <div className="dt-stack">
+      <small className="dt-sub dt-trunc" title={inv.email}>{inv.email}</small>
+      <span className={`st ${inv.status === 'completed' ? 'st-approved' : inv.status === 'failed' || inv.expired ? 'st-rejected' : 'st-pending'}`}><span className="st-dot" aria-hidden="true" />{label}</span>
+      {inv.status === 'sent' && inv.lastSentAt && <small className="dt-sub">{when(inv.lastSentAt)}</small>}
+      {inv.status === 'failed' && inv.lastError && <small className="dt-sub is-warn">{inv.lastError}</small>}
+    </div>
+  )
+}
+
+// Save the address an activation email will go to. Nothing is sent here.
+function EmailDialog({ row, onClose, onSaved }) {
+  const { t } = useApp()
+  const errText = useErrText()
+  const [email, setEmail] = useState(row.invite?.email || '')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const dirty = email.trim().toLowerCase() !== (row.invite?.email || '')
+  const save = async (e) => {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true); setErr('')
+    try { await api(`/admin/imported-students/${row.id}/email`, { method: 'PATCH', body: JSON.stringify({ email }) }); onSaved() } catch (e2) { setErr(e2.fields?.email || errText(e2)) } finally { setBusy(false) }
+  }
+  return (
+    <Modal title={t('ad.inv.emailTitle')} onClose={onClose} busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
+      <p><strong>{row.name}</strong> <span className="muted">· {row.department}</span></p>
+      <p className="muted small">{t('ad.inv.emailHelp')}</p>
+      <form onSubmit={save} noValidate className="ad-form">
+        <Field label={t('auth.email')} required error={err}>{(id, bad) => <input id={id} type="email" autoFocus value={email} maxLength={120} aria-invalid={bad} onChange={(e) => setEmail(e.target.value)} />}</Field>
+        <div className="row">
+          <button className="btn btn-dark btn-sm" disabled={busy || !dirty || !email.trim()}>{busy ? t('state.loading') : t('ad.save')}</button>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{t('admin.roles.cancel')}</button>
         </div>
       </form>

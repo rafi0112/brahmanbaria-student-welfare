@@ -347,3 +347,33 @@ test('students: two sections, honest empty states and the directory note', async
   await page.getByRole('link', { name: 'View directory records' }).click()
   await expect(page).toHaveURL(/tab=imported/)
 })
+
+test('activation emails: addresses can be saved, sending is honestly unavailable without the Supabase admin key', async ({ page }) => {
+  await login(page)
+  await page.goto('/admin/students?tab=imported')
+  await expect(page.getByText(/Activation emails are switched off/)).toBeVisible()
+  const row = page.locator('.dt tbody tr').first()
+  const name = (await row.locator('strong').first().innerText()).trim()
+  await row.getByRole('button', { name: /Actions/ }).click()
+  await page.getByRole('menuitem', { name: 'Add email address' }).click()
+  const dlg = page.getByRole('dialog', { name: 'Email address for activation' })
+  await dlg.locator('input[type=email]').pressSequentially('not-an-email', { delay: 5 })
+  await dlg.locator('form button').first().click()
+  await expect(dlg.getByText('Enter a real email address.')).toBeVisible() // validated by the server
+  await dlg.locator('input[type=email]').fill('e2e.person@example.test')
+  await dlg.locator('form button').first().click()
+  await expect(page.getByText('Nothing has been sent yet.')).toBeVisible()
+  const saved = page.locator('.dt tbody tr', { hasText: name }).first()
+  await expect(saved).toContainText('Email saved, not sent')
+  await saved.getByRole('button', { name: /Actions/ }).click()
+  await page.getByRole('menuitem', { name: 'Send activation email' }).click()
+  await expect(page.getByText(/Invitations are not configured on the server/)).toBeVisible() // never a false success
+  await expect(saved).toContainText('Email saved, not sent')
+})
+
+test('activation page: an unusable link explains what to do and never shows success', async ({ page }) => {
+  await page.goto('/activate')
+  await expect(page.getByRole('heading', { name: 'Activate your account' })).toBeVisible()
+  await expect(page.getByText(/not available in this setup|invalid, has expired/)).toBeVisible()
+  await expect(page.getByText('Your email address is confirmed.')).toHaveCount(0)
+})
