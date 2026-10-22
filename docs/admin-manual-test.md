@@ -38,6 +38,18 @@ stays in the bucket (remove unreferenced files by hand in Supabase → Storage i
 | Heritage places | `/admin/heritage` | Draft/publish/unpublish/archive/restore, bilingual names, location, facts, sources, several images, preview. |
 | Blog | `/admin/blog` | Markdown editor with toolbar, preview, categories/tags, featured image, SEO fields, draft/publish/archive. No scheduler: publishing is manual. |
 | Gallery | `/admin/gallery` | Albums, multi-file upload with progress, captions/credit/license, hide/show, archive, reorder, move between albums. |
+| Activity | `/admin/activity` | Read-only timeline of admin actions from the audit tables, filterable by area and text. |
+
+## The list toolbar (every admin list)
+
+- **Search** (debounced), **quick views** (tabs such as Pending/Approved or Draft/Published/Archived), the main filters inline, the rest behind **Filters**
+  (a draft panel: nothing is applied until you press *Apply*), a **sort** menu, and **Saved views**.
+- Every active filter is a **chip** that can be removed on its own; "Clear filters" removes all. The line "Showing 21–40 of 126" always matches the server's total.
+- All state lives in the URL (shareable, survives refresh and back/forward); a changed filter returns to page 1. Lists are filtered, sorted and paged by the API
+  (sort fields are allow-listed; anything else is a 400), and a slow old response can never overwrite a newer one.
+- **Saved views** are stored in this browser only, per admin and per section (max 12). They are a convenience, never used for permissions.
+- **Quick search**: `Ctrl/Cmd+K` anywhere in the admin jumps to a section or finds students, posts, places and albums by name.
+- **Stale-save guard**: if another admin saved a post/place/image after you opened it, your save is refused with a clear message and your text stays in the form.
 
 Archive means "hidden everywhere and kept"; there is intentionally no permanent delete button. Deactivating a member keeps the account and profile.
 
@@ -56,7 +68,8 @@ Archive means "hidden everywhere and kept"; there is intentionally no permanent 
 6. **Roles.** In Admin management promote a second *verified* member; an unverified one has a disabled button. Open "Role change history".
    Try to demote the only admin: refused.
 7. **Navigation.** Every sidebar item works, the current section is highlighted, refresh/back/forward keep filters (they live in the URL), the menu collapses on a phone.
-8. **Language and theme.** Toggle Bangla/English and light/dark on each page.
+8. **Toolbar.** On Blog: pick *Archived*, open *Filters*, set *From* to a far-future date (nothing changes until *Apply*), apply it (a chip appears, the count says "No results"), remove just that chip, save the search as a view, clear everything, apply the saved view, delete it. Press `Ctrl+K`, type a post title, press Enter.
+9. **Language and theme.** Toggle Bangla/English and light/dark on each page.
 
 ## What the automated checks prove (and what they do not)
 
@@ -67,10 +80,13 @@ Archive means "hidden everywhere and kept"; there is intentionally no permanent 
 - `LIVE_TEMP_TABLES=1 go test -run TestPostgresStoresInTempTables ./...` — runs the committee and editorial suites against the **real PostgreSQL engine** on
   temporary tables that exist on one connection only and shadow the real ones, so no real row is read or written. It reads `DATABASE_URL` from `backend/.env`.
 - `cd frontend && npm test && npm run build` — unit tests for the pure helpers (auth error mapping, Markdown blocks, URL names) and a production build.
+- `frontend/src/lib/filters.js` (chips, ranges, saved views) has unit tests; the rest of the toolbar, tables and dialogs have no automated component tests.
 - **Not automated:** React components and full browser journeys have no automated suite (no DOM test harness or Playwright is installed). They were checked by hand in the
-  browser against the live local app, as described above.
-- **Live Supabase behaviour verified by hand:** a real image upload to the `site-media` bucket by an admin, its public URL loading, and the public gallery showing it.
-  **Not verified:** real email delivery, and the storage policy refusing a non-admin's upload directly against Supabase (the API refuses non-admins first).
+  browser against the live local app, as described above (all admin routes crawled for console errors, unlabeled controls, horizontal overflow and broken images; phone, tablet
+  and laptop widths; Bangla and English).
+- **Live Supabase behaviour verified by hand:** real image uploads to the `site-media` bucket by an admin (new picture, and replacing one), the public URL loading, the public gallery showing it,
+  an anonymous upload straight to Supabase being refused by the row-level-security policy, and an API upload without a token being a 401. Browser-side refusal of a wrong file type and an oversize
+  file (no request is sent). **Not verified:** real email delivery, and an upload by a signed-in *non-admin* member directly against Supabase (the API refuses non-admins first, and the policy is admin-only).
 
 ## Before production
 
