@@ -98,6 +98,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.manualRoutes(m, h)
 	a.memberViewRoutes(m, h)
 	a.inviteRoutes(m, h)
+	a.profileChangeRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 

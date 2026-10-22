@@ -110,6 +110,7 @@ type AuthStore interface {
 	ImportedStore
 	ManualImportedStore
 	InviteStore
+	ProfileChangeStore
 
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)

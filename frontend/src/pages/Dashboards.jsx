@@ -85,6 +85,82 @@ function CompleteProfile({ defaultName, onDone }) {
   )
 }
 
+// Approved details are locked. A member asks for a change here; an administrator reviews it in Membership Requests.
+function ChangeRequest({ p }) {
+  const { t, n, pick } = useApp()
+  const depts = useApi('/departments')
+  const ups = useApi('/upazilas')
+  const open = useApi('/me/profile/request')
+  const start = () => ({ name: p.name, batch: String(p.batch), department: p.department, session: p.session || '', upazila: p.upazila, union: p.union, gender: p.gender || '' })
+  const [v, setV] = useState(null)
+  const [errs, setErrs] = useState({})
+  const [msg, setMsg] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const upList = ups.data?.items || []
+  const unions = upList.find((u) => u.slug === v?.upazila)?.unions || []
+  const pending = open.data?.request
+  const send = async (e) => {
+    e.preventDefault()
+    setBusy(true); setMsg(null); setErrs({})
+    try {
+      await api('/me/profile/request', { method: 'POST', body: JSON.stringify({ ...v, batch: Number(v.batch) }) })
+      setV(null); setMsg({ tone: 'ok', text: t('dash.change.done') }); open.retry()
+    } catch (err) {
+      if (err.fields) setErrs(err.fields)
+      else setMsg({ tone: 'bad', text: err.message === 'no_changes' ? t('dash.change.none') : t(errorKey(err) || 'admin.failed') })
+    } finally { setBusy(false) }
+  }
+  const withdraw = async () => {
+    setBusy(true); setMsg(null)
+    try { await api('/me/profile/request', { method: 'DELETE' }); setMsg({ tone: 'ok', text: t('dash.change.withdrawn') }); open.retry() }
+    catch (err) { setMsg({ tone: 'bad', text: t(errorKey(err) || 'admin.failed') }) } finally { setBusy(false) }
+  }
+  const set = (k, val) => setV({ ...v, [k]: val, ...(k === 'upazila' ? { union: '' } : {}) })
+  const sel = (k, label, opts, disabled) => (
+    <label key={k} className="field"><span>{t(label)}</span>
+      <select value={v[k]} disabled={disabled} aria-invalid={!!errs[k]} onChange={(e) => set(k, e.target.value)}>
+        <option value="">{t('auth.select')}</option>
+        {opts.map(([val, text]) => <option key={val} value={val}>{text}</option>)}
+      </select>
+      {errs[k] && <small className="err">{errs[k]}</small>}
+    </label>
+  )
+  return (
+    <section className="card-form" aria-labelledby="chg-h">
+      <h2 id="chg-h">{t('dash.change.title')}</h2>
+      <p className="muted">{t('dash.change.note')}</p>
+      {pending ? (
+        <>
+          <p className="notice">{t('dash.change.sent')}</p>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={withdraw}>{t('dash.change.withdraw')}</button>
+        </>
+      ) : !v ? (
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => { setV(start()); setMsg(null) }}>{t('dash.change.open')}</button>
+      ) : (
+        <form onSubmit={send} noValidate>
+          <label className="field"><span>{t('auth.name')}</span>
+            <input value={v.name} onChange={(e) => set('name', e.target.value)} aria-invalid={!!errs.name} />
+            {errs.name && <small className="err">{errs.name}</small>}
+          </label>
+          <label className="field"><span>{t('auth.session')}</span>
+            <input value={v.session} placeholder="2020-21" onChange={(e) => set('session', e.target.value)} aria-invalid={!!errs.session} />
+            {errs.session && <small className="err">{errs.session}</small>}
+          </label>
+          {sel('batch', 'auth.batch', Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [String(b), `${t('auth.batch')} ${n(b)}`]))}
+          {sel('department', 'auth.dept', (depts.data?.items || []).map((d) => [d, d]))}
+          {sel('upazila', 'auth.upazila', upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]))}
+          {sel('union', 'auth.union', unions.map((x) => [x, x]), !v.upazila)}
+          <div className="row-actions">
+            <button className="btn btn-dark" disabled={busy}>{busy ? t('state.loading') : t('dash.change.submit')}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setV(null)}>{t('dash.change.cancel')}</button>
+          </div>
+        </form>
+      )}
+      <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`}>{msg.text}</p>}</div>
+    </section>
+  )
+}
+
 function DashboardBody({ user }) {
   const { t, n, pick } = useApp()
   const auth = useAuth()
@@ -147,6 +223,7 @@ function DashboardBody({ user }) {
             <div><dt>{t('auth.upazila')}</dt><dd>{up ? pick(up.nameBn, up.nameEn) : p.upazila}</dd></div>
             <div><dt>{t('auth.union')}</dt><dd>{p.union}</dd></div>
           </dl>
+          {p.status === 'approved' && <ChangeRequest p={p} />}
           {form && (
             <form onSubmit={save} className="card-form" noValidate>
               <h2>{t('dash.contact')}</h2>

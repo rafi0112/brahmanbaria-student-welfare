@@ -47,3 +47,7 @@ Messages arriving in Spam ("similar to messages that were identified as spam") a
 
 ## The template file
 `docs/email-templates/supabase_invite_template.html` is the only invitation template kept in the repository. It uses only `{{ .ConfirmationURL }}`. Its one image (the university photograph) is an external Google-hosted link, which is public today but not under your control and may change or stop working; the file has no icon images (the step numbers, the "!" and the logo letter are plain text). For a stable result, host the photograph and any icons on your own site or a public Supabase Storage bucket and put those links in the file.
+
+## Profile change requests
+
+Approved members cannot edit name, batch, department, session or location directly. They send a change request from their dashboard (`POST /me/profile/request`); it waits in Membership Requests as a "Profile update" row showing old → new values. Approve applies the details (`POST /admin/profile-changes/{id}/approve`), Decline discards them. The member stays approved and verified throughout. Stored in `profile_changes` (migration 012), one open request per member.

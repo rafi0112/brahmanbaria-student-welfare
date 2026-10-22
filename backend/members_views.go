@@ -7,7 +7,7 @@ import (
 )
 
 // memberCounts are the numbers behind the Students sidebar. Each one is a real query over the same registered-member data:
-// Membership Requests are the pending members, split by profile completeness; Members are everyone, those needing review and the verified.
+// Membership Requests are the pending members plus approved members’ profile-update requests, split by profile completeness; Members are everyone, those needing review and the verified.
 func (a *App) memberCounts(ctx context.Context) (map[string]int, error) {
 	s := a.Auth.Store
 	count := func(q MemberQuery) (int, error) {
@@ -30,6 +30,14 @@ func (a *App) memberCounts(ctx context.Context) (map[string]int, error) {
 		}
 		out[k] = n
 	}
+	// Profile-update requests from approved members wait in the same queue; their details are always complete.
+	ch, err := s.ListProfileChanges(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out["updates"] = len(ch)
+	out["pending"] += len(ch)
+	out["pendingComplete"] += len(ch)
 	return out, nil
 }
 

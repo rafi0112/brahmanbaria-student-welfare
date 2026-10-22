@@ -55,7 +55,7 @@ function Members({ mode }) {
   const depts = useApi('/departments')
   const counts = useApi('/admin/student-counts')
   const audit = useApi(requests ? null : '/admin/directory-audit')
-  const list = useApi(`/admin/students${qs({ ...eff, page: f.page === '1' ? '' : f.page })}`)
+  const list = useApi(`${requests ? '/admin/membership-requests' : '/admin/students'}${qs({ ...eff, page: f.page === '1' ? '' : f.page })}`)
   const [rejecting, setRejecting] = useState(null)
   const { notice, ok, bad, clear } = useNotice()
   const [picked, setPicked] = useState([])
@@ -77,7 +77,7 @@ function Members({ mode }) {
   }
   const bulk = (action) => setConfirm({
     text: t('ad.stu.confirmBulk').replace('{n}', n(picked.length)).replace('{action}', t(`ad.stu.act.${action}`).toLowerCase()), label: t(`ad.stu.act.${action}`),
-    run: () => act('/admin/students/bulk', { ids: picked, action }, (r) => `${t('ad.stu.bulkDone').replace('{n}', n(r.done))}${r.failed?.length ? ` ${t('ad.stu.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`).then((r) => r && setPicked(r.failed?.map((x) => x.id) || [])),
+    run: () => act('/admin/students/bulk', { ids: picked.filter((id) => rows.find((r) => r.id === id)?.kind !== 'update'), action }, (r) => `${t('ad.stu.bulkDone').replace('{n}', n(r.done))}${r.failed?.length ? ` ${t('ad.stu.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`).then((r) => r && setPicked(r.failed?.map((x) => x.id) || [])),
   })
   const exportCsv = (contact) => {
     const run = async () => {
@@ -96,7 +96,9 @@ function Members({ mode }) {
   const clearAll = () => set({ q: '', status: '', view: '', department: '', batch: '', verified: '', complete: '', disabled: '' })
   const c = counts.data || {}
   const num = (v) => (v == null ? '' : ` ${n(v)}`)
+  const key = (r) => (r.kind === 'update' ? `u-${r.id}` : r.id)
   const reasons = (r) => {
+    if (r.kind === 'update') return []
     if (r.status === 'rejected') return []
     const out = []
     if (r.status === 'pending') out.push(t('ad.rv.pending'))
@@ -152,7 +154,7 @@ function Members({ mode }) {
           action={filtered && <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button>} />
       ) : (
         <>
-          <DataTable caption={t('ad.stu.title')} rows={rows} rowKey={(r) => r.id} rowClass={(r) => (r.disabled ? 'is-off' : '')}
+          <DataTable caption={t('ad.stu.title')} rows={rows} rowKey={key} rowClass={(r) => (r.disabled ? 'is-off' : '')}
             selection={{ picked, toggle, allOn: allOnPage, toggleAll: () => setPicked(allOnPage ? [] : rows.map((r) => r.id)), name: (r) => r.name }}
             columns={[
               { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
@@ -161,15 +163,23 @@ function Members({ mode }) {
               { id: 'academic', label: t('ad.stu.col.academic'), width: '24%', cell: (r) => <div className="dt-stack"><span className="dt-trunc" title={r.department}>{r.department}</span><small className="dt-sub">{t('auth.batch')} {n(r.batch)}</small></div> },
               { id: 'status', label: t('ad.stu.col.status'), width: '30%', cell: (r) => (
                 <div className="dt-stack">
-                  <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>
+                  {requests && <span className="dt-badges"><span className={`st ${r.kind === 'update' ? 'st-role' : 'st-pending'}`}>{t(r.kind === 'update' ? 'ad.req.kindUpdate' : 'ad.req.kindNew')}</span></span>}
+                  {r.kind === 'update' && (
+                    <ul className="dt-diff" aria-label={t('ad.req.changes')}>
+                      {r.diff.map((d) => <li key={d.field}><b>{t(`ad.rv.f.${d.field}`)}</b> <s>{d.from || '—'}</s> → <em>{d.to || '—'}</em></li>)}
+                    </ul>
+                  )}
+                  {r.kind !== 'update' && <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>}
                   {reasons(r).length > 0 && <small className="dt-sub is-warn">{reasons(r).join(' · ')}</small>}
                   <small className={`dt-sub ${r.emailVerified ? '' : 'is-warn'}`}>{r.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')}</small>
                   <small className="dt-sub">{when(r.createdAt)}</small>
                 </div>
               ) },
-              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
+              { id: 'actions', srLabel: t('ad.actions'), width: requests ? '190px' : '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  {r.status === 'pending' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>
+                  {r.kind === 'update' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/profile-changes/${r.id}/approve`, null, t('ad.req.changeApproved'))}>{t('ad.req.approveChange')}</button>
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setConfirm({ text: t('ad.req.confirmDecline'), label: t('ad.req.declineChange'), run: () => act(`/admin/profile-changes/${r.id}/reject`, null, t('ad.req.changeDeclined')) })}>{t('ad.req.declineChange')}</button></>}
+                  {r.kind !== 'update' && r.status === 'pending' && <><button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>
                     <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setRejecting(r)}>{t('ad.stu.act.reject')}</button></>}
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
                 </div>
