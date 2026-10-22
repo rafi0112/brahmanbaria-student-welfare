@@ -8,6 +8,8 @@ export function authStatus(error) {
   if (code === 'over_request_rate_limit' || code === 'over_email_send_rate_limit' || error?.status === 429) return 429
   if (code === 'weak_password') return 422
   if (code === 'invalid_credentials' || msg.includes('invalid login credentials')) return 401
+  // "Error sending confirmation email" / "...recovery email": Supabase's mail sender (SMTP) is not working.
+  if (msg.includes('error sending') || code === 'email_send_failed') return 502
   if (error?.status >= 500) return 500
   return 400
 }

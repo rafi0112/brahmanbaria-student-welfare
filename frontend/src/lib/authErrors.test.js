@@ -2,6 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { authStatus, readUrlAuthError, toApiError } from './authErrors.js'
 
+test('a failed confirmation email is reported as 502, not a generic error', () => {
+  assert.equal(authStatus({ code: 'unexpected_failure', status: 500, message: 'Error sending confirmation email' }), 502)
+})
+
 test('authStatus maps Supabase errors to UI statuses', () => {
   assert.equal(authStatus({ code: 'email_not_confirmed', message: 'Email not confirmed' }), 403)
   assert.equal(authStatus({ message: 'Email not confirmed' }), 403)

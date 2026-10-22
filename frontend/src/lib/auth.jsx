@@ -54,6 +54,7 @@ export const useAuth = () => useContext(Ctx)
 export function errorKey(err) {
   if (err.status === 503) return 'auth.unavailable'
   if (err.status === 429) return 'auth.rateLimited'
+  if (err.status === 502) return 'auth.emailFailed'
   if (err.status === 0 || err.name === 'TypeError') return 'state.error'
   return null
 }
