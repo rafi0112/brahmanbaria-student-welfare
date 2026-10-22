@@ -139,17 +139,13 @@ func (a *App) importedRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, 
 	m.HandleFunc("POST /api/v1/admin/imported-students/{id}/unverify", adm(a.importedUnverify))
 }
 
-func (a *App) importedByID(id string) (Student, bool) {
-	for _, s := range a.Store.Students {
-		if s.ID == id {
-			return s, true
-		}
-	}
-	return Student{}, false
-}
 
 type importedView struct {
 	Student
+	Source     string         `json:"source"` // file | manual
+	Phone      string         `json:"phone,omitempty"`
+	Note       string         `json:"note,omitempty"`
+	AddedAt    string         `json:"addedAt,omitempty"`
 	Verified   bool           `json:"verified"`
 	VerifiedAt string         `json:"verifiedAt,omitempty"`
 	VerifiedBy string         `json:"verifiedBy,omitempty"`
@@ -168,7 +164,7 @@ func (a *App) linkedSummary(ctx context.Context, userID string) *MemberAdminRow 
 }
 
 func (a *App) importedMatches(w http.ResponseWriter, r *http.Request, _ User) {
-	st, ok := a.importedByID(r.PathValue("id"))
+	st, ok := a.importedFind(r.Context(), r.PathValue("id"))
 	if !ok {
 		apiError(w, http.StatusNotFound, "imported record not found")
 		return
@@ -216,7 +212,7 @@ func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	id := r.PathValue("id")
-	if _, ok := a.importedByID(id); !ok {
+	if _, ok := a.importedFind(r.Context(), id); !ok {
 		apiError(w, http.StatusNotFound, "imported record not found")
 		return
 	}
@@ -245,7 +241,7 @@ func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
 
 func (a *App) importedUnverify(w http.ResponseWriter, r *http.Request, u User) {
 	id := r.PathValue("id")
-	if _, ok := a.importedByID(id); !ok {
+	if _, ok := a.importedFind(r.Context(), id); !ok {
 		apiError(w, http.StatusNotFound, "imported record not found")
 		return
 	}
@@ -271,9 +267,27 @@ func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
 		apiError(w, 500, "could not load the directory")
 		return
 	}
+	manual, err := a.Auth.Store.ListManualImported(r.Context())
+	if err != nil {
+		log.Printf("manual imported: %v", err)
+		apiError(w, 500, "could not load the directory")
+		return
+	}
+	type rec struct {
+		Student
+		src, phone, note, added string
+	}
+	all := make([]rec, 0, len(manual)+len(a.Store.Students))
+	for _, m := range manual { // hand-added records first, newest first
+		all = append(all, rec{Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "manual", m.Phone, m.Note, m.CreatedAt})
+	}
+	for _, s := range a.Store.Students {
+		all = append(all, rec{Student: s, src: "file"})
+	}
 	out := []importedView{}
 	counts := map[string]int{"verified": 0, "awaiting": 0}
-	for _, s := range a.Store.Students {
+	for _, r0 := range all {
+		s := r0.Student
 		if needle != "" && !contains(s.Name, needle) {
 			continue
 		}
@@ -292,7 +306,7 @@ func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
 		if (status == "verified" && !verified) || (status == "awaiting" && verified) {
 			continue
 		}
-		iv := importedView{Student: s, Verified: verified}
+		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Note: r0.note, AddedAt: r0.added, Verified: verified}
 		if verified {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
 		}

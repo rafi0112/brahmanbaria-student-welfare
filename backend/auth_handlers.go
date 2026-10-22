@@ -93,6 +93,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.cmsRoutes(m, h)
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)
+	a.manualRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 

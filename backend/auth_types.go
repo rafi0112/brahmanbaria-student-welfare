@@ -104,6 +104,7 @@ type AuthStore interface {
 	CMSStore
 	ContactStore
 	ImportedStore
+	ManualImportedStore
 
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)

@@ -171,3 +171,110 @@ func TestPromotionRequiresApprovedMembership(t *testing.T) {
 		t.Fatalf("approved and verified member should be promotable: %d %s", rec.Code, rec.Body)
 	}
 }
+
+func TestManualImportedRecordsCrudWithoutAccounts(t *testing.T) {
+	e := authApp(t)
+	if len(e.app.Store.Students) == 0 || len(e.app.Store.Depts) == 0 {
+		t.Skip("needs directory data")
+	}
+	admin, member := e.admin(t), e.member(t, "plain@example.com")
+	dept := e.app.Store.Depts[0]
+	good := map[string]any{"name": "Zqxv Uddin", "batch": 12, "department": dept, "session": "2026-27", "phone": "01712345678", "note": "Added from the 2025 reunion list"}
+	_, usersBefore, _ := e.mem.ListUsers(context.Background(), "", "", 1, 0)
+
+	if rec := e.do("POST", "/api/v1/admin/imported-students", good, member); rec.Code != 403 {
+		t.Fatalf("members cannot add: %d", rec.Code)
+	}
+	for name, bad := range map[string]map[string]any{
+		"no department":  {"name": "Zqxv Uddin", "batch": 12, "department": ""},
+		"fake department": {"name": "Zqxv Uddin", "batch": 12, "department": "Astrology"},
+		"short name":     {"name": "R", "batch": 12, "department": dept},
+		"no batch":       {"name": "Zqxv Uddin", "department": dept},
+		"bad phone":      {"name": "Zqxv Uddin", "batch": 12, "department": dept, "phone": "123"},
+		"bad session":    {"name": "Zqxv Uddin", "batch": 12, "department": dept, "session": "next year"},
+	} {
+		if rec := e.do("POST", "/api/v1/admin/imported-students", bad, admin); rec.Code != 422 {
+			t.Errorf("%s: want 422 got %d %s", name, rec.Code, rec.Body)
+		}
+	}
+	rec := e.do("POST", "/api/v1/admin/imported-students", good, admin)
+	if rec.Code != 201 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	var made ManualImported
+	decodeBody(t, rec, &made)
+	if !strings.HasPrefix(made.ID, "i-") {
+		t.Fatalf("id: %s", made.ID)
+	}
+	// it is listed first, marked as hand-added, and no account exists for it
+	items := importedList(t, e, admin, "?q=Zqxv")["items"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "manual" || items[0].(map[string]any)["phone"] != "01712345678" {
+		t.Fatalf("listing: %v", items)
+	}
+	if _, after, _ := e.mem.ListUsers(context.Background(), "", "", 1, 0); after != usersBefore {
+		t.Fatalf("adding an imported record must not create accounts (%d -> %d)", usersBefore, after)
+	}
+	// edit, verify, link-free; bundled records stay read-only
+	good["name"] = "Zqxv Uddin Ahmed"
+	if rec := e.do("PATCH", "/api/v1/admin/imported-students/"+made.ID, good, admin); rec.Code != 200 {
+		t.Fatalf("edit: %d %s", rec.Code, rec.Body)
+	}
+	if rec := e.do("PATCH", "/api/v1/admin/imported-students/"+e.app.Store.Students[0].ID, good, admin); rec.Code != 409 {
+		t.Fatalf("bundled records are read-only: %d", rec.Code)
+	}
+	if rec := e.do("POST", "/api/v1/admin/imported-students/"+made.ID+"/verify", map[string]string{}, admin); rec.Code != 200 {
+		t.Fatalf("verify manual: %d", rec.Code)
+	}
+	if v := importedList(t, e, admin, "?status=verified")["total"].(float64); v != 1 {
+		t.Fatalf("verified: %v", v)
+	}
+	if rec := e.do("POST", "/api/v1/admin/imported-students/"+e.app.Store.Students[0].ID+"/delete", map[string]string{}, admin); rec.Code != 409 {
+		t.Fatalf("bundled records cannot be deleted: %d", rec.Code)
+	}
+	if rec := e.do("POST", "/api/v1/admin/imported-students/"+made.ID+"/delete", map[string]string{}, admin); rec.Code != 200 {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+	if v := importedList(t, e, admin, "?status=verified")["total"].(float64); v != 0 {
+		t.Fatalf("a deleted record must take its verification with it: %v", v)
+	}
+	if rec := e.do("POST", "/api/v1/admin/imported-students/"+made.ID+"/delete", map[string]string{}, admin); rec.Code != 404 {
+		t.Fatalf("second delete: %d", rec.Code)
+	}
+}
+
+func manualStoreSuite(t *testing.T, s AuthStore) {
+	ctx := context.Background()
+	batch := 14
+	r, err := s.CreateManualImported(ctx, "", ManualImportedInput{Name: "Store Person", Batch: &batch, Department: "Finance", Phone: "01712345678"})
+	if err != nil || !strings.HasPrefix(r.ID, "i-") {
+		t.Fatalf("create: %+v %v", r, err)
+	}
+	rows, _ := s.ListManualImported(ctx)
+	found := false
+	for _, x := range rows {
+		found = found || x.ID == r.ID
+	}
+	if !found {
+		t.Fatal("not listed")
+	}
+	if u, err := s.UpdateManualImported(ctx, r.ID, ManualImportedInput{Name: "Store Person Two", Batch: &batch, Department: "Finance"}); err != nil || u.Name != "Store Person Two" || u.Phone != "" {
+		t.Fatalf("update: %+v %v", u, err)
+	}
+	if err := s.VerifyImported(ctx, "", r.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteManualImported(ctx, r.ID); err != nil {
+		t.Fatal(err)
+	}
+	if rv, _ := s.ImportedReviews(ctx); rv[r.ID].ImportedID != "" {
+		t.Fatal("review row outlived its record")
+	}
+	if err := s.DeleteManualImported(ctx, r.ID); err != ErrNotFound {
+		t.Fatalf("second delete: %v", err)
+	}
+	if _, err := s.UpdateManualImported(ctx, "i-not-a-uuid", ManualImportedInput{Name: "X Y"}); err != ErrNotFound {
+		t.Fatalf("bad id: %v", err)
+	}
+}
+
+func TestMemManualImportedStoreSuite(t *testing.T) { manualStoreSuite(t, newMemStore()) }

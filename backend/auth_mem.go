@@ -35,6 +35,7 @@ type memStore struct {
 	cms      cmsMem
 	contacts []*memContact
 	reviews  map[string]memReview
+	manual   []*ManualImported
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).
