@@ -2,70 +2,56 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Imported directory review. An imported record is a directory entry, not an account. Verifying it records that an admin
-// confirmed the person is real; it never touches email confirmation, roles, or the registered profile it may be linked to.
-
-var ErrAlreadyLinked = errors.New("that account is already linked to another imported record")
+// Member directory review. The directory is the existing list of members (content_documents, kind "students", seeded from the
+// bundled directory data) plus any records an admin adds by hand (imported_members). Every record starts in "needs verification".
+// An admin verifies it, which stores who and when in imported_reviews. Verifying changes nothing else: it creates no account,
+// confirms no email address, approves no membership and grants no role. There is no matching or merging of people across sources.
 
 type ImportedReview struct {
 	ImportedID string
 	VerifiedAt string
 	VerifiedBy string // display name of the admin
-	LinkedUser string // registered user id, or ""
 }
 
 type ImportedStore interface {
 	ImportedReviews(ctx context.Context) (map[string]ImportedReview, error)
-	// VerifyImported is idempotent. linkedUserID is optional; an account can be linked to one record only (ErrAlreadyLinked).
-	VerifyImported(ctx context.Context, actorID, importedID, linkedUserID string) error
+	// VerifyImported is idempotent: verifying twice keeps the first verifier and time.
+	VerifyImported(ctx context.Context, actorID, importedID string) error
 	UnverifyImported(ctx context.Context, actorID, importedID string) error
 }
 
 // ---- memory store ----
 
-type memReview struct{ at, by, linked string }
+type memReview struct{ at, by string }
 
 func (m *memStore) ImportedReviews(_ context.Context) (map[string]ImportedReview, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := map[string]ImportedReview{}
 	for id, r := range m.reviews {
-		out[id] = ImportedReview{ImportedID: id, VerifiedAt: r.at, VerifiedBy: r.by, LinkedUser: r.linked}
+		out[id] = ImportedReview{ImportedID: id, VerifiedAt: r.at, VerifiedBy: r.by}
 	}
 	return out, nil
 }
 
-func (m *memStore) VerifyImported(_ context.Context, actorID, importedID, linkedUserID string) error {
+func (m *memStore) VerifyImported(_ context.Context, actorID, importedID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.reviews == nil {
 		m.reviews = map[string]memReview{}
 	}
-	if linkedUserID != "" {
-		if _, ok := m.users[linkedUserID]; !ok {
-			return ErrNotFound
-		}
-		for id, r := range m.reviews {
-			if r.linked == linkedUserID && id != importedID {
-				return ErrAlreadyLinked
-			}
-		}
-	}
-	old, had := m.reviews[importedID]
-	at := old.at
-	if !had {
-		at = time.Now().UTC().Format(time.RFC3339)
+	if _, had := m.reviews[importedID]; had {
+		return nil
 	}
 	by := actorID
 	if p, ok := m.profiles[actorID]; ok && p.Name != "" {
@@ -73,7 +59,7 @@ func (m *memStore) VerifyImported(_ context.Context, actorID, importedID, linked
 	} else if u, ok := m.users[actorID]; ok {
 		by = u.Email
 	}
-	m.reviews[importedID] = memReview{at: at, by: by, linked: linkedUserID}
+	m.reviews[importedID] = memReview{at: time.Now().UTC().Format(time.RFC3339), by: by}
 	return nil
 }
 
@@ -87,7 +73,7 @@ func (m *memStore) UnverifyImported(_ context.Context, _, importedID string) err
 // ---- PostgreSQL store ----
 
 func (s *pgStore) ImportedReviews(ctx context.Context) (map[string]ImportedReview, error) {
-	rows, err := s.db.Query(ctx, `SELECT r.imported_id, to_char(r.verified_at AT TIME ZONE 'UTC', `+tsFmt+`), COALESCE(NULLIF(p.name, ''), u.email, ''), COALESCE(r.linked_user_id::text, '')
+	rows, err := s.db.Query(ctx, `SELECT r.imported_id, to_char(r.verified_at AT TIME ZONE 'UTC', `+tsFmt+`), COALESCE(NULLIF(p.name, ''), u.email, '')
 		FROM imported_reviews r LEFT JOIN users u ON u.id = r.verified_by LEFT JOIN profiles p ON p.user_id = r.verified_by`)
 	if err != nil {
 		return nil, err
@@ -96,7 +82,7 @@ func (s *pgStore) ImportedReviews(ctx context.Context) (map[string]ImportedRevie
 	out := map[string]ImportedReview{}
 	for rows.Next() {
 		var r ImportedReview
-		if err := rows.Scan(&r.ImportedID, &r.VerifiedAt, &r.VerifiedBy, &r.LinkedUser); err != nil {
+		if err := rows.Scan(&r.ImportedID, &r.VerifiedAt, &r.VerifiedBy); err != nil {
 			return nil, err
 		}
 		out[r.ImportedID] = r
@@ -104,29 +90,13 @@ func (s *pgStore) ImportedReviews(ctx context.Context) (map[string]ImportedRevie
 	return out, rows.Err()
 }
 
-func (s *pgStore) VerifyImported(ctx context.Context, actorID, importedID, linkedUserID string) error {
-	if linkedUserID != "" && !okID(linkedUserID) {
-		return ErrNotFound
-	}
-	_, err := s.db.Exec(ctx, `INSERT INTO imported_reviews (imported_id, verified_by, linked_user_id) VALUES ($1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid)
-		ON CONFLICT (imported_id) DO UPDATE SET linked_user_id = EXCLUDED.linked_user_id, verified_by = EXCLUDED.verified_by`, importedID, actorID, linkedUserID)
-	var pe *pgconn.PgError
-	if errors.As(err, &pe) {
-		switch pe.Code {
-		case "23505":
-			return ErrAlreadyLinked
-		case "23503":
-			return ErrNotFound
-		}
-	}
+func (s *pgStore) VerifyImported(ctx context.Context, actorID, importedID string) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO imported_reviews (imported_id, verified_by) VALUES ($1, NULLIF($2, '')::uuid) ON CONFLICT (imported_id) DO NOTHING`, importedID, actorID)
 	return err
 }
 
 func (s *pgStore) UnverifyImported(ctx context.Context, _, importedID string) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM imported_reviews WHERE imported_id = $1`, importedID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
 	return err
 }
 
@@ -134,108 +104,34 @@ func (s *pgStore) UnverifyImported(ctx context.Context, _, importedID string) er
 
 func (a *App) importedRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *http.Request)) http.HandlerFunc) {
 	adm := func(f func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc { return h(a.requireAdmin(f)) }
-	m.HandleFunc("GET /api/v1/admin/imported-students/{id}/matches", adm(a.importedMatches))
 	m.HandleFunc("POST /api/v1/admin/imported-students/{id}/verify", adm(a.importedVerify))
 	m.HandleFunc("POST /api/v1/admin/imported-students/{id}/unverify", adm(a.importedUnverify))
+	m.HandleFunc("GET /api/v1/admin/export/imported", adm(a.importedExport))
 }
-
 
 type importedView struct {
 	Student
-	Source     string         `json:"source"` // file | manual
-	Phone      string         `json:"phone,omitempty"`
-	Note       string         `json:"note,omitempty"`
-	AddedAt    string         `json:"addedAt,omitempty"`
-	Verified   bool           `json:"verified"`
-	VerifiedAt string         `json:"verifiedAt,omitempty"`
-	VerifiedBy string         `json:"verifiedBy,omitempty"`
-	Linked     *MemberAdminRow `json:"linked,omitempty"`
-}
-
-func (a *App) linkedSummary(ctx context.Context, userID string) *MemberAdminRow {
-	if userID == "" {
-		return nil
-	}
-	r, err := a.Auth.Store.MemberAdmin(ctx, userID)
-	if err != nil {
-		return nil
-	}
-	return &MemberAdminRow{ID: r.ID, Name: r.Name, Email: r.Email, Status: r.Status}
-}
-
-func (a *App) importedMatches(w http.ResponseWriter, r *http.Request, _ User) {
-	st, ok := a.importedFind(r.Context(), r.PathValue("id"))
-	if !ok {
-		apiError(w, http.StatusNotFound, "imported record not found")
-		return
-	}
-	reviews, err := a.Auth.Store.ImportedReviews(r.Context())
-	if err != nil {
-		log.Printf("imported matches: %v", err)
-		apiError(w, 500, "could not load matches")
-		return
-	}
-	taken := map[string]bool{}
-	for id, rv := range reviews {
-		if rv.LinkedUser != "" && id != st.ID {
-			taken[rv.LinkedUser] = true
-		}
-	}
-	// candidates: registered members with the same name (ignoring case); a matching batch and department raise confidence
-	rows, _, err := a.Auth.Store.ListMembersAdmin(r.Context(), MemberQuery{Q: st.Name, Page: 1, Limit: 20})
-	if err != nil {
-		apiError(w, 500, "could not load matches")
-		return
-	}
-	type cand struct {
-		ID, Name, Email, Status string
-		Batch                   int
-		Department              string
-		SameBatch, SameDept     bool
-	}
-	out := []map[string]any{}
-	for _, m := range rows {
-		if !strings.EqualFold(strings.TrimSpace(m.Name), strings.TrimSpace(st.Name)) || taken[m.ID] {
-			continue
-		}
-		out = append(out, map[string]any{"id": m.ID, "name": m.Name, "email": m.Email, "status": m.Status, "batch": m.Batch, "department": m.Department,
-			"sameBatch": st.Batch != nil && *st.Batch == m.Batch, "sameDepartment": st.Department != "" && st.Department == m.Department})
-	}
-	writeJSON(w, 200, map[string]any{"items": out})
+	Source     string `json:"source"` // file (the existing directory) | manual (added by an admin)
+	Phone      string `json:"phone,omitempty"`
+	Note       string `json:"note,omitempty"`
+	AddedAt    string `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
+	Verified   bool   `json:"verified"`
+	VerifiedAt string `json:"verifiedAt,omitempty"`
+	VerifiedBy string `json:"verifiedBy,omitempty"`
 }
 
 func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
-	var q struct {
-		LinkedUserID string `json:"linkedUserId"`
-	}
-	if !decode(w, r, &q) {
-		return
-	}
 	id := r.PathValue("id")
 	if _, ok := a.importedFind(r.Context(), id); !ok {
 		apiError(w, http.StatusNotFound, "imported record not found")
 		return
 	}
-	link := strings.TrimSpace(q.LinkedUserID)
-	if link != "" {
-		if _, err := a.Auth.Store.MemberAdmin(r.Context(), link); err != nil {
-			apiError(w, http.StatusUnprocessableEntity, "match_not_found")
-			return
-		}
-	}
-	if err := a.Auth.Store.VerifyImported(r.Context(), u.ID, id, link); err != nil {
-		switch {
-		case errors.Is(err, ErrAlreadyLinked):
-			apiError(w, http.StatusConflict, "already_linked")
-		case errors.Is(err, ErrNotFound):
-			apiError(w, http.StatusUnprocessableEntity, "match_not_found")
-		default:
-			log.Printf("imported verify: %v", err)
-			apiError(w, 500, "could not save")
-		}
+	if err := a.Auth.Store.VerifyImported(r.Context(), u.ID, id); err != nil {
+		log.Printf("imported verify: %v", err)
+		apiError(w, 500, "could not save")
 		return
 	}
-	_ = a.Auth.Store.Audit(r.Context(), u.ID, "imported.verify", "imported", id, map[string]any{"linked": link != ""})
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, "imported.verify", "imported", id, nil)
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
@@ -254,24 +150,19 @@ func (a *App) importedUnverify(w http.ResponseWriter, r *http.Request, u User) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// importedStudents lists the bundled directory records with their review state. The records themselves are read-only.
-func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
-	v := r.URL.Query()
-	pg, limit := paging(r, 100)
+// importedAll applies the list filters (q, department, batch, status) to the whole directory and counts both queues for
+// the same search, so the tab counters match what each tab shows.
+func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, map[string]int, error) {
 	needle := strings.TrimSpace(v.Get("q"))
 	b, _ := strconv.Atoi(v.Get("batch"))
 	status := v.Get("status") // "", verified, awaiting
-	reviews, err := a.Auth.Store.ImportedReviews(r.Context())
+	reviews, err := a.Auth.Store.ImportedReviews(ctx)
 	if err != nil {
-		log.Printf("imported reviews: %v", err)
-		apiError(w, 500, "could not load the directory")
-		return
+		return nil, nil, err
 	}
-	manual, err := a.Auth.Store.ListManualImported(r.Context())
+	manual, err := a.Auth.Store.ListManualImported(ctx)
 	if err != nil {
-		log.Printf("manual imported: %v", err)
-		apiError(w, 500, "could not load the directory")
-		return
+		return nil, nil, err
 	}
 	type rec struct {
 		Student
@@ -312,12 +203,48 @@ func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
 		}
 		out = append(out, iv)
 	}
-	lo, hi, pages := window(len(out), pg, limit)
-	page := out[lo:hi]
-	for i := range page { // only the visible page needs linked-account details
-		if rv, ok := reviews[page[i].ID]; ok {
-			page[i].Linked = a.linkedSummary(r.Context(), rv.LinkedUser)
-		}
-	}
-	writeJSON(w, 200, map[string]any{"items": page, "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample, "counts": counts})
+	return out, counts, nil
 }
+
+func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
+	pg, limit := paging(r, 100)
+	out, counts, err := a.importedAll(r.Context(), r.URL.Query())
+	if err != nil {
+		log.Printf("imported list: %v", err)
+		apiError(w, 500, "could not load the directory")
+		return
+	}
+	lo, hi, pages := window(len(out), pg, limit)
+	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample, "counts": counts})
+}
+
+// importedExport streams the filtered directory as CSV (UTF-8 with a byte-order mark so Bangla opens correctly in spreadsheets).
+// Phone numbers and notes of hand-added records are left out; they are admin working notes, not directory data.
+func (a *App) importedExport(w http.ResponseWriter, r *http.Request, u User) {
+	out, _, err := a.importedAll(r.Context(), r.URL.Query())
+	if err != nil {
+		log.Printf("imported export: %v", err)
+		apiError(w, 500, "could not export")
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="member-directory.csv"`)
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"name", "batch", "department", "session", "upazila", "source", "verification", "verified_by", "verified_at", "added_to_directory"})
+	for _, x := range out {
+		batch := ""
+		if x.Batch != nil {
+			batch = strconv.Itoa(*x.Batch)
+		}
+		state := "needs_verification"
+		if x.Verified {
+			state = "verified"
+		}
+		_ = cw.Write([]string{csvCell(x.Name), batch, csvCell(x.Department), x.Session, x.Upazila, x.Source, state, csvCell(x.VerifiedBy), x.VerifiedAt, x.AddedAt})
+	}
+	cw.Flush()
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, "imported.export", "imported", "", map[string]any{"rows": len(out)})
+}
+
+var _ = errors.New

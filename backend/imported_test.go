@@ -18,76 +18,105 @@ func importedList(t *testing.T, e *env2, ck *http.Cookie, q string) map[string]a
 	return out
 }
 
-func TestImportedVerifyLinkAndGuards(t *testing.T) {
+func TestDirectoryStartsUnverifiedAndVerificationPersists(t *testing.T) {
 	e := authApp(t)
 	if len(e.app.Store.Students) < 3 {
-		t.Skip("needs at least three imported records")
+		t.Skip("needs the directory data")
 	}
-	s1, s2 := e.app.Store.Students[0], e.app.Store.Students[1]
-	member := e.member(t, "linkme@example.com")
+	s1 := e.app.Store.Students[0]
+	member := e.member(t, "plain1@example.com")
 	admin := e.admin(t)
+	ctx := context.Background()
 
-	// only admins may review
 	for _, ck := range []*http.Cookie{nil, member} {
 		if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, ck); rec.Code != 401 && rec.Code != 403 {
 			t.Fatalf("non-admin verify: %d", rec.Code)
 		}
+		if rec := e.do("GET", "/api/v1/admin/export/imported", nil, ck); rec.Code != 401 && rec.Code != 403 {
+			t.Fatalf("non-admin export: %d", rec.Code)
+		}
 	}
-	before := importedList(t, e, admin, "")
-	counts := before["counts"].(map[string]any)
+	// every existing record starts in the queue; none is verified until an admin does it
+	counts := importedList(t, e, admin, "")["counts"].(map[string]any)
 	if counts["verified"].(float64) != 0 || int(counts["awaiting"].(float64)) != len(e.app.Store.Students) {
-		t.Fatalf("nothing is verified until an admin does it: %v", counts)
+		t.Fatalf("initial state: %v", counts)
 	}
+	_, usersBefore, _ := e.mem.ListUsers(ctx, "", "", 1, 0)
+	mid := ""
+	rows, _, _ := e.mem.ListMembersAdmin(ctx, MemberQuery{Page: 1, Limit: 10})
+	for _, r := range rows {
+		mid = r.ID
+	}
+	pre, _ := e.mem.MemberAdmin(ctx, mid)
 
-	// verify (idempotent), shows up as verified, filters work
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 2; i++ { // idempotent
 		if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, admin); rec.Code != 200 {
 			t.Fatalf("verify: %d %s", rec.Code, rec.Body)
 		}
 	}
 	list := importedList(t, e, admin, "?status=verified")
 	items := list["items"].([]any)
-	if len(items) != 1 || items[0].(map[string]any)["id"] != s1.ID || items[0].(map[string]any)["verified"] != true {
+	first := items[0].(map[string]any)
+	if len(items) != 1 || first["id"] != s1.ID || first["verified"] != true || first["verifiedBy"] == "" || first["verifiedAt"] == "" {
 		t.Fatalf("verified view: %v", list)
 	}
 	if got := importedList(t, e, admin, "?status=awaiting")["total"].(float64); int(got) != len(e.app.Store.Students)-1 {
-		t.Fatalf("awaiting view: %v", got)
+		t.Fatalf("needs-verification view: %v", got)
 	}
-
-	// linking records the account but changes nothing on it: not its approval, role, or email verification
-	var mid string
-	for _, r := range func() []MemberAdminRow { rows, _, _ := e.mem.ListMembersAdmin(context.Background(), MemberQuery{Page: 1, Limit: 10}); return rows }() {
-		if r.Email == "linkme@example.com" {
-			mid = r.ID
-		}
+	if got := importedList(t, e, admin, "")["total"].(float64); int(got) != len(e.app.Store.Students) {
+		t.Fatalf("All must keep every record: %v", got)
 	}
-	pre, _ := e.mem.MemberAdmin(context.Background(), mid)
-	if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{"linkedUserId": mid}, admin); rec.Code != 200 {
-		t.Fatalf("link: %d %s", rec.Code, rec.Body)
+	// verifying a directory record touches no account, approval or email state
+	post, _ := e.mem.MemberAdmin(ctx, mid)
+	if _, after, _ := e.mem.ListUsers(ctx, "", "", 1, 0); after != usersBefore || pre != post {
+		t.Fatalf("directory verification must not change accounts: users %d->%d, %+v -> %+v", usersBefore, after, pre, post)
 	}
-	post, _ := e.mem.MemberAdmin(context.Background(), mid)
-	if pre.Status != post.Status || pre.EmailVerified != post.EmailVerified || pre.Role != post.Role || pre.Name != post.Name {
-		t.Fatalf("linking must not alter the account: %+v -> %+v", pre, post)
-	}
-	if lk := importedList(t, e, admin, "?status=verified")["items"].([]any)[0].(map[string]any)["linked"]; lk == nil {
-		t.Fatal("link not shown")
-	}
-	// the same account cannot be linked to a second record; unknown account/record are refused
-	if rec := e.do("POST", "/api/v1/admin/imported-students/"+s2.ID+"/verify", map[string]string{"linkedUserId": mid}, admin); rec.Code != 409 {
-		t.Fatalf("duplicate link: %d", rec.Code)
-	}
-	if rec := e.do("POST", "/api/v1/admin/imported-students/"+s2.ID+"/verify", map[string]string{"linkedUserId": "nobody"}, admin); rec.Code != 422 {
-		t.Fatalf("unknown account: %d", rec.Code)
+	// and the reverse: approving a membership does not verify any directory record
+	e.approve(t, mid)
+	if got := importedList(t, e, admin, "?status=verified")["total"].(float64); got != 1 {
+		t.Fatalf("membership approval must not verify directory records: %v", got)
 	}
 	if rec := e.do("POST", "/api/v1/admin/imported-students/does-not-exist/verify", map[string]string{}, admin); rec.Code != 404 {
 		t.Fatalf("unknown record: %d", rec.Code)
 	}
-	// withdraw the verification
 	if rec := e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/unverify", map[string]string{}, admin); rec.Code != 200 {
 		t.Fatalf("unverify: %d", rec.Code)
 	}
 	if got := importedList(t, e, admin, "?status=verified")["total"].(float64); got != 0 {
 		t.Fatalf("still verified: %v", got)
+	}
+}
+
+func TestDirectoryExportFollowsFiltersAndIsSafe(t *testing.T) {
+	e := authApp(t)
+	if len(e.app.Store.Students) < 3 {
+		t.Skip("needs the directory data")
+	}
+	admin := e.admin(t)
+	s1 := e.app.Store.Students[0]
+	e.do("POST", "/api/v1/admin/imported-students/"+s1.ID+"/verify", map[string]string{}, admin)
+	// a hand-added record with a spreadsheet-formula name, and phone/notes that must not be exported
+	e.do("POST", "/api/v1/admin/imported-students", map[string]any{"name": "=SUM(A1) Evil", "batch": 5, "department": e.app.Store.Depts[0], "phone": "01712345678", "note": "private note"}, admin)
+	csvOf := func(q string) string {
+		rec := e.do("GET", "/api/v1/admin/export/imported"+q, nil, admin)
+		if rec.Code != 200 || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/csv") {
+			t.Fatalf("export: %d %s", rec.Code, rec.Header().Get("Content-Type"))
+		}
+		return rec.Body.String()
+	}
+	lines := func(s string) int { return len(strings.Split(strings.TrimSpace(s), "\n")) - 1 }
+	all := csvOf("")
+	if !strings.HasPrefix(all, "\xEF\xBB\xBF") || lines(all) != len(e.app.Store.Students)+1 {
+		t.Fatalf("unfiltered export has %d rows, want %d", lines(all), len(e.app.Store.Students)+1)
+	}
+	if v := csvOf("?status=verified"); lines(v) != 1 || !strings.Contains(v, s1.Name) || !strings.Contains(v, "verified") {
+		t.Fatalf("verified export: %q", v)
+	}
+	if w := csvOf("?status=awaiting"); lines(w) != len(e.app.Store.Students) || strings.Contains(w, ",verified,") {
+		t.Fatalf("needs-verification export wrong")
+	}
+	if strings.Contains(all, "01712345678") || strings.Contains(all, "private note") || strings.Contains(all, "\n=SUM") || !strings.Contains(all, "'=SUM(A1) Evil") {
+		t.Fatalf("export leaks private fields or allows formulas")
 	}
 }
 
@@ -97,28 +126,15 @@ func importedStoreSuite(t *testing.T, s AuthStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, err := s.CreateUser(ctx, NewUser{Email: "imp-user@example.com", PasswordHash: "h", Role: RoleMember, Verified: true,
-		Profile: &Profile{Name: "Imp User", Batch: 17, Department: "Finance", Upazila: "kasba", Union: "Kuti"}})
-	if err != nil {
+	if err := s.VerifyImported(ctx, admin.ID, "imp-1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.VerifyImported(ctx, admin.ID, "imp-1", ""); err != nil {
+	first, _ := s.ImportedReviews(ctx)
+	if err := s.VerifyImported(ctx, admin.ID, "imp-1"); err != nil { // idempotent, keeps the first time
 		t.Fatal(err)
-	}
-	if err := s.VerifyImported(ctx, admin.ID, "imp-1", ""); err != nil { // idempotent
-		t.Fatal(err)
-	}
-	if err := s.VerifyImported(ctx, admin.ID, "imp-1", u.ID); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.VerifyImported(ctx, admin.ID, "imp-2", u.ID); err != ErrAlreadyLinked {
-		t.Fatalf("an account links to one record only: %v", err)
-	}
-	if err := s.VerifyImported(ctx, admin.ID, "imp-3", "00000000-0000-0000-0000-00000000dead"); err != ErrNotFound {
-		t.Fatalf("unknown account: %v", err)
 	}
 	rv, err := s.ImportedReviews(ctx)
-	if err != nil || rv["imp-1"].LinkedUser != u.ID || rv["imp-1"].VerifiedAt == "" || rv["imp-2"].ImportedID != "" || rv["imp-3"].ImportedID != "" {
+	if err != nil || rv["imp-1"].VerifiedAt == "" || rv["imp-1"].VerifiedAt != first["imp-1"].VerifiedAt || rv["imp-2"].ImportedID != "" {
 		t.Fatalf("reviews: %+v %v", rv, err)
 	}
 	if err := s.UnverifyImported(ctx, admin.ID, "imp-1"); err != nil {
@@ -126,10 +142,6 @@ func importedStoreSuite(t *testing.T, s AuthStore) {
 	}
 	if rv, _ = s.ImportedReviews(ctx); rv["imp-1"].ImportedID != "" {
 		t.Fatal("still verified")
-	}
-	// the freed account can now be linked elsewhere
-	if err := s.VerifyImported(ctx, admin.ID, "imp-2", u.ID); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -260,7 +272,7 @@ func manualStoreSuite(t *testing.T, s AuthStore) {
 	if u, err := s.UpdateManualImported(ctx, r.ID, ManualImportedInput{Name: "Store Person Two", Batch: &batch, Department: "Finance"}); err != nil || u.Name != "Store Person Two" || u.Phone != "" {
 		t.Fatalf("update: %+v %v", u, err)
 	}
-	if err := s.VerifyImported(ctx, "", r.ID, ""); err != nil {
+	if err := s.VerifyImported(ctx, "", r.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.DeleteManualImported(ctx, r.ID); err != nil {

@@ -13,10 +13,19 @@ export const NAV = [
     { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
   ] },
-  // Two primary views only. The status views (pending, approved, ...) live inside Registered members, in the list's own toolbar.
-  { id: 'students', to: '/admin/students', icon: 'users', label: 'admin.nav.students', group: 'people', watch: ['tab'], children: [
-    { id: 'registered', label: 'ad.stu.tab.members', query: {} },
-    { id: 'imported', label: 'ad.stu.tab.imported', query: { tab: 'imported' } },
+  // Students has two primary sections. Member Directory is the existing directory (needs verification / verified);
+  // Membership Requests is registered accounts and their approval workflow.
+  { id: 'directory', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.directory', group: 'people', watch: ['status'], children: [
+    { id: 'all', label: 'ad.status.allShort', query: {} },
+    { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
+    { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
+  ] },
+  { id: 'requests', to: '/admin/students', icon: 'users', label: 'ad.nav.requests', group: 'people', watch: ['status', 'complete'], children: [
+    { id: 'all', label: 'ad.status.allShort', query: {} },
+    { id: 'pending', label: 'ad.status.pending', query: { status: 'pending' } },
+    { id: 'approved', label: 'ad.status.approved', query: { status: 'approved' } },
+    { id: 'rejected', label: 'ad.status.rejected', query: { status: 'rejected' } },
+    { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
@@ -56,6 +65,7 @@ export function navFor(pathname, search = '') {
     const tab = new URLSearchParams(search).get('tab')
     return NAV.find((n) => n.id === (tab === 'roles' ? 'roles' : tab === 'committee' ? 'committee' : 'dash'))
   }
+  if (pathname === '/admin/students' && new URLSearchParams(search).get('tab') === 'imported') return NAV.find((n) => n.id === 'directory')
   return NAV.find((n) => !n.to.includes('?') && n.to !== '/admin' && (pathname === n.to || pathname.startsWith(`${n.to}/`)))
 }
 

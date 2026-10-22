@@ -249,10 +249,19 @@ function Imported() {
   const [undo, setUndo] = useState(null)
   const [form, setForm] = useState(null) // null | {} (new) | a manual record (edit)
   const [drop, setDrop] = useState(null)
+  const [exporting, setExporting] = useState(false)
   const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
   const counts = list.data?.counts || {}
   const filtered = !!(f.q || f.department || f.batch || f.status)
+  const exportCsv = async () => { // the same filters as the list on screen
+    setExporting(true); clear()
+    try { await downloadFile(`/admin/export/imported${qs({ q: f.q, department: f.department, batch: f.batch, status: f.status })}`, 'member-directory.csv') } catch (e) { bad(errText(e)) } finally { setExporting(false) }
+  }
+  const doVerify = async () => {
+    setBusy(true); clear()
+    try { await api(`/admin/imported-students/${verify.id}/verify`, { method: 'POST', body: '{}' }); ok(t('ad.imp.done')); list.retry() } catch (e) { bad(errText(e)) } finally { setBusy(false); setVerify(null) }
+  }
   const unverify = async () => {
     setBusy(true); clear()
     try { await api(`/admin/imported-students/${undo.id}/unverify`, { method: 'POST', body: '{}' }); ok(t('ad.imp.undone')); list.retry() } catch (e) { bad(errText(e)) } finally { setBusy(false); setUndo(null) }
@@ -264,7 +273,8 @@ function Imported() {
   return (
     <>
       <div className="ad-subhead"><p className="notice">{t('ad.imp.note')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
-        <button type="button" className="btn btn-dark btn-sm" onClick={() => setForm({})}><Icon name="plus" size={15} /> {t('ad.imp.add')}</button></div>
+        <span className="row"><button type="button" className="btn btn-outline btn-sm" disabled={exporting} onClick={exportCsv}><Icon name="download" size={15} /> {t('ad.imp.export')}</button>
+          <button type="button" className="btn btn-dark btn-sm" onClick={() => setForm({})}><Icon name="plus" size={15} /> {t('ad.imp.add')}</button></span></div>
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
         views={[
@@ -288,18 +298,18 @@ function Imported() {
               ) },
               { id: 'dept', label: t('students.dept'), width: '26%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
               { id: 'batch', label: t('students.batch'), width: '80px', cell: (r) => (r.batch ? n(r.batch) : '—') },
+              { id: 'added', label: t('ad.imp.addedDate'), width: '140px', cell: (r) => <small className="dt-sub">{r.addedAt ? when(r.addedAt) : t('ad.imp.noDate')}</small> },
               { id: 'review', label: t('ad.imp.review'), width: '24%', cell: (r) => (
                 r.verified ? (
                   <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
                     <small className="dt-sub">{r.verifiedBy} · {when(r.verifiedAt)}</small>
-                    {r.linked && <small className="dt-sub" title={r.linked.email}>{t('ad.imp.linkedTo')} {r.linked.name}</small>}</div>
+                  </div>
                 ) : <span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
               ) },
               { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
                   {!r.verified && <button type="button" className="btn btn-outline btn-sm" onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
                   <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
-                    r.verified && { label: t('ad.imp.relink'), icon: 'folderMove', onClick: () => setVerify(r) },
                     r.verified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
                     r.source === 'manual' && { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
                     r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
@@ -312,45 +322,9 @@ function Imported() {
       ))}
       {form && <ImportedForm row={form.id ? form : null} depts={depts.data?.items || []} onClose={() => setForm(null)} onSaved={() => { const edit = !!form.id; setForm(null); ok(t(edit ? 'ad.imp.saved' : 'ad.imp.created')); list.retry() }} />}
       {drop && <Confirm tone="danger" text={t('ad.imp.deleteText').replace('{who}', drop.name)} label={t('ad.imp.delete')} busy={busy} onYes={remove} onNo={() => setDrop(null)} />}
-      {verify && <VerifyDialog row={verify} onClose={() => setVerify(null)} onDone={() => { setVerify(null); ok(t('ad.imp.done')); list.retry() }} />}
+      {verify && <Confirm text={t('ad.imp.verifyConfirm').replace('{who}', verify.name)} label={t('ad.imp.verify')} busy={busy} onYes={doVerify} onNo={() => setVerify(null)} />}
       {undo && <Confirm tone="danger" text={t('ad.imp.unverifyText').replace('{who}', undo.name)} label={t('ad.imp.unverify')} busy={busy} onYes={unverify} onNo={() => setUndo(null)} />}
     </>
-  )
-}
-
-// Verify an imported record. Optionally link it to the registered account of the same person. Neither choice changes that account.
-function VerifyDialog({ row, onClose, onDone }) {
-  const { t } = useApp()
-  const errText = useErrText()
-  const matches = useApi(`/admin/imported-students/${row.id}/matches`)
-  const [link, setLink] = useState(row.linked?.id || '')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const go = async () => {
-    setBusy(true); setErr('')
-    try { await api(`/admin/imported-students/${row.id}/verify`, { method: 'POST', body: JSON.stringify({ linkedUserId: link }) }); onDone() } catch (e) { setErr(e.message === 'already_linked' ? t('ad.imp.alreadyLinked') : errText(e)) } finally { setBusy(false) }
-  }
-  const items = matches.data?.items || []
-  return (
-    <Modal title={t('ad.imp.verifyTitle')} onClose={onClose} busy={busy}>
-      <p><strong>{row.name}</strong> <span className="muted">· {row.department} · {t('auth.batch')} {row.batch}</span></p>
-      <p className="muted small">{t('ad.imp.verifyHelp')}</p>
-      <fieldset className="ad-matches"><legend>{t('ad.imp.matchTitle')}</legend>
-        <label className="check"><input type="radio" name="match" checked={link === ''} onChange={() => setLink('')} /> {t('ad.imp.noLink')}</label>
-        {matches.loading && <small className="muted">{t('state.loading')}</small>}
-        {items.length === 0 && !matches.loading && <small className="muted">{t('ad.imp.noMatches')}</small>}
-        {items.map((m) => (
-          <label className="check" key={m.id}><input type="radio" name="match" checked={link === m.id} onChange={() => setLink(m.id)} />
-            <span>{m.name} <small className="muted">{m.email} · {m.department} · {t('auth.batch')} {m.batch}{m.sameBatch && m.sameDepartment ? ` · ${t('ad.imp.strong')}` : ''}</small></span></label>
-        ))}
-      </fieldset>
-      {link && <p className="notice">{t('ad.imp.linkNote')}</p>}
-      {err && <p className="notice bad" role="alert">{err}</p>}
-      <div className="row">
-        <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={go}>{busy ? t('state.loading') : t('ad.imp.confirm')}</button>
-        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{t('admin.roles.cancel')}</button>
-      </div>
-    </Modal>
   )
 }
 

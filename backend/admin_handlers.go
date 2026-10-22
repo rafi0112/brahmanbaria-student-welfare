@@ -374,6 +374,7 @@ func (a *App) studentsExport(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="members.csv"`)
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF}) // byte-order mark: Bangla opens correctly in spreadsheets
 	cw := csv.NewWriter(w)
 	_ = cw.Write(header)
 	exported := 0
