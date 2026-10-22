@@ -17,6 +17,13 @@ const PATHS = {
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2',
   download: 'M12 4v11 M7 11l5 5 5-5 M5 20h14',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  panel: 'M4 5h16v14H4z M9 5v14',
+  logout: 'M9 4H5v16h4 M16 8l4 4-4 4 M20 12H9',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18',
+  check: 'M5 12l5 5 9-10',
+  alert: 'M12 4l9 16H3z M12 10v4 M12 17h.01',
 }
 
 export default function AdminIcon({ name, size = 18 }) {

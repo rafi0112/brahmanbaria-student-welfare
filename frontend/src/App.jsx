@@ -6,7 +6,8 @@ import Directory, { UpazilaDetail } from './pages/Directory.jsx'
 import Heritage, { HeritageDetail } from './pages/Heritage.jsx'
 import { About, Blog, BlogPost, Contact, Gallery, NotFound } from './pages/Content.jsx'
 import Auth, { Verify } from './pages/Auth.jsx'
-import { AdminHome, AdminShell, Dashboard } from './pages/Dashboards.jsx'
+import { Dashboard } from './pages/Dashboards.jsx'
+import { AdminHome, AdminShell } from './admin/Shell.jsx'
 import StudentsAdmin from './admin/StudentsAdmin.jsx'
 import { BlogEditor, BlogList } from './admin/BlogAdmin.jsx'
 import { HeritageEditor, HeritageList } from './admin/HeritageAdmin.jsx'
@@ -41,20 +42,20 @@ export default function App() {
         <Route path="reset-password" element={<Auth mode="reset" />} />
         <Route path="verify-email" element={<Verify />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="admin" element={<AdminShell />}>
-          <Route index element={<AdminHome />} />
-          <Route path="students" element={<StudentsAdmin />} />
-          <Route path="profile/:id" element={<StudentDetail />} />
-          <Route path="heritage" element={<HeritageList />} />
-          <Route path="heritage/new" element={<HeritageEditor />} />
-          <Route path="heritage/:id/edit" element={<HeritageEditor />} />
-          <Route path="blog" element={<BlogList />} />
-          <Route path="blog/new" element={<BlogEditor />} />
-          <Route path="blog/:id/edit" element={<BlogEditor />} />
-          <Route path="gallery" element={<GalleryAdmin />} />
-          <Route path="activity" element={<ActivityPage />} />
-        </Route>
         <Route path="*" element={<NotFound />} />
+      </Route>
+      <Route path="admin" element={<AdminShell />}>
+        <Route index element={<AdminHome />} />
+        <Route path="students" element={<StudentsAdmin />} />
+        <Route path="profile/:id" element={<StudentDetail />} />
+        <Route path="heritage" element={<HeritageList />} />
+        <Route path="heritage/new" element={<HeritageEditor />} />
+        <Route path="heritage/:id/edit" element={<HeritageEditor />} />
+        <Route path="blog" element={<BlogList />} />
+        <Route path="blog/new" element={<BlogEditor />} />
+        <Route path="blog/:id/edit" element={<BlogEditor />} />
+        <Route path="gallery" element={<GalleryAdmin />} />
+        <Route path="activity" element={<ActivityPage />} />
       </Route>
     </Routes>
   )

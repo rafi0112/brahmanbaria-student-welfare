@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { uploadMedia } from '../lib/api.js'
 export { slugFrom } from '../lib/slug.js'
 import { useApp } from '../lib/app.jsx'
-import { Badge, Pagination } from '../components/ui.jsx'
+import { Pagination } from '../components/ui.jsx'
 
 /* ---------------------------------------------------------------- state helpers */
 
@@ -84,13 +85,10 @@ export function PageHeader({ title, desc, action, crumbs }) {
   )
 }
 
-const STATUS = { published: ['●', 'gold'], draft: ['○', 'muted'], archived: ['▣', 'muted'], pending: ['◔', 'gold'], approved: ['●', 'leaf'], rejected: ['✕', 'muted'] }
-
-// Status is always written out as well as coloured, so it never relies on colour alone.
+// Status is a coloured dot plus the written status, so it never relies on colour alone.
 export function StatusBadge({ status, label }) {
   const { t } = useApp()
-  const [mark, tone] = STATUS[status] || ['•', 'muted']
-  return <Badge tone={tone}><span aria-hidden="true">{mark} </span>{label || t(`ad.status.${status}`)}</Badge>
+  return <span className={`st st-${status}`}><span className="st-dot" aria-hidden="true" />{label || t(`ad.status.${status}`)}</span>
 }
 
 export function Notice({ notice, onClose }) {
@@ -181,14 +179,16 @@ export function Field({ label, required, hint, error, count, max, children, id }
 
 /* ---------------------------------------------------------------- dialogs */
 
-export function Modal({ title, children, onClose, wide, busy }) {
+export function Modal({ title, children, onClose, wide, busy, drawer }) {
   const { t } = useApp()
   const labelId = useId()
   const box = useRef(null)
+  const [leaving, setLeaving] = useState(false)
+  const close = useCallback(() => { if (busy) return; setLeaving(true); setTimeout(onClose, 140) }, [busy, onClose])
   useEffect(() => {
     const prev = document.activeElement
     const onKey = (e) => {
-      if (e.key === 'Escape' && !busy) onClose()
+      if (e.key === 'Escape') close()
       if (e.key === 'Tab' && box.current) { // keep keyboard focus inside the dialog
         const f = box.current.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')
         if (!f.length) return
@@ -200,15 +200,15 @@ export function Modal({ title, children, onClose, wide, busy }) {
     addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => { removeEventListener('keydown', onKey); document.body.style.overflow = ''; prev?.focus?.() }
-  }, [onClose, busy])
+  }, [close])
   return (
-    <div className="modal-back" onClick={(e) => e.target === e.currentTarget && !busy && onClose()}>
-      <div ref={box} className={`modal ad-modal ${wide ? 'ad-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={labelId}>
+    <div className={`modal-back ad-back ${drawer ? 'is-drawer' : ''} ${leaving ? 'is-leaving' : ''}`} onClick={(e) => e.target === e.currentTarget && close()}>
+      <div ref={box} className={`modal ad-modal ${wide ? 'ad-modal-wide' : ''} ${drawer ? 'ad-drawer' : ''}`} role="dialog" aria-modal="true" aria-labelledby={labelId}>
         <header className="ad-modal-head">
           <h3 id={labelId}>{title}</h3>
-          <button type="button" className="ad-x" onClick={onClose} disabled={busy} aria-label={t('ad.close')}>×</button>
+          <button type="button" className="ad-x" onClick={close} disabled={busy} aria-label={t('ad.close')}>×</button>
         </header>
-        {children}
+        <div className="ad-modal-body">{children}</div>
       </div>
     </div>
   )
@@ -355,7 +355,7 @@ export function RowMenu({ label, items }) {
       <button ref={btn} type="button" className="btn btn-ghost btn-sm ad-more" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>
         <span aria-hidden="true">⋯</span>
       </button>
-      {open && (
+      {open && createPortal(
         <ul ref={list} role="menu" className="ad-menu" aria-label={label} style={{ top: pos.top, right: pos.right }}>
           {live.map((it) => (
             <li key={it.label} role="none">
@@ -364,7 +364,8 @@ export function RowMenu({ label, items }) {
                 : <button role="menuitem" type="button" className={it.danger ? 'danger' : ''} disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}>{it.label}</button>}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.querySelector('.adm') || document.body,
       )}
     </>
   )

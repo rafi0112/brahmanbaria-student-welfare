@@ -5,6 +5,7 @@ import { useApp } from '../lib/app.jsx'
 import { Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
+import DataTable from './DataTable.jsx'
 
 const NEXT = {
   draft: [['publish', 'ad.act2.publish'], ['archive', 'ad.act2.archive']],
@@ -84,31 +85,23 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
           action={filtered ? <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button> : addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
       ) : (
         <>
-          <table className="table rtable">
-            <thead>
-              <tr>
-                <th scope="col"><input type="checkbox" checked={allOnPage} onChange={() => setPicked(allOnPage ? [] : rows.map((r) => r.id))} aria-label={t('ad.selectAll')} /></th>
-                {columns.map((c) => <th key={c.label} scope="col">{c.label}</th>)}
-                <th scope="col">{t('ad.status')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td data-label=""><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.title}`} /></td>
-                  {columns.map((c) => <td key={c.label} data-label={c.label}>{c.render(r)}</td>)}
-                  <td data-label={t('ad.status')}><StatusBadge status={r.status} /><br /><small className="muted">{when(r.updatedAt)}</small></td>
-                  <td className="actions" data-label="">
+          <DataTable caption={title} rows={rows} rowKey={(r) => r.id}
+            selection={{ picked, toggle, allOn: allOnPage, toggleAll: () => setPicked(allOnPage ? [] : rows.map((r) => r.id)), name: (r) => r.title }}
+            columns={[
+              ...columns.map((col, i) => ({ id: col.label, label: col.label, width: col.width, primary: i === 0, cell: col.render })),
+              { id: 'status', label: t('ad.status'), width: '148px', cell: (r) => <div className="dt-stack"><StatusBadge status={r.status} /><small className="dt-sub">{when(r.updatedAt)}</small></div> },
+              {
+                id: 'actions', srLabel: t('ad.actions'), width: '116px', className: 'dt-actions-cell', cell: (r) => (
+                  <div className="dt-actions">
                     <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>
                     <RowMenu label={`${t('ad.actions')}: ${r.title}`} items={[
-                      ...NEXT[r.status].map(([a, label]) => ({ label: t(label), onClick: () => ask(a, [r.id], r.title), disabled: busy, danger: a === 'archive' })),
+                      ...NEXT[r.status].map(([act, label]) => ({ label: t(label), onClick: () => ask(act, [r.id], r.title), disabled: busy, danger: act === 'archive' })),
                       r.status === 'published' && publicPath ? { label: t('ad.openPublic'), href: publicPath(r) } : null,
                     ]} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                ),
+              },
+            ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}

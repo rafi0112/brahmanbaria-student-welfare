@@ -7,6 +7,7 @@ import { Avatar, Badge, Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
+import DataTable, { Trunc } from './DataTable.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
 
@@ -95,7 +96,7 @@ function Members() {
         sorts={[['newest', t('ad.stu.sort.newest')], ['oldest', t('ad.stu.sort.oldest')], ['name', t('ad.stu.sort.name')], ['batch', t('ad.stu.sort.batch')], ['status', t('ad.stu.sort.status')]]}
         extra={(
           <>
-            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(false)}><Icon name="download" size={16} /> {t('ad.stu.export')}</button>
+            <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => exportCsv(false)}><Icon name="download" size={16} /> {t('ad.stu.export')}</button>
             <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(true)}>{t('ad.stu.exportContact')}</button>
           </>
         )} />
@@ -118,35 +119,27 @@ function Members() {
           action={filtered && <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button>} />
       ) : (
         <>
-          <table className="table rtable">
-            <thead>
-              <tr>
-                <th scope="col"><input type="checkbox" checked={allOnPage} onChange={() => setPicked(allOnPage ? [] : rows.map((r) => r.id))} aria-label={t('ad.selectAll')} /></th>
-                <th scope="col">{t('ad.stu.col.member')}</th><th scope="col">{t('ad.stu.col.academic')}</th><th scope="col">{t('ad.stu.col.status')}</th>
-                <th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className={r.disabled ? 'ad-off' : ''}>
-                  <td data-label=""><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.name}`} /></td>
-                  <td data-label={t('ad.stu.col.member')}>
-                    <span className="ad-person"><Avatar name={r.name} size={36} /><span><strong>{r.name}</strong><br /><small className="muted">{r.email}</small></span></span>
-                  </td>
-                  <td data-label={t('ad.stu.col.academic')}>{r.department}<br /><small className="muted">{t('auth.batch')} {n(r.batch)}</small></td>
-                  <td data-label={t('ad.stu.col.status')}>
-                    <StatusBadge status={r.status} />{r.role === 'admin' && <> <Badge tone="gold">{t('admin.roles.admin')}</Badge></>}<br />
-                    <small className={r.emailVerified ? 'muted' : 'err'}>{r.emailVerified ? '✓ ' + t('admin.roles.verified') : '! ' + t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {r.complete ? t('ad.stu.completeYes') : t('ad.stu.completeNo')}</small><br />
-                    <small className="muted">{when(r.createdAt)}</small>
-                  </td>
-                  <td className="actions" data-label="">
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
-                    {r.status === 'pending' && <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable caption={t('ad.stu.title')} rows={rows} rowKey={(r) => r.id} rowClass={(r) => (r.disabled ? 'is-off' : '')}
+            selection={{ picked, toggle, allOn: allOnPage, toggleAll: () => setPicked(allOnPage ? [] : rows.map((r) => r.id)), name: (r) => r.name }}
+            columns={[
+              { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
+                <span className="dt-person"><Avatar name={r.name} size={34} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}</strong><small className="dt-sub dt-trunc" title={r.email}>{r.email}</small></span></span>
+              ) },
+              { id: 'academic', label: t('ad.stu.col.academic'), width: '24%', cell: (r) => <div className="dt-stack"><span className="dt-trunc" title={r.department}>{r.department}</span><small className="dt-sub">{t('auth.batch')} {n(r.batch)}</small></div> },
+              { id: 'status', label: t('ad.stu.col.status'), width: '30%', cell: (r) => (
+                <div className="dt-stack">
+                  <span className="dt-badges"><StatusBadge status={r.status} />{r.role === 'admin' && <span className="st st-role">{t('admin.roles.admin')}</span>}</span>
+                  <small className={`dt-sub ${r.emailVerified ? '' : 'is-warn'}`}>{r.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {r.complete ? t('ad.stu.completeYes') : t('ad.stu.completeNo')}</small>
+                  <small className="dt-sub">{when(r.createdAt)}</small>
+                </div>
+              ) },
+              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
+                <div className="dt-actions">
+                  {r.status === 'pending' && <button type="button" className="btn btn-ok btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>}
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
+                </div>
+              ) },
+            ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}
@@ -190,7 +183,7 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
   const text = (k) => (e) => setV({ ...v, [k]: e.target.value })
 
   return (
-    <Modal title={row.name} onClose={onClose} wide busy={busy}>
+    <Modal title={row.name} onClose={onClose} drawer busy={busy}>
       <p className="muted small">{row.email} · <StatusBadge status={row.status} /> · {row.role === 'admin' ? t('admin.roles.admin') : t('admin.roles.member')}
         {row.role === 'admin' && <> — <Link to="/admin?tab=roles">{t('ad.stu.manageRole')}</Link></>}</p>
       <form onSubmit={save} noValidate className="ad-form">
@@ -258,20 +251,14 @@ function Imported() {
       {list.error && <Data q={list}>{() => null}</Data>}
       {list.data && (rows.length === 0 ? <EmptyState title={t('ad.stu.noMatch')} text={t('ad.stu.noMatchHint')} /> : (
         <>
-          <table className="table rtable">
-            <thead><tr><th scope="col">{t('ad.stu.col.member')}</th><th scope="col">{t('students.dept')}</th><th scope="col">{t('students.batch')}</th><th scope="col">{t('students.session')}</th><th scope="col">{t('auth.upazila')}</th></tr></thead>
-            <tbody>
-              {rows.map((s) => (
-                <tr key={s.id}>
-                  <td data-label={t('ad.stu.col.member')}><Link to={`/admin/profile/${s.id}`}><span className="ad-person"><Avatar name={s.name} size={32} /><strong>{s.name}</strong></span></Link></td>
-                  <td data-label={t('students.dept')}>{s.department || '—'}</td>
-                  <td data-label={t('students.batch')}>{s.batch ? n(s.batch) : '—'}</td>
-                  <td data-label={t('students.session')}>{s.session || '—'}</td>
-                  <td data-label={t('auth.upazila')}>{s.upazila || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable caption={t('ad.stu.tab.imported')} rows={rows} rowKey={(r) => r.id}
+            columns={[
+              { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><strong className="dt-clamp">{r.name}</strong></Link> },
+              { id: 'dept', label: t('students.dept'), width: '30%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
+              { id: 'batch', label: t('students.batch'), width: '90px', cell: (r) => (r.batch ? n(r.batch) : '—') },
+              { id: 'session', label: t('students.session'), width: '120px', cell: (r) => r.session || '—' },
+              { id: 'upazila', label: t('auth.upazila'), width: '18%', cell: (r) => <Trunc>{r.upazila || '—'}</Trunc> },
+            ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}

@@ -22,19 +22,19 @@ export function HeritageList() {
       columns={[
         {
           label: t('ad.her.col.place'), render: (r) => (
-            <span className="ad-person">
-              <MediaPhoto id={r.data.images?.[0]} url={r.data.imageUrls?.[0]} alt="" className="ad-mini" sizes="64px" />
-              <span><strong>{pick(r.data.nameBn, r.data.nameEn) || r.title}</strong><br /><small className="muted">/{r.slug}</small></span>
+            <span className="dt-person">
+              <MediaPhoto id={r.data.images?.[0]} url={r.data.imageUrls?.[0]} alt="" className="dt-thumb" sizes="64px" />
+              <span className="dt-twoline"><strong className="dt-clamp">{pick(r.data.nameBn, r.data.nameEn) || r.title}</strong><small className="dt-sub">/{r.slug}</small></span>
             </span>
           ),
         },
         {
-          label: t('ad.her.col.location'), render: (r) => {
+          label: t('ad.her.col.location'), width: '26%', render: (r) => {
             const up = (ups.data?.items || []).find((u) => u.slug === r.data.upazila)
             return <>{r.data.category ? t(`cat.${r.data.category}`) : '—'}<br /><small className="muted">{up ? pick(up.nameBn, up.nameEn) : '—'}{r.data.lat != null ? ` · ${r.data.lat}, ${r.data.lng}` : ''}</small></>
           },
         },
-        { label: t('ad.her.col.checked'), render: (r) => (r.data.verified ? <Badge tone="leaf">✓ {t('place.verified')}</Badge> : <Badge tone="muted">{t('place.unverified')}</Badge>) },
+        { label: t('ad.her.col.checked'), width: '150px', render: (r) => (r.data.verified ? <Badge tone="leaf">✓ {t('place.verified')}</Badge> : <Badge tone="muted">{t('place.unverified')}</Badge>) },
       ]} />
   )
 }

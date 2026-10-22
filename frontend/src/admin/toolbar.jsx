@@ -43,6 +43,8 @@ export default function ListToolbar({ section, values, set, defaults = {}, searc
   const [name, setName] = useState('')
   const [msg, setMsg] = useState('')
   const panel = useRef(null)
+  const [leaving, setLeaving] = useState(null)
+  const removeChip = (key) => { setLeaving(key); setTimeout(() => { set({ [key]: defaults[key] ?? '' }); setLeaving(null) }, 120) }
   const inline = fields.filter((f) => !f.advanced)
   const advanced = fields.filter((f) => f.advanced)
   const filterKeys = useMemo(() => [...fields.map((f) => f.key), ...views.flatMap((v) => Object.keys(v.patch)), ...(search ? [search.key || 'q'] : [])], [fields, views, search])
@@ -101,7 +103,7 @@ export default function ListToolbar({ section, values, set, defaults = {}, searc
         ))}
         {advanced.length > 0 && (
           <div className="ad-pop" ref={panel}>
-            <button type="button" className="btn btn-ghost btn-sm" aria-expanded={open} aria-controls={`${id}-panel`} onClick={openPanel}>
+            <button type="button" className="btn btn-outline btn-sm" aria-expanded={open} aria-controls={`${id}-panel`} onClick={openPanel}>
               <Icon name="filter" size={16} /> {t('ad.tb.filters')}{advancedActive > 0 && <span className="ad-count-badge">{n(advancedActive)}</span>}
             </button>
             {open && (
@@ -128,7 +130,7 @@ export default function ListToolbar({ section, values, set, defaults = {}, searc
             </select></label>
         )}
         <div className="ad-pop ad-pop-right">
-          <button type="button" className="btn btn-ghost btn-sm" aria-expanded={menu} onClick={() => { setMenu(!menu); setMsg('') }}>
+          <button type="button" className="btn btn-outline btn-sm" aria-expanded={menu} onClick={() => { setMenu(!menu); setMsg('') }}>
             <Icon name="bookmark" size={16} /> {t('ad.tb.saved')}{saved.length > 0 && <span className="ad-count-badge">{n(saved.length)}</span>}
           </button>
           {menu && (
@@ -160,8 +162,8 @@ export default function ListToolbar({ section, values, set, defaults = {}, searc
       {chips.length > 0 && (
         <ul className="ad-chips" aria-label={t('ad.tb.active')}>
           {chips.map((c) => (
-            <li key={c.key} className="ad-chip"><span><b>{c.label}:</b> {c.text}</span>
-              <button type="button" aria-label={`${t('ad.tb.remove')} ${c.label}`} onClick={() => set({ [c.key]: defaults[c.key] ?? '' })}><Icon name="x" size={12} /></button></li>
+            <li key={c.key} className={`ad-chip ${leaving === c.key ? 'is-leaving' : ''}`}><span><b>{c.label}:</b> {c.text}</span>
+              <button type="button" aria-label={`${t('ad.tb.remove')} ${c.label}`} onClick={() => removeChip(c.key)}><Icon name="x" size={12} /></button></li>
           ))}
         </ul>
       )}

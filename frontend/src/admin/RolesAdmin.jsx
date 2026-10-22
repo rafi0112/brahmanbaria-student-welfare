@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Notice, PageHeader, Pager, SkeletonRows, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
+import DataTable from './DataTable.jsx'
 
 // Admin management: who is an admin, who can become one, and every change that was made.
 // The buttons only call the API; the Go backend decides (admins only, verified accounts only, never the last admin).
@@ -64,34 +65,28 @@ export default function RolesAdmin() {
       {list.error && <Data q={list}>{() => null}</Data>}
       {list.data && (rows.length === 0 ? <EmptyState title={t(filtered ? 'ad.stu.noMatch' : 'admin.roles.none')} text={filtered ? t('ad.stu.noMatchHint') : undefined} /> : (
         <>
-          <table className="table rtable">
-            <thead><tr><th scope="col">{t('ad.stu.col.member')}</th><th scope="col">{t('admin.roles.title')}</th><th scope="col">{t('ad.stu.col.account')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th></tr></thead>
-            <tbody>
-              {rows.map((r) => {
-                const self = r.id === me?.id
-                const admin = r.role === 'admin'
-                return (
-                  <tr key={r.id} className={r.disabled ? 'ad-off' : ''}>
-                    <td data-label={t('ad.stu.col.member')}>
-                      <span className="ad-person"><Avatar name={label(r)} size={36} />
-                        <span><strong>{r.name || r.email}</strong>{self && <> <Badge tone="muted">{t('admin.roles.you')}</Badge></>}{r.name && <><br /><small className="muted">{r.email}</small></>}</span></span>
-                    </td>
-                    <td data-label={t('admin.roles.title')}><Badge tone={admin ? 'gold' : 'muted'}>{t(admin ? 'admin.roles.admin' : 'admin.roles.member')}</Badge></td>
-                    <td data-label={t('ad.stu.col.account')}>
-                      <span className={`verify ${r.emailVerified ? 'yes' : 'no'}`}>{r.emailVerified ? '✓ ' + t('admin.roles.verified') : '! ' + t('admin.roles.unverified')}</span><br />
-                      <small className="muted">{r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {when(r.createdAt)}</small>
-                    </td>
-                    <td className="actions" data-label="">
-                      {admin
-                        ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPending({ row: r, role: 'member' })}>{t(self ? 'admin.roles.leave' : 'admin.roles.makeMember')}</button>
-                        : <button type="button" className="btn btn-dark btn-sm" disabled={!r.emailVerified || r.disabled} title={!r.emailVerified ? t('admin.err.unverified') : r.disabled ? t('ad.roles.deactivatedNo') : undefined}
-                          onClick={() => setPending({ row: r, role: 'admin' })}>{t('admin.roles.makeAdmin')}</button>}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <DataTable caption={t('admin.roles.title')} rows={rows} rowKey={(x) => x.id} rowClass={(x) => (x.disabled ? 'is-off' : '')}
+            columns={[
+              { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (x) => (
+                <span className="dt-person"><Avatar name={label(x)} size={34} />
+                  <span className="dt-twoline"><strong className="dt-clamp">{x.name || x.email}{x.id === me?.id && <span className="st st-you">{t('admin.roles.you')}</span>}</strong>{x.name && <small className="dt-sub dt-trunc" title={x.email}>{x.email}</small>}</span></span>
+              ) },
+              { id: 'role', label: t('admin.roles.title'), width: '120px', cell: (x) => <span className={`st ${x.role === 'admin' ? 'st-role' : 'st-neutral'}`}>{t(x.role === 'admin' ? 'admin.roles.admin' : 'admin.roles.member')}</span> },
+              { id: 'account', label: t('ad.stu.col.account'), width: '30%', cell: (x) => (
+                <div className="dt-stack">
+                  <small className={`dt-sub ${x.emailVerified ? '' : 'is-warn'}`}>{x.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')}</small>
+                  <small className="dt-sub">{x.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {when(x.createdAt)}</small>
+                </div>
+              ) },
+              { id: 'actions', srLabel: t('ad.actions'), width: '170px', className: 'dt-actions-cell', cell: (x) => (
+                <div className="dt-actions">
+                  {x.role === 'admin'
+                    ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPending({ row: x, role: 'member' })}>{t(x.id === me?.id ? 'admin.roles.leave' : 'admin.roles.makeMember')}</button>
+                    : <button type="button" className="btn btn-outline btn-sm" disabled={!x.emailVerified || x.disabled} title={!x.emailVerified ? t('admin.err.unverified') : x.disabled ? t('ad.roles.deactivatedNo') : undefined}
+                      onClick={() => setPending({ row: x, role: 'admin' })}>{t('admin.roles.makeAdmin')}</button>}
+                </div>
+              ) },
+            ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}

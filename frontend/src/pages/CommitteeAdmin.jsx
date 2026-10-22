@@ -289,8 +289,7 @@ export default function CommitteeManager() {
 
   return (
     <section aria-labelledby="cm-h">
-      <h2 id="cm-h">{t('cm.title')}</h2>
-      <p className="muted">{t('cm.lede')}</p>
+      <header className="ad-head"><h2 id="cm-h">{t('cm.title')}</h2><p>{t('cm.lede')}</p></header>
       <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`} role={msg.tone === 'bad' ? 'alert' : 'status'}>{msg.text}</p>}</div>
 
       <div className="cm-layout">

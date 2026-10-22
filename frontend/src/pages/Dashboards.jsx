@@ -1,21 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { BaseProvider } from '../lib/base.js'
+import { Link } from 'react-router-dom'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
-import CommitteeManager from './CommitteeAdmin.jsx'
-import AdminDashboard from '../admin/Dashboard.jsx'
-import RolesAdmin from '../admin/RolesAdmin.jsx'
-import CommandPalette from '../admin/CommandPalette.jsx'
-import Icon from '../admin/icons.jsx'
-import { Logo } from '../components/Sketch.jsx'
 
 const LEVELS = ['public', 'members', 'hidden']
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
-function Gate({ role, children }) {
+export function Gate({ role, children }) {
   const { t } = useApp()
   const { user, loading } = useAuth()
   if (loading) return <section className="section wrap narrow"><Loading /></section>
@@ -180,75 +173,4 @@ function DashboardBody({ user }) {
       )}
     </section>
   )
-}
-
-// The admin panel is a frame (sidebar + top bar) around its sections, so the sidebar stays on screen
-// whichever section or page is open.
-export function AdminShell() {
-  return <Gate role="admin">{() => <AdminFrame />}</Gate>
-}
-
-function AdminFrame() {
-  const { t } = useApp()
-  const { user: me, profile, logout } = useAuth()
-  const go = useNavigate()
-  const loc = useLocation()
-  const [params] = useSearchParams()
-  const [open, setOpen] = useState(false)
-  useEffect(() => setOpen(false), [loc.pathname, loc.search])
-  const onHome = loc.pathname === '/admin'
-  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'dash'
-  const sections = [['dash', 'dashboard', 'admin.nav.dash'], ['roles', 'shield', 'admin.tab.roles'], ['committee', 'star', 'admin.tab.committee']]
-  const pages = [['/admin/students', 'users', 'admin.nav.students'], ['/admin/heritage', 'landmark', 'admin.nav.places'], ['/admin/blog', 'pen', 'admin.nav.blog'], ['/admin/gallery', 'image', 'admin.nav.gallery'], ['/admin/activity', 'clock', 'ad.nav.activity']]
-  const [palette, setPalette] = useState(false)
-  useEffect(() => {
-    const onKey = (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette((p) => !p) } }
-    addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
-  }, [])
-  const here = (p) => loc.pathname === p || loc.pathname.startsWith(`${p}/`)
-  const name = profile?.name || me?.email?.split('@')[0] || ''
-  return (
-    <div className="admin">
-      <aside className={`admin-side ${open ? 'open' : ''}`}>
-        <div className="admin-side-top">
-          <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
-          <button type="button" className="admin-burger" aria-expanded={open} aria-controls="admin-nav" onClick={() => setOpen(!open)}>
-            <span aria-hidden="true">{open ? '✕' : '☰'}</span> {t(open ? 'nav.close' : 'nav.menu')}
-          </button>
-        </div>
-        <nav id="admin-nav" aria-label="Admin" className="admin-nav">
-          {sections.map(([k, ic, label]) => {
-            const on = onHome && tab === k
-            return <Link key={k} to={k === 'dash' ? '/admin' : `/admin?tab=${k}`} title={t(label)} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><Icon name={ic} /><span className="nav-label">{t(label)}</span></Link>
-          })}
-          {pages.map(([to, ic, label]) => <Link key={to} to={to} title={t(label)} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><Icon name={ic} /><span className="nav-label">{t(label)}</span></Link>)}
-          <small className="side-label">{t('admin.nav.site')}</small>
-          <a href="/" target="_blank" rel="noopener noreferrer"><Icon name="external" /><span className="nav-label">{t('admin.nav.exit')}</span></a>
-        </nav>
-      </aside>
-      <div className="admin-main">
-        <div className="admin-top">
-          <div className="admin-title"><h1>{t('admin.title')}</h1>
-            <button type="button" className="ad-cmdk" onClick={() => setPalette(true)} aria-label={t('ad.cmd.open')}><Icon name="search" size={16} /><span>{t('ad.cmd.placeholder')}</span><kbd>Ctrl K</kbd></button></div>
-          <div className="admin-who">
-            <Avatar name={name || '?'} size={34} />
-            <span className="admin-id"><strong>{name}</strong><small className="muted">{me?.email} · {t('admin.roles.admin')}</small></span>
-            <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); go('/') }}>{t('auth.logout')}</button>
-          </div>
-        </div>
-        <BaseProvider value="/admin"><Outlet /></BaseProvider>
-        {palette && <CommandPalette onClose={() => setPalette(false)} />}
-      </div>
-    </div>
-  )
-}
-
-// /admin shows the dashboard; ?tab=roles and ?tab=committee open the two management sections.
-export function AdminHome() {
-  const [params] = useSearchParams()
-  const tab = params.get('tab')
-  if (tab === 'roles') return <RolesAdmin />
-  if (tab === 'committee') return <CommitteeManager />
-  return <AdminDashboard />
 }

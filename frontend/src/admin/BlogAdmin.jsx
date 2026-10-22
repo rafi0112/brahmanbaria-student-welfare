@@ -22,18 +22,18 @@ export function BlogList() {
       columns={[
         {
           label: t('ad.blog.col.post'), render: (r) => (
-            <span className="ad-person">
-              <MediaPhoto id={r.data.image} url={r.data.imageUrl} alt="" className="ad-mini" sizes="64px" />
-              <span><strong>{pick(r.data.titleBn, r.data.titleEn) || r.title}</strong><br /><small className="muted">/{r.slug}</small></span>
+            <span className="dt-person">
+              <MediaPhoto id={r.data.image} url={r.data.imageUrl} alt="" className="dt-thumb" sizes="64px" />
+              <span className="dt-twoline"><strong className="dt-clamp">{pick(r.data.titleBn, r.data.titleEn) || r.title}</strong><small className="dt-sub">/{r.slug}</small></span>
             </span>
           ),
         },
         {
-          label: t('ad.blog.col.about'), render: (r) => (
+          label: t('ad.blog.col.about'), width: '22%', render: (r) => (
             <>{r.data.author || r.authorName || '—'}<br /><small className="muted">{r.data.category ? t(`cat.${r.data.category}`) : '—'}{r.data.tags?.length ? ` · ${r.data.tags.join(', ')}` : ''}</small></>
           ),
         },
-        { label: t('ad.blog.col.meta'), render: (r) => <>{r.featured ? '★ ' + t('ad.blog.featured') : '—'}<br /><small className="muted">{n(r.data.readMin || 1)} {t('blog.min')} · {r.publishedAt ? r.publishedAt.slice(0, 10) : t('ad.notPublished')}</small></> },
+        { label: t('ad.blog.col.meta'), width: '20%', render: (r) => <>{r.featured ? '★ ' + t('ad.blog.featured') : '—'}<br /><small className="muted">{n(r.data.readMin || 1)} {t('blog.min')} · {r.publishedAt ? r.publishedAt.slice(0, 10) : t('ad.notPublished')}</small></> },
       ]} />
   )
 }

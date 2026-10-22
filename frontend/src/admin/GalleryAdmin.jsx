@@ -239,7 +239,7 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
     try { onChanged(await api(`/admin/content/image/${row.id}/${action}`, { method: 'POST' }), t(`ad.done.${action}`)) } catch (err) { setMsg(errText(err)) } finally { setBusy(false); setConfirm(null) }
   }
   return (
-    <Modal title={t('ad.gal.editImage')} onClose={() => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) onClose() }} wide busy={busy}>
+    <Modal title={t('ad.gal.editImage')} onClose={() => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) onClose() }} drawer busy={busy}>
       <p><StatusBadge status={row.status} label={row.status === 'draft' ? t('ad.gal.hidden') : undefined} /></p>
       <form onSubmit={save} noValidate className="ad-form">
         <ImagePicker label={t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
