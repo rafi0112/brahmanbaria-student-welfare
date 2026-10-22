@@ -59,7 +59,6 @@ export const NAV = [
 
 export const GROUPS = [
   { id: 'overview', label: 'ad.nav.g.overview' },
-  { id: 'students', label: 'ad.nav.g.students' },
   { id: 'people', label: 'ad.nav.g.admin' },
   { id: 'content', label: 'ad.nav.g.content' },
 ]

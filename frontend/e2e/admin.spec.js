@@ -36,6 +36,7 @@ const kid = (page, parent, name) => side(page).locator('.adm-parent').filter({ h
 test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   await login(page)
   await expect(page.locator('header.site-header, .site-header')).toHaveCount(0)
+  await side(page).getByRole('button', { name: 'Students', exact: true }).click() // opens like Messages
   for (const label of ['Dashboard', 'Activity', 'Membership Requests', 'Members', 'Member Directory', 'Admin management', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label, exact: true })).toBeVisible()
   }
@@ -327,7 +328,11 @@ test('imported directory: add a record by hand, edit it, delete it; no account i
 
 test('students: a dropdown of three pages, each with its own tabs', async ({ page }) => {
   await login(page)
-  await expect(side(page).getByRole('button', { name: 'Students', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  const students = side(page).getByRole('button', { name: 'Students', exact: true })
+  await expect(students).toHaveAttribute('aria-expanded', 'false')
+  await students.click()
+  await expect(students).toHaveAttribute('aria-expanded', 'true')
+  await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(3)
   const pages = [
     ['Membership Requests', /tab=requests/, ['All pending requests', 'Complete profiles', 'Incomplete profiles'], [/complete=yes/, /complete=no/]],
     ['Members', /tab=members/, ['All', 'Needs review', 'Verified'], [/view=review/, /view=verified/]],

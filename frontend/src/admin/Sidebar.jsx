@@ -86,6 +86,35 @@ function Parent({ item, current, collapsed }) {
   )
 }
 
+// "Students" opens like "Messages": one row with a chevron that reveals its three pages. Each page has its own tabs in the page itself.
+const STUDENT_PAGES = NAV.filter((n) => n.group === 'students')
+function StudentsParent({ current, collapsed }) {
+  const { t } = useApp()
+  const fav = useFavorites()
+  const loc = useLocation()
+  const key = 'nav:students'
+  const here = STUDENT_PAGES.some((i) => i.id === current)
+  const open = !collapsed && fav.state.groups[key] === true
+  useEffect(() => { if (here && fav.state.groups[key] !== true) fav.setGroup(key, true) }, [here, loc.pathname, loc.search]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (collapsed) {
+    return <Link to={STUDENT_PAGES[0].to} className={`adm-link ${here ? 'on' : ''}`} aria-current={here ? 'page' : undefined} title={t('ad.nav.g.students')} aria-label={t('ad.nav.g.students')}><NavIcon name="users" /></Link>
+  }
+  return (
+    <div className="adm-parent" data-open={open}>
+      <button type="button" className={`adm-link adm-parent-btn ${here ? 'cur' : ''}`} aria-expanded={open} onClick={() => fav.setGroup(key, !open)}>
+        <NavIcon name="users" /><span className="adm-fade">{t('ad.nav.g.students')}</span><Icon name="chevronDown" size={13} className="adm-pcaret" />
+      </button>
+      <Fold open={open}>
+        <div className="adm-children">
+          {STUDENT_PAGES.map((i) => (
+            <Link key={i.id} to={i.to} className={`adm-child ${current === i.id ? 'on' : ''}`} aria-current={current === i.id ? 'page' : undefined}><span>{t(i.label)}</span></Link>
+          ))}
+        </div>
+      </Fold>
+    </div>
+  )
+}
+
 function Group({ group, current, collapsed }) {
   const { t } = useApp()
   const fav = useFavorites()
@@ -98,7 +127,10 @@ function Group({ group, current, collapsed }) {
       <button type="button" className="adm-gh" aria-expanded={open} onClick={() => fav.setGroup(group.id, !open)} tabIndex={collapsed ? -1 : 0}>
         <Icon name="chevron" size={12} className="adm-caret" /><span className="adm-fade">{t(group.label)}</span>
       </button>
-      <Fold open={open}>{items.map((i) => (i.children ? <Parent key={i.id} item={i} current={current} collapsed={collapsed} /> : <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />))}</Fold>
+      <Fold open={open}>
+        {items.map((i) => (i.children ? <Parent key={i.id} item={i} current={current} collapsed={collapsed} /> : <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />))}
+        {group.id === 'overview' && <StudentsParent current={current} collapsed={collapsed} />}
+      </Fold>
     </div>
   )
 }
