@@ -15,7 +15,7 @@ test('child links keep the parent route and add only their own filter', () => {
 })
 
 test('the current child is decided by the address, and exactly one child matches', () => {
-  for (const id of ['students', 'roles', 'blog', 'heritage', 'gallery']) {
+  for (const id of ['students', 'roles', 'blog', 'heritage', 'gallery', 'imported', 'contact']) {
     const it = item(id)
     for (const c of it.children) {
       const to = childTo(it, c)
@@ -35,4 +35,11 @@ test('locations map to their section', () => {
   assert.equal(navFor('/admin', '').id, 'dash')
   assert.equal(navFor('/admin/blog/abc/edit', '').id, 'blog')
   assert.equal(navFor('/admin/students', '?status=approved').id, 'students')
+})
+
+test('the imported directory is its own section, not a Students view', () => {
+  assert.equal(navFor('/admin/students', '?tab=imported').id, 'imported')
+  assert.equal(navFor('/admin/students', '?tab=imported&status=verified').id, 'imported')
+  assert.equal(navFor('/admin/students', '?status=pending').id, 'students')
+  assert.equal(childTo(item('imported'), item('imported').children[2]), '/admin/students?tab=imported&status=verified')
 })

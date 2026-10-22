@@ -261,3 +261,28 @@ test('contact inbox: a public message arrives, can be opened, answered and archi
   await kid(page, 'Messages', 'Archived').click()
   await expect(page.getByText('Hello from the e2e suite').first()).toBeVisible()
 })
+
+test('imported directory: verify a record, see the mark, and it persists; linking is optional', async ({ page }) => {
+  await login(page)
+  await side(page).getByRole('button', { name: 'Imported directory', exact: true }).click()
+  await kid(page, 'Imported directory', 'Awaiting review').click()
+  await expect(page).toHaveURL(/tab=imported&status=awaiting$/)
+  const first = page.locator('.dt tbody tr').first()
+  const name = (await first.locator('strong').first().innerText()).trim()
+  await first.getByRole('button', { name: 'Verify', exact: true }).click()
+  const dlg = page.getByRole('dialog', { name: 'Verify imported record' })
+  await expect(dlg).toContainText(name)
+  await dlg.getByRole('button', { name: 'Verify record' }).click()
+  await expect(dlg).toBeHidden()
+  // it left "awaiting" and is in "verified", with the mark that explains itself
+  await kid(page, 'Imported directory', 'Verified').click()
+  const row = page.locator('.dt tbody tr', { hasText: name }).first()
+  await expect(row.locator('.vmark')).toHaveAttribute('title', /directory record, not an account/)
+  await page.reload()
+  await expect(page.locator('.dt tbody tr', { hasText: name }).first().locator('.vmark')).toBeVisible()
+  // removing the verification puts it back
+  await page.locator('.dt tbody tr', { hasText: name }).first().getByRole('button', { name: /Actions/ }).click()
+  await page.getByRole('menuitem', { name: 'Remove verification' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Remove verification' }).click()
+  await expect(page.getByText('Verification removed.')).toBeVisible()
+})

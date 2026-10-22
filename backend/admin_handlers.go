@@ -382,25 +382,3 @@ func (a *App) studentsExport(w http.ResponseWriter, r *http.Request, u User) {
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "member.export", "user", "", map[string]any{"rows": exported, "withContact": withContact})
 }
 
-// importedStudents lists the bundled directory records (read-only: they are seed data, not accounts).
-func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
-	v := r.URL.Query()
-	pg, limit := paging(r, 100)
-	needle := strings.TrimSpace(v.Get("q"))
-	b, _ := strconv.Atoi(v.Get("batch"))
-	out := []Student{}
-	for _, s := range a.Store.Students {
-		if needle != "" && !contains(s.Name, needle) {
-			continue
-		}
-		if d := v.Get("department"); d != "" && s.Department != d {
-			continue
-		}
-		if b > 0 && (s.Batch == nil || *s.Batch != b) {
-			continue
-		}
-		out = append(out, s)
-	}
-	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample})
-}

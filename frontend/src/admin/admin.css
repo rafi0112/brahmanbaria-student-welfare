@@ -467,3 +467,8 @@
 .ct-body { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; background: var(--a-surface-2); border-radius: var(--a-r); margin: 8px 0; }
 .ct-thread { margin-top: 8px; } .ct-reply { margin-top: 8px; } .ct-reply.is-failed .ct-body { box-shadow: inset 3px 0 0 var(--a-bad); }
 .ct-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; } .adm .ct-delete { margin-left: auto; color: var(--a-bad); }
+
+/* verified mark beside a name */
+.adm .vmark { display: inline-flex; vertical-align: -3px; margin-left: 5px; color: var(--ni-sky); }
+.adm .ad-matches { display: grid; gap: 8px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--a-line); border-radius: var(--a-r); }
+.adm .ad-matches legend { padding: 0 6px; color: var(--a-text-2); font-size: .8125rem; }

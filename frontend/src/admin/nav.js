@@ -20,6 +20,11 @@ export const NAV = [
     { id: 'rejected', label: 'ad.status.rejected', query: { status: 'rejected' } },
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
+  { id: 'imported', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.imported', group: 'people', watch: ['status'], children: [
+    { id: 'all', label: 'ad.status.allShort', query: {} },
+    { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
+    { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
+  ] },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people', watch: ['role'], children: [
     { id: 'all', label: 'ad.roles.view.all', query: {} },
     { id: 'admin', label: 'admin.roles.admin', query: { role: 'admin' } },
@@ -62,6 +67,7 @@ export function navFor(pathname, search = '') {
     const tab = new URLSearchParams(search).get('tab')
     return NAV.find((n) => n.id === (tab === 'roles' ? 'roles' : tab === 'committee' ? 'committee' : 'dash'))
   }
+  if (pathname === '/admin/students' && new URLSearchParams(search).get('tab') === 'imported') return NAV.find((n) => n.id === 'imported')
   return NAV.find((n) => !n.to.includes('?') && n.to !== '/admin' && (pathname === n.to || pathname.startsWith(`${n.to}/`)))
 }
 

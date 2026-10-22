@@ -4,7 +4,7 @@ import { api, downloadFile, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
@@ -123,7 +123,7 @@ function Members() {
             selection={{ picked, toggle, allOn: allOnPage, toggleAll: () => setPicked(allOnPage ? [] : rows.map((r) => r.id)), name: (r) => r.name }}
             columns={[
               { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
-                <span className="dt-person"><Avatar name={r.name} size={34} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}</strong><small className="dt-sub dt-trunc" title={r.email}>{r.email}</small></span></span>
+                <span className="dt-person"><Avatar name={r.name} size={34} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.status === 'approved' && r.emailVerified && <VerifiedMark label={t('ad.vm.member')} />}</strong><small className="dt-sub dt-trunc" title={r.email}>{r.email}</small></span></span>
               ) },
               { id: 'academic', label: t('ad.stu.col.academic'), width: '24%', cell: (r) => <div className="dt-stack"><span className="dt-trunc" title={r.department}>{r.department}</span><small className="dt-sub">{t('auth.batch')} {n(r.batch)}</small></div> },
               { id: 'status', label: t('ad.stu.col.status'), width: '30%', cell: (r) => (
@@ -183,7 +183,7 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
   const text = (k) => (e) => setV({ ...v, [k]: e.target.value })
 
   return (
-    <Modal title={row.name} onClose={onClose} drawer busy={busy}>
+    <Modal title={row.name} onClose={onClose} drawer busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
       <p className="muted small">{row.email} · <StatusBadge status={row.status} /> · {row.role === 'admin' ? t('admin.roles.admin') : t('admin.roles.member')}
         {row.role === 'admin' && <> — <Link to="/admin?tab=roles">{t('ad.stu.manageRole')}</Link></>}</p>
       <form onSubmit={save} noValidate className="ad-form">
@@ -230,38 +230,115 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
   )
 }
 
-/* ---------------------------------------------------------------- imported directory (read-only) */
+/* ---------------------------------------------------------------- imported directory */
+
+// Small check beside a name. It is only drawn when the real condition holds, and always carries a written explanation.
+function VerifiedMark({ label }) {
+  return <span className="vmark" title={label} role="img" aria-label={label}><Icon name="verified" size={15} /></span>
+}
 
 function Imported() {
-  const { t, n } = useApp()
-  const [f, set] = useFilters({ q: '', department: '', batch: '', page: '1', limit: '20' })
+  const { t, n, lang } = useApp()
+  const errText = useErrText()
+  const when = useWhen(lang)
+  const [f, set] = useFilters({ q: '', department: '', batch: '', status: '', page: '1', limit: '20' })
   const depts = useApi('/departments')
   const list = useApi(`/admin/imported-students${qs({ ...f, page: f.page === '1' ? '' : f.page })}`)
+  const { notice, ok, bad, clear } = useNotice()
+  const [verify, setVerify] = useState(null)
+  const [undo, setUndo] = useState(null)
+  const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
+  const counts = list.data?.counts || {}
+  const filtered = !!(f.q || f.department || f.batch || f.status)
+  const unverify = async () => {
+    setBusy(true); clear()
+    try { await api(`/admin/imported-students/${undo.id}/unverify`, { method: 'POST', body: '{}' }); ok(t('ad.imp.undone')); list.retry() } catch (e) { bad(errText(e)) } finally { setBusy(false); setUndo(null) }
+  }
   return (
     <>
-      <p className="notice">{t('ad.stu.importedNote')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
+      <p className="notice">{t('ad.imp.note')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
+        views={[
+          { id: 'all', label: t('ad.status.allShort'), patch: { status: '' } },
+          { id: 'awaiting', label: `${t('ad.imp.awaiting')}${counts.awaiting != null ? ` ${n(counts.awaiting)}` : ''}`, patch: { status: 'awaiting' } },
+          { id: 'verified', label: `${t('ad.imp.verified')}${counts.verified != null ? ` ${n(counts.verified)}` : ''}`, patch: { status: 'verified' } },
+        ]}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
           { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
         ]} />
+      <Notice notice={notice} onClose={clear} />
       {list.loading && <SkeletonRows />}
       {list.error && <Data q={list}>{() => null}</Data>}
-      {list.data && (rows.length === 0 ? <EmptyState title={t('ad.stu.noMatch')} text={t('ad.stu.noMatchHint')} /> : (
+      {list.data && (rows.length === 0 ? <EmptyState title={t(filtered ? 'ad.stu.noMatch' : 'ad.imp.none')} text={t('ad.stu.noMatchHint')} /> : (
         <>
           <DataTable caption={t('ad.stu.tab.imported')} rows={rows} rowKey={(r) => r.id}
             columns={[
-              { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><strong className="dt-clamp">{r.name}</strong></Link> },
-              { id: 'dept', label: t('students.dept'), width: '30%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
-              { id: 'batch', label: t('students.batch'), width: '90px', cell: (r) => (r.batch ? n(r.batch) : '—') },
-              { id: 'session', label: t('students.session'), width: '120px', cell: (r) => r.session || '—' },
-              { id: 'upazila', label: t('auth.upazila'), width: '18%', cell: (r) => <Trunc>{r.upazila || '—'}</Trunc> },
+              { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
+                <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong></Link>
+              ) },
+              { id: 'dept', label: t('students.dept'), width: '26%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
+              { id: 'batch', label: t('students.batch'), width: '80px', cell: (r) => (r.batch ? n(r.batch) : '—') },
+              { id: 'review', label: t('ad.imp.review'), width: '24%', cell: (r) => (
+                r.verified ? (
+                  <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
+                    <small className="dt-sub">{r.verifiedBy} · {when(r.verifiedAt)}</small>
+                    {r.linked && <small className="dt-sub" title={r.linked.email}>{t('ad.imp.linkedTo')} {r.linked.name}</small>}</div>
+                ) : <span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
+              ) },
+              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
+                <div className="dt-actions">
+                  {!r.verified && <button type="button" className="btn btn-outline btn-sm" onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
+                  {r.verified && <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
+                    { label: t('ad.imp.relink'), icon: 'folderMove', onClick: () => setVerify(r) },
+                    { label: t('ad.imp.unverify'), icon: 'x', danger: true, onClick: () => setUndo(r) },
+                  ]} />}
+                </div>
+              ) },
             ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}
+      {verify && <VerifyDialog row={verify} onClose={() => setVerify(null)} onDone={() => { setVerify(null); ok(t('ad.imp.done')); list.retry() }} />}
+      {undo && <Confirm tone="danger" text={t('ad.imp.unverifyText').replace('{who}', undo.name)} label={t('ad.imp.unverify')} busy={busy} onYes={unverify} onNo={() => setUndo(null)} />}
     </>
+  )
+}
+
+// Verify an imported record. Optionally link it to the registered account of the same person. Neither choice changes that account.
+function VerifyDialog({ row, onClose, onDone }) {
+  const { t } = useApp()
+  const errText = useErrText()
+  const matches = useApi(`/admin/imported-students/${row.id}/matches`)
+  const [link, setLink] = useState(row.linked?.id || '')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const go = async () => {
+    setBusy(true); setErr('')
+    try { await api(`/admin/imported-students/${row.id}/verify`, { method: 'POST', body: JSON.stringify({ linkedUserId: link }) }); onDone() } catch (e) { setErr(e.message === 'already_linked' ? t('ad.imp.alreadyLinked') : errText(e)) } finally { setBusy(false) }
+  }
+  const items = matches.data?.items || []
+  return (
+    <Modal title={t('ad.imp.verifyTitle')} onClose={onClose} busy={busy}>
+      <p><strong>{row.name}</strong> <span className="muted">· {row.department} · {t('auth.batch')} {row.batch}</span></p>
+      <p className="muted small">{t('ad.imp.verifyHelp')}</p>
+      <fieldset className="ad-matches"><legend>{t('ad.imp.matchTitle')}</legend>
+        <label className="check"><input type="radio" name="match" checked={link === ''} onChange={() => setLink('')} /> {t('ad.imp.noLink')}</label>
+        {matches.loading && <small className="muted">{t('state.loading')}</small>}
+        {items.length === 0 && !matches.loading && <small className="muted">{t('ad.imp.noMatches')}</small>}
+        {items.map((m) => (
+          <label className="check" key={m.id}><input type="radio" name="match" checked={link === m.id} onChange={() => setLink(m.id)} />
+            <span>{m.name} <small className="muted">{m.email} · {m.department} · {t('auth.batch')} {m.batch}{m.sameBatch && m.sameDepartment ? ` · ${t('ad.imp.strong')}` : ''}</small></span></label>
+        ))}
+      </fieldset>
+      {link && <p className="notice">{t('ad.imp.linkNote')}</p>}
+      {err && <p className="notice bad" role="alert">{err}</p>}
+      <div className="row">
+        <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={go}>{busy ? t('state.loading') : t('ad.imp.confirm')}</button>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{t('admin.roles.cancel')}</button>
+      </div>
+    </Modal>
   )
 }
