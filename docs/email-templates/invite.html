@@ -1,9 +1,13 @@
 <!--
   Supabase Auth -> Email Templates -> "Invite user"
   Subject:  Activate your Jela Kollan for University account
-  Variables: only Supabase's {{ .ConfirmationURL }}. No name, email or profile detail is placed in the message or in the link.
-  Layout:   600px table layout with inline styles (works in Gmail, Outlook desktop/web, Apple Mail and mobile clients), a
-            bulletproof button (VML fallback for Outlook), a hidden preheader, light and dark colour support, no remote images.
+  Variables: {{ .ConfirmationURL }} (the single-use invitation link) and {{ .SiteURL }} (used only to find the images below).
+             No name, email or profile detail is placed in the message or in the link.
+  Images:   served from the website at {{ .SiteURL }}/email/ (frontend/public/email/): logo.png, hero.jpg and the i-*.png icons.
+            Mail clients can only load them from a public https address, so they appear once the site is deployed at the Supabase
+            "Site URL". Until then, or when a client blocks images, every image has alt text and a plain background, and the
+            message stays fully readable. Replace public/email/hero.jpg with the university building photograph when you have it.
+  Layout:   640px table layout with inline styles (Gmail, Outlook, Apple Mail, mobile), bulletproof button, hidden preheader.
 -->
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -13,151 +17,174 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="x-apple-disable-message-reformatting">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
 <title>Activate your Jela Kollan for University account</title>
 <!--[if mso]>
 <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
-<style>td, th, div, p, a, h1 { font-family: Segoe UI, Arial, sans-serif !important; }</style>
+<style>td, th, div, p, a, h1, h2 { font-family: Segoe UI, Arial, sans-serif !important; }</style>
 <![endif]-->
 <style>
   body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
   a { text-decoration: none; }
-  @media only screen and (max-width: 620px) {
+  @media only screen and (max-width: 640px) {
     .wrap { width: 100% !important; }
     .px { padding-left: 22px !important; padding-right: 22px !important; }
-    .h1 { font-size: 24px !important; line-height: 30px !important; }
-    .btn a { display: block !important; }
+    .stack { display: block !important; width: 100% !important; box-sizing: border-box; }
+    .hide-m { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+    .h1 { font-size: 34px !important; line-height: 38px !important; }
+    .hero-img { width: 100% !important; height: auto !important; border-radius: 14px !important; }
+    .btn-a { display: block !important; }
     .btn { width: 100% !important; }
-  }
-  @media (prefers-color-scheme: dark) {
-    .bg { background: #101114 !important; }
-    .card { background: #17181c !important; border-color: #2a2c33 !important; }
-    .ink { color: #ececf0 !important; }
-    .muted { color: #a3a6af !important; }
-    .rule { border-color: #2a2c33 !important; }
-    .callout { background: #1d1f26 !important; border-color: #2e3140 !important; }
-    .step-n { background: #2a2d3a !important; color: #c9ccff !important; }
-    .btn-cell { background: #ececf0 !important; }
-    .btn-a { color: #15161a !important; }
-    .link { color: #a9b0ff !important; }
+    .step { display: block !important; width: 100% !important; padding: 0 0 18px 0 !important; }
+    .why { display: block !important; width: 100% !important; border-left: 0 !important; padding: 0 0 16px 0 !important; }
   }
 </style>
 </head>
-<body class="bg" style="margin:0;padding:0;width:100%;background:#f3f3f1;">
+<body style="margin:0;padding:0;width:100%;background:#f3f3f1;">
 
-<!-- preheader: the grey preview line in the inbox list -->
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#f3f3f1;">
   Your member profile is waiting. Open the secure link to confirm your email, set a password and review your details.
   &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
 </div>
 
-<table role="presentation" class="bg" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f3f1;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f3f1;">
  <tr><td align="center" style="padding:28px 12px 36px 12px;">
 
-  <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+  <table role="presentation" class="wrap" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px;max-width:640px;background:#ffffff;border-radius:20px;border:1px solid #e8e8e4;">
 
-   <!-- brand -->
-   <tr><td class="px" style="padding:0 4px 16px 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Helvetica,Arial,sans-serif;">
-     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-       <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;background:#1f2025;border-radius:9px;color:#ffffff;font-size:14px;font-weight:700;letter-spacing:.02em;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">JK</td>
-       <td style="padding-left:11px;font-size:15px;line-height:18px;font-weight:650;color:#1a1b1f;" class="ink">Jela Kollan for University</td>
-     </tr></table>
+   <!-- header -->
+   <tr><td class="px" style="padding:26px 36px 20px 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+     <td valign="middle" width="64" style="width:64px;"><img src="{{ .SiteURL }}/email/logo.png" width="56" height="56" alt="Jela Kollan for University" style="width:56px;height:56px;border-radius:28px;background:#1f2025;"></td>
+     <td valign="middle" style="padding-left:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;line-height:22px;font-weight:700;color:#15161a;">Jela Kollan<br>for University</td>
+     <td class="hide-m" align="right" valign="middle" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;line-height:16px;letter-spacing:.16em;text-transform:uppercase;color:#6b6e75;">Connect &nbsp;&middot;&nbsp; Support &nbsp;&middot;&nbsp; Grow together</td>
+    </tr></table>
    </td></tr>
+   <tr><td class="px" style="padding:0 36px;"><div style="border-top:1px solid #ececE8;font-size:0;line-height:0;height:1px;">&nbsp;</div></td></tr>
 
-   <!-- card -->
-   <tr><td>
-    <table role="presentation" class="card" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border:1px solid #e4e4e0;border-radius:14px;">
-     <tr><td style="height:4px;line-height:4px;font-size:0;background:#4650c9;border-radius:14px 14px 0 0;">&nbsp;</td></tr>
-
-     <tr><td class="px" style="padding:34px 40px 8px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Helvetica,Arial,sans-serif;color:#1a1b1f;">
-      <p class="muted" style="margin:0 0 10px 0;font-size:12px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:#6b6e75;">Member invitation</p>
-      <h1 class="h1 ink" style="margin:0 0 18px 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.01em;color:#1a1b1f;">Activate your account</h1>
-      <p class="ink" style="margin:0 0 14px 0;font-size:16px;line-height:25px;color:#1a1b1f;">Hello,</p>
-      <p class="ink" style="margin:0 0 14px 0;font-size:16px;line-height:25px;color:#1a1b1f;">A member profile for your email address already exists in the Jela Kollan for University directory. You have been invited to activate your account and review your existing profile information.</p>
-     </td></tr>
-
-     <!-- steps -->
-     <tr><td class="px" style="padding:6px 40px 6px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Helvetica,Arial,sans-serif;">
-      <p class="ink" style="margin:0 0 10px 0;font-size:14px;line-height:20px;font-weight:650;color:#1a1b1f;">What you need to do</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-       <tr><td width="34" valign="top" style="padding:0 0 11px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td class="step-n" width="24" height="24" align="center" style="width:24px;height:24px;background:#eceeff;color:#3a43b0;border-radius:12px;font-size:12px;line-height:24px;font-weight:700;">1</td></tr></table></td>
-           <td class="ink" valign="top" style="padding:2px 0 11px 0;font-size:15px;line-height:22px;color:#1a1b1f;">Open the secure link below.</td></tr>
-       <tr><td width="34" valign="top" style="padding:0 0 11px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td class="step-n" width="24" height="24" align="center" style="width:24px;height:24px;background:#eceeff;color:#3a43b0;border-radius:12px;font-size:12px;line-height:24px;font-weight:700;">2</td></tr></table></td>
-           <td class="ink" valign="top" style="padding:2px 0 11px 0;font-size:15px;line-height:22px;color:#1a1b1f;">Confirm your email address and complete the account setup.</td></tr>
-       <tr><td width="34" valign="top" style="padding:0 0 11px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td class="step-n" width="24" height="24" align="center" style="width:24px;height:24px;background:#eceeff;color:#3a43b0;border-radius:12px;font-size:12px;line-height:24px;font-weight:700;">3</td></tr></table></td>
-           <td class="ink" valign="top" style="padding:2px 0 11px 0;font-size:15px;line-height:22px;color:#1a1b1f;">Set your own password.</td></tr>
-       <tr><td width="34" valign="top" style="padding:0 0 11px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td class="step-n" width="24" height="24" align="center" style="width:24px;height:24px;background:#eceeff;color:#3a43b0;border-radius:12px;font-size:12px;line-height:24px;font-weight:700;">4</td></tr></table></td>
-           <td class="ink" valign="top" style="padding:2px 0 11px 0;font-size:15px;line-height:22px;color:#1a1b1f;">Review your existing profile information and correct any outdated or incomplete details.</td></tr>
-       <tr><td width="34" valign="top" style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td class="step-n" width="24" height="24" align="center" style="width:24px;height:24px;background:#eceeff;color:#3a43b0;border-radius:12px;font-size:12px;line-height:24px;font-weight:700;">5</td></tr></table></td>
-           <td class="ink" valign="top" style="padding:2px 0 0 0;font-size:15px;line-height:22px;color:#1a1b1f;">Complete the required fields and submit your membership request.</td></tr>
-      </table>
-     </td></tr>
-
-     <!-- button -->
-     <tr><td class="px" align="left" style="padding:26px 40px 8px 40px;">
-      <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0"><tr>
-       <td class="btn-cell" align="center" bgcolor="#1f2025" style="border-radius:10px;background:#1f2025;">
+   <!-- hero: text + photograph -->
+   <tr><td class="px" style="padding:30px 36px 8px 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+     <td class="stack" valign="top" width="52%" style="width:52%;padding-right:22px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Helvetica,Arial,sans-serif;color:#15161a;">
+      <p style="margin:0 0 12px 0;font-size:12px;line-height:16px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;color:#6b6e75;">You&rsquo;re invited</p>
+      <h1 class="h1" style="margin:0 0 20px 0;font-size:40px;line-height:44px;font-weight:800;letter-spacing:-.02em;color:#15161a;">Activate Your Account</h1>
+      <p style="margin:0 0 12px 0;font-size:16px;line-height:24px;color:#2a2c33;">Hello,</p>
+      <p style="margin:0 0 22px 0;font-size:16px;line-height:25px;color:#44464c;">A member profile for your email address already exists in the Jela Kollan for University directory. You have been invited to activate your account and review your existing profile information.</p>
+      <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;"><tr>
+       <td align="center" bgcolor="#0a0a0b" style="border-radius:10px;background:#0a0a0b;">
         <!--[if mso]>
-        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .ConfirmationURL }}" style="height:50px;v-text-anchor:middle;width:300px;" arcsize="20%" stroke="f" fillcolor="#1f2025">
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .ConfirmationURL }}" style="height:52px;v-text-anchor:middle;width:300px;" arcsize="20%" stroke="f" fillcolor="#0a0a0b">
           <w:anchorlock/>
-          <center style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:16px;font-weight:600;">Activate Account &amp; Verify Email</center>
+          <center style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:16px;font-weight:600;">Activate Account &amp; Verify Email &rarr;</center>
         </v:roundrect>
         <![endif]-->
         <!--[if !mso]><!-- -->
-        <a class="btn-a" href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:20px;font-weight:600;color:#ffffff;border-radius:10px;text-align:center;">Activate Account &amp; Verify Email</a>
+        <a class="btn-a" href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:16px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:20px;font-weight:600;color:#ffffff;border-radius:10px;text-align:center;">Activate Account &amp; Verify Email &rarr;</a>
         <!--<![endif]-->
        </td>
       </tr></table>
-     </td></tr>
-     <tr><td class="px muted" style="padding:14px 40px 4px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#6b6e75;">
-      This is a single-use link. If the button does not work, copy this address into your browser:<br>
-      <a class="link" href="{{ .ConfirmationURL }}" target="_blank" style="color:#3a43b0;word-break:break-all;">{{ .ConfirmationURL }}</a>
-     </td></tr>
+      <p style="margin:0;font-size:13px;line-height:20px;color:#6b6e75;">This is a secure, single-use link that will take you to set up your account and verify your email.</p>
+     </td>
+     <td class="stack" valign="top" width="48%" style="width:48%;padding-top:4px;">
+      <img class="hero-img" src="{{ .SiteURL }}/email/hero.jpg" width="288" alt="Jela Kollan for University" style="width:288px;max-width:100%;height:auto;border-radius:18px;background:#e9ecf5;">
+     </td>
+    </tr></table>
+   </td></tr>
 
-     <!-- after activation -->
-     <tr><td class="px" style="padding:22px 40px 6px 40px;">
-      <table role="presentation" class="callout" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f7ff;border:1px solid #e1e4ff;border-radius:10px;">
-       <tr><td style="padding:16px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Bengali','Hind Siliguri',Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#2a2c33;" class="ink">
-        <p style="margin:0 0 8px 0;font-weight:650;color:#1a1b1f;" class="ink">After activation</p>
-        <p style="margin:0 0 8px 0;">After opening the secure invitation link, you will be taken to the Jela Kollan for University website to complete your account setup and review your existing profile.</p>
-        <p style="margin:0 0 8px 0;">Your membership will remain pending until an authorized administrator approves your request. Confirming your email alone does not grant membership approval or administrator access.</p>
-        <p style="margin:0;">You will receive the verified member indicator only when the application&rsquo;s defined conditions are satisfied: genuine email verification and approved membership.</p>
-       </td></tr>
-      </table>
-     </td></tr>
-
-     <!-- security -->
-     <tr><td class="px" style="padding:16px 40px 6px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#5b5e66;">
-      <p class="muted" style="margin:0;"><strong class="ink" style="color:#1a1b1f;">Security note.</strong> If you were not expecting this invitation, you can safely ignore this email. Do not share your invitation link or password with anyone.</p>
-     </td></tr>
-
-     <tr><td class="px" style="padding:22px 40px 30px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#1a1b1f;">
-      <p class="ink" style="margin:0;">Regards,<br><strong>Jela Kollan for University</strong></p>
-     </td></tr>
-
-     <!-- Bangla -->
-     <tr><td class="px" style="padding:0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="rule" style="border-top:1px solid #ececE8;font-size:0;line-height:0;height:1px;">&nbsp;</td></tr></table></td></tr>
-     <tr><td class="px" style="padding:24px 40px 34px 40px;font-family:'Noto Sans Bengali','Hind Siliguri','Kalpurush',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1b1f;">
-      <p class="muted" style="margin:0 0 8px 0;font-size:12px;line-height:16px;letter-spacing:.06em;font-weight:600;color:#6b6e75;">বাংলা</p>
-      <p class="ink" style="margin:0 0 10px 0;font-size:16px;line-height:26px;font-weight:650;color:#1a1b1f;">আপনার অ্যাকাউন্ট চালু করুন</p>
-      <p class="ink" style="margin:0 0 10px 0;font-size:15px;line-height:26px;color:#1a1b1f;">জেলা কল্যাণ ফর ইউনিভার্সিটির সদস্য ডিরেক্টরিতে আপনার ইমেইল ঠিকানায় একটি প্রোফাইল আগে থেকেই আছে। অ্যাকাউন্ট চালু করে প্রোফাইল দেখে নিতে আপনাকে আমন্ত্রণ জানানো হয়েছে।</p>
-      <p class="ink" style="margin:0 0 10px 0;font-size:15px;line-height:26px;color:#1a1b1f;">উপরের নিরাপদ লিংক খুলুন, ইমেইল নিশ্চিত করুন, নিজের পাসওয়ার্ড দিন, পুরনো বা অসম্পূর্ণ তথ্য ঠিক করুন এবং সদস্যপদের আবেদন জমা দিন।</p>
-      <p class="muted" style="margin:0 0 10px 0;font-size:14px;line-height:24px;color:#44464c;">অ্যাডমিন অনুমোদন না করা পর্যন্ত আপনার সদস্যপদ অপেক্ষমাণ থাকবে। শুধু ইমেইল নিশ্চিত করলে সদস্যপদ বা অ্যাডমিন অধিকার মেলে না। ইমেইল সত্যিই নিশ্চিত এবং সদস্যপদ অনুমোদিত হলেই যাচাইকৃত সদস্যের চিহ্ন পাবেন।</p>
-      <p class="muted" style="margin:0;font-size:13px;line-height:22px;color:#5b5e66;">এই আমন্ত্রণ আপনি আশা না করলে ইমেইলটি উপেক্ষা করুন। লিংক বা পাসওয়ার্ড কাউকে দেবেন না।</p>
+   <!-- what you need to do -->
+   <tr><td class="px" style="padding:26px 36px 8px 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f6f4;border-radius:16px;">
+     <tr><td style="padding:22px 24px 6px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;line-height:24px;font-weight:700;color:#15161a;">What you need to do</td></tr>
+     <tr><td style="padding:14px 24px 22px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+       <td class="step" valign="top" width="25%" style="width:25%;padding-right:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td><img src="{{ .SiteURL }}/email/i-mail.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td><td valign="bottom" style="padding-left:2px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="20" height="20" align="center" bgcolor="#15161a" style="width:20px;height:20px;border-radius:10px;background:#15161a;color:#ffffff;font-size:11px;line-height:20px;font-weight:700;">1</td></tr></table></td></tr></table>
+        <p style="margin:10px 0 4px 0;font-size:14px;line-height:19px;font-weight:700;color:#15161a;">Open the secure link</p>
+        <p style="margin:0;font-size:13px;line-height:19px;color:#5b5e66;">Click the button above to activate your account.</p></td>
+       <td class="step" valign="top" width="25%" style="width:25%;padding-right:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td><img src="{{ .SiteURL }}/email/i-lock.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td><td valign="bottom" style="padding-left:2px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="20" height="20" align="center" bgcolor="#15161a" style="width:20px;height:20px;border-radius:10px;background:#15161a;color:#ffffff;font-size:11px;line-height:20px;font-weight:700;">2</td></tr></table></td></tr></table>
+        <p style="margin:10px 0 4px 0;font-size:14px;line-height:19px;font-weight:700;color:#15161a;">Confirm your email</p>
+        <p style="margin:0;font-size:13px;line-height:19px;color:#5b5e66;">Verify your email address and set your own password.</p></td>
+       <td class="step" valign="top" width="25%" style="width:25%;padding-right:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td><img src="{{ .SiteURL }}/email/i-doc.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td><td valign="bottom" style="padding-left:2px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="20" height="20" align="center" bgcolor="#15161a" style="width:20px;height:20px;border-radius:10px;background:#15161a;color:#ffffff;font-size:11px;line-height:20px;font-weight:700;">3</td></tr></table></td></tr></table>
+        <p style="margin:10px 0 4px 0;font-size:14px;line-height:19px;font-weight:700;color:#15161a;">Review your profile</p>
+        <p style="margin:0;font-size:13px;line-height:19px;color:#5b5e66;">Your existing information will be prefilled. Check it, correct anything outdated and complete missing details.</p></td>
+       <td class="step" valign="top" width="25%" style="width:25%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td><img src="{{ .SiteURL }}/email/i-user.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td><td valign="bottom" style="padding-left:2px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="20" height="20" align="center" bgcolor="#15161a" style="width:20px;height:20px;border-radius:10px;background:#15161a;color:#ffffff;font-size:11px;line-height:20px;font-weight:700;">4</td></tr></table></td></tr></table>
+        <p style="margin:10px 0 4px 0;font-size:14px;line-height:19px;font-weight:700;color:#15161a;">Submit membership request</p>
+        <p style="margin:0;font-size:13px;line-height:19px;color:#5b5e66;">Complete the required fields and submit for administrator review.</p></td>
+      </tr></table>
      </td></tr>
     </table>
    </td></tr>
 
-   <!-- footer -->
-   <tr><td class="px muted" align="center" style="padding:20px 20px 0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#8a8d94;">
-    You are receiving this because an administrator of Jela Kollan for University invited this email address.<br>
-    Please do not reply to this automated message.
+   <!-- important information -->
+   <tr><td class="px" style="padding:14px 36px 8px 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f6f4;border-radius:16px;">
+     <tr>
+      <td class="hide-m" valign="top" width="76" style="width:76px;padding:22px 0 22px 24px;"><img src="{{ .SiteURL }}/email/i-shield.png" width="52" height="52" alt="" style="width:52px;height:52px;"></td>
+      <td valign="top" style="padding:22px 24px 22px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#44464c;">
+       <p style="margin:0 0 6px 0;font-size:17px;line-height:22px;font-weight:700;color:#15161a;">Important information</p>
+       <p style="margin:0 0 8px 0;">After opening the secure invitation link, you will be taken to the Jela Kollan for University website to complete your account setup and review your existing profile.</p>
+       <p style="margin:0 0 8px 0;">Your membership will remain pending until an authorized administrator approves your request. Confirming your email alone does not grant membership approval or administrator access.</p>
+       <p style="margin:0;">You will receive the verified member indicator only when the application&rsquo;s defined conditions are satisfied: genuine email verification and approved membership.</p>
+      </td>
+     </tr>
+    </table>
    </td></tr>
 
+   <!-- why activate -->
+   <tr><td class="px" style="padding:26px 36px 4px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <p style="margin:0 0 16px 0;font-size:20px;line-height:26px;font-weight:700;color:#15161a;">Why activate your account?</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+     <td class="why" valign="top" width="33%" style="width:33%;padding-right:14px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+       <td valign="top" width="52"><img src="{{ .SiteURL }}/email/i-people.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td>
+       <td valign="top" style="padding-left:4px;font-size:13px;line-height:19px;color:#5b5e66;"><strong style="display:block;font-size:14px;color:#15161a;">Keep your profile updated</strong>Make sure your information is accurate and complete.</td></tr></table></td>
+     <td class="why" valign="top" width="33%" style="width:33%;padding:0 14px;border-left:1px solid #ececE8;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+       <td valign="top" width="52"><img src="{{ .SiteURL }}/email/i-community.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td>
+       <td valign="top" style="padding-left:4px;font-size:13px;line-height:19px;color:#5b5e66;"><strong style="display:block;font-size:14px;color:#15161a;">Stay connected</strong>Be part of a stronger university community.</td></tr></table></td>
+     <td class="why" valign="top" width="34%" style="width:34%;padding-left:14px;border-left:1px solid #ececE8;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+       <td valign="top" width="52"><img src="{{ .SiteURL }}/email/i-work.png" width="44" height="44" alt="" style="width:44px;height:44px;"></td>
+       <td valign="top" style="padding-left:4px;font-size:13px;line-height:19px;color:#5b5e66;"><strong style="display:block;font-size:14px;color:#15161a;">Take part</strong>Hear about community events and initiatives.</td></tr></table></td>
+    </tr></table>
+   </td></tr>
+
+   <!-- fallback + security + regards -->
+   <tr><td class="px" style="padding:24px 36px 0 36px;"><div style="border-top:1px solid #ececE8;font-size:0;line-height:0;height:1px;">&nbsp;</div></td></tr>
+   <tr><td class="px" style="padding:18px 36px 6px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#6b6e75;">
+    If the button does not work, copy this address into your browser:<br>
+    <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#3a43b0;word-break:break-all;">{{ .ConfirmationURL }}</a>
+   </td></tr>
+   <tr><td class="px" style="padding:12px 36px 6px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#5b5e66;">
+    <strong style="color:#15161a;">Security note.</strong> If you were not expecting this invitation, you can safely ignore this email. Do not share your invitation link or password with anyone.
+   </td></tr>
+   <tr><td class="px" style="padding:14px 36px 28px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#15161a;">
+    Warm regards,<br><strong>Jela Kollan for University Team</strong>
+   </td></tr>
+
+   <!-- Bangla -->
+   <tr><td class="px" style="padding:0 36px;"><div style="border-top:1px solid #ececE8;font-size:0;line-height:0;height:1px;">&nbsp;</div></td></tr>
+   <tr><td class="px" style="padding:22px 36px 32px 36px;font-family:'Noto Sans Bengali','Hind Siliguri','Kalpurush',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15161a;">
+    <p style="margin:0 0 6px 0;font-size:12px;line-height:16px;letter-spacing:.08em;font-weight:600;color:#6b6e75;">বাংলা</p>
+    <p style="margin:0 0 8px 0;font-size:16px;line-height:26px;font-weight:700;color:#15161a;">আপনার অ্যাকাউন্ট চালু করুন</p>
+    <p style="margin:0 0 8px 0;font-size:15px;line-height:26px;color:#2a2c33;">জেলা কল্যাণ ফর ইউনিভার্সিটির সদস্য ডিরেক্টরিতে আপনার ইমেইল ঠিকানায় একটি প্রোফাইল আগে থেকেই আছে। অ্যাকাউন্ট চালু করে প্রোফাইল দেখে নিতে আপনাকে আমন্ত্রণ জানানো হয়েছে।</p>
+    <p style="margin:0 0 8px 0;font-size:15px;line-height:26px;color:#2a2c33;">উপরের নিরাপদ লিংক খুলুন, ইমেইল নিশ্চিত করুন, নিজের পাসওয়ার্ড দিন, পুরনো বা অসম্পূর্ণ তথ্য ঠিক করুন এবং সদস্যপদের আবেদন জমা দিন।</p>
+    <p style="margin:0 0 8px 0;font-size:14px;line-height:24px;color:#44464c;">অ্যাডমিন অনুমোদন না করা পর্যন্ত আপনার সদস্যপদ অপেক্ষমাণ থাকবে। শুধু ইমেইল নিশ্চিত করলে সদস্যপদ বা অ্যাডমিন অধিকার মেলে না। ইমেইল সত্যিই নিশ্চিত এবং সদস্যপদ অনুমোদিত হলেই যাচাইকৃত সদস্যের চিহ্ন পাবেন।</p>
+    <p style="margin:0;font-size:13px;line-height:22px;color:#5b5e66;">এই আমন্ত্রণ আপনি আশা না করলে ইমেইলটি উপেক্ষা করুন। লিংক বা পাসওয়ার্ড কাউকে দেবেন না।</p>
+   </td></tr>
   </table>
+
+  <table role="presentation" class="wrap" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px;max-width:640px;"><tr>
+   <td align="center" style="padding:18px 20px 0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#8a8d94;">
+    You are receiving this because an administrator of Jela Kollan for University invited this email address. Please do not reply to this automated message.
+   </td></tr></table>
+
  </td></tr>
 </table>
 </body>
