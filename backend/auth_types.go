@@ -34,6 +34,7 @@ type User struct {
 	PasswordHash  string
 	Role          string
 	EmailVerified bool
+	Disabled      bool
 }
 
 type Profile struct {
@@ -93,6 +94,7 @@ type ProfilePatch struct {
 // the in-memory implementation is for tests and explicit local development.
 type AuthStore interface {
 	CommitteeStore
+	CMSStore
 
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)

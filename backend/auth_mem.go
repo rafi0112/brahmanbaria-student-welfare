@@ -32,6 +32,7 @@ type memStore struct {
 	sessions map[string]*memSession
 	roleLog  []RoleChange
 	cm       committeeMem
+	cms      cmsMem
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).
@@ -253,6 +254,9 @@ func (m *memStore) ApprovedDirectory(_ context.Context) ([]Student, error) {
 	defer m.mu.Unlock()
 	out := []Student{}
 	for id, p := range m.profiles {
+		if u := m.users[id]; u != nil && u.Disabled {
+			continue
+		}
 		if p.Status == StatusApproved && p.ShowInDirectory {
 			b := p.Batch
 			out = append(out, Student{ID: "m-" + id, Name: p.Name, Batch: &b, Department: p.Department, Upazila: p.Upazila})

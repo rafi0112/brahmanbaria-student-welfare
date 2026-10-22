@@ -30,6 +30,7 @@ type Auth struct {
 	// Executive photos: Images stores them, PhotoBase is the public URL prefix, Drive* are overridable for tests.
 	Images         ImageStore
 	PhotoBase      string
+	MediaBase      string
 	DriveBase      string
 	DriveAllowHost func(string) bool
 
@@ -87,6 +88,8 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/admin/members/{id}/approve", h(a.requireAdmin(a.review(StatusApproved))))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/reject", h(a.requireAdmin(a.review(StatusRejected))))
 	a.committeeRoutes(m, h)
+	a.cmsRoutes(m, h)
+	a.adminRoutes(m, h)
 }
 
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {
@@ -149,6 +152,10 @@ func (a *App) requireUser(next func(http.ResponseWriter, *http.Request, User)) f
 		}
 		if !u.EmailVerified {
 			apiError(w, http.StatusForbidden, "email_not_verified")
+			return
+		}
+		if u.Disabled {
+			apiError(w, http.StatusForbidden, "account_disabled")
 			return
 		}
 		next(w, r, u)
@@ -335,6 +342,10 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, map[string]any{"error": "email_not_verified"})
 		return
 	}
+	if u.Disabled {
+		apiError(w, http.StatusForbidden, "account_disabled")
+		return
+	}
 	if err := a.startSession(w, r, u.ID); err != nil {
 		apiError(w, 500, "could not sign in")
 		return
@@ -406,6 +417,10 @@ func (a *App) me(w http.ResponseWriter, r *http.Request) {
 	u, ok := a.currentUser(r)
 	if !ok {
 		apiError(w, http.StatusUnauthorized, "not signed in")
+		return
+	}
+	if u.Disabled {
+		apiError(w, http.StatusForbidden, "account_disabled")
 		return
 	}
 	writeJSON(w, 200, a.meBody(r.Context(), u))

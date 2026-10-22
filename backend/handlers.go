@@ -75,7 +75,7 @@ func logging(next http.Handler) http.Handler {
 func (a *App) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", a.Origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Vary", "Origin")
@@ -278,16 +278,29 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		"facets": map[string]any{"batches": batches, "departments": depts}})
 }
 
+// withPlaceCounts sets each upazila's place count from what is actually published.
+func (a *App) withPlaceCounts(r *http.Request) []Upazila {
+	out := append([]Upazila{}, a.Store.Upazilas...)
+	counts := map[string]int{}
+	for _, p := range a.publishedPlaces(r) {
+		counts[p.Upazila]++
+	}
+	for i := range out {
+		out[i].Places = counts[out[i].Slug]
+	}
+	return out
+}
+
 func (a *App) upazilas(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"items": a.Store.Upazilas})
+	writeJSON(w, 200, map[string]any{"items": a.withPlaceCounts(r)})
 }
 
 func (a *App) upazila(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
-	for _, u := range a.Store.Upazilas {
+	for _, u := range a.withPlaceCounts(r) {
 		if u.Slug == slug {
-			places := []Place{}
-			for _, p := range a.Store.Places {
+			places := []placeOut{}
+			for _, p := range a.publishedPlaces(r) {
 				if p.Upazila == slug {
 					places = append(places, p)
 				}
@@ -301,8 +314,8 @@ func (a *App) upazila(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) heritage(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	out := []Place{}
-	for _, p := range a.Store.Places {
+	out := []placeOut{}
+	for _, p := range a.publishedPlaces(r) {
 		if c := q.Get("category"); c != "" && p.Category != c {
 			continue
 		}
@@ -318,7 +331,7 @@ func (a *App) heritage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) heritageOne(w http.ResponseWriter, r *http.Request) {
-	for _, p := range a.Store.Places {
+	for _, p := range a.publishedPlaces(r) {
 		if p.Slug == r.PathValue("slug") {
 			writeJSON(w, 200, p)
 			return
@@ -328,8 +341,8 @@ func (a *App) heritageOne(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) blog(w http.ResponseWriter, r *http.Request) {
-	out := []Post{}
-	for _, p := range a.Store.Posts {
+	out := []postOut{}
+	for _, p := range a.publishedPosts(r) {
 		if c := r.URL.Query().Get("category"); c != "" && p.Category != c {
 			continue
 		}
@@ -339,7 +352,7 @@ func (a *App) blog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) blogOne(w http.ResponseWriter, r *http.Request) {
-	for _, p := range a.Store.Posts {
+	for _, p := range a.publishedPosts(r) {
 		if p.Slug == r.PathValue("slug") {
 			writeJSON(w, 200, p)
 			return
@@ -358,7 +371,7 @@ func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{
 		"students": len(students), "alumni": len(a.Store.Alumni), "batches": len(batches),
-		"upazilas": len(a.Store.Upazilas), "places": len(a.Store.Places), "blood": a.Store.Blood, "sample": a.Store.Sample,
+		"upazilas": len(a.Store.Upazilas), "places": len(a.publishedPlaces(r)), "blood": a.Store.Blood, "sample": a.Store.Sample,
 	})
 }
 

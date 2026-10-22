@@ -19,7 +19,9 @@ func (a *App) committeeRoutes(m *http.ServeMux, h func(func(http.ResponseWriter,
 	m.HandleFunc("POST /api/v1/admin/committees/{id}/members", adm(a.addExecutive))
 	m.HandleFunc("PATCH /api/v1/admin/executives/{id}", adm(a.updateExecutive))
 	m.HandleFunc("POST /api/v1/admin/executives/{id}/remove", adm(a.removeExecutive))
-	m.HandleFunc("POST /api/v1/admin/executive-photo", adm(a.uploadPhoto))
+	m.HandleFunc("POST /api/v1/admin/executive-photo", adm(func(w http.ResponseWriter, r *http.Request, u User) {
+		a.uploadImage(w, r, u, photoBucket, a.Auth.PhotoBase)
+	}))
 }
 
 func (a *App) photoURL(path string) string {
@@ -218,10 +220,10 @@ func bearerToken(r *http.Request) string {
 	return ""
 }
 
-// uploadPhoto accepts either a file (multipart field "file") or a Google Drive link (field "driveUrl"). Either way the
+// uploadImage accepts either a file (multipart field "file") or a Google Drive link (field "driveUrl"). Either way the
 // bytes are validated as a real JPEG/PNG, re-encoded, stored in the photo bucket under a random name, and only that
 // name is returned for saving in PostgreSQL.
-func (a *App) uploadPhoto(w http.ResponseWriter, r *http.Request, u User) {
+func (a *App) uploadImage(w http.ResponseWriter, r *http.Request, u User, bucket, base string) {
 	token := bearerToken(r)
 	if a.Auth.Images == nil || token == "" {
 		apiError(w, http.StatusServiceUnavailable, "storage_off")
@@ -300,10 +302,10 @@ func (a *App) uploadPhoto(w http.ResponseWriter, r *http.Request, u User) {
 		apiError(w, http.StatusInternalServerError, "could not save the photo")
 		return
 	}
-	if err := a.Auth.Images.Put(r.Context(), token, name, ct, clean); err != nil {
+	if err := a.Auth.Images.Put(r.Context(), token, bucket, name, ct, clean); err != nil {
 		log.Printf("photo upload: %v", err)
 		apiError(w, http.StatusBadGateway, "storage_failed")
 		return
 	}
-	writeJSON(w, 201, map[string]string{"path": name, "url": a.photoURL(name)})
+	writeJSON(w, 201, map[string]string{"path": name, "url": base + name})
 }

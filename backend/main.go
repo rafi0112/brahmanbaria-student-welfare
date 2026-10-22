@@ -59,11 +59,16 @@ func main() {
 		return
 	}
 	if authStore != nil {
+		seedCtx, seedCancel := context.WithTimeout(context.Background(), 60*time.Second)
+		if err := seedLegacyContent(seedCtx, authStore, store); err != nil {
+			log.Fatalf("seed content: %v", err)
+		}
+		seedCancel()
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
 		if st := newSupabaseStorage(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", "")); st != nil {
-			app.Auth.Images, app.Auth.PhotoBase = st, st.PublicBase()
+			app.Auth.Images, app.Auth.PhotoBase, app.Auth.MediaBase = st, st.PublicBase(photoBucket), st.PublicBase(mediaBucket)
 		}
 		if app.Auth.Verifier == nil {
 			log.Printf("Supabase bearer auth disabled: configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")

@@ -60,7 +60,7 @@ Migration `005_executive_committee.sql` (tables) is applied automatically when t
 
 ## Running the PostgreSQL committee tests safely
 
-`LIVE_TEMP_TABLES=1 go test -run TestPostgresCommitteeStoreInTempTables ./...` runs the committee rules against the real
+`LIVE_TEMP_TABLES=1 go test -run TestPostgresStoresInTempTables ./...` runs the committee rules against the real
 PostgreSQL engine but on temporary tables that exist only on one connection and shadow the real ones (they vanish when
 the connection closes, every connection re-creates them, and the test refuses to continue if they are missing). It
 reads `DATABASE_URL` from `backend/.env` and touches no real row.

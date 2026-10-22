@@ -1,13 +1,18 @@
--- Supabase Storage for executive committee photos. Idempotent and additive: it never drops, truncates or deletes
+-- Supabase Storage for executive committee photos and site media (blog, heritage and gallery pictures). Idempotent and additive: it never drops, truncates or deletes
 -- anything. Run it once, either with `go run . storage-setup` or by pasting it into Supabase > SQL Editor.
 --
 -- Result:
---   * bucket "executive-photos": public read (so photos show on the public site), 5 MB limit, JPEG/PNG only
+--   * buckets "executive-photos" and "site-media": public read (so pictures show on the public site), 5 MB limit, JPEG/PNG only
 --   * only signed-in verified admins may upload (the API forwards the admin's own token; no service key anywhere)
 --   * no UPDATE or DELETE policy, so nobody can overwrite or delete a photo through the API
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('executive-photos', 'executive-photos', true, 5242880, ARRAY['image/jpeg', 'image/png'])
+ON CONFLICT (id) DO UPDATE
+  SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('site-media', 'site-media', true, 5242880, ARRAY['image/jpeg', 'image/png'])
 ON CONFLICT (id) DO UPDATE
   SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
 
@@ -23,3 +28,8 @@ DROP POLICY IF EXISTS "executive photos: admins upload" ON storage.objects;
 CREATE POLICY "executive photos: admins upload" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'executive-photos' AND public.is_admin());
+
+DROP POLICY IF EXISTS "site media: admins upload" ON storage.objects;
+CREATE POLICY "site media: admins upload" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'site-media' AND public.is_admin());

@@ -134,18 +134,18 @@ func (s *pgStore) CreateUser(ctx context.Context, n NewUser) (User, error) {
 	return u, tx.Commit(ctx)
 }
 
-const userCols = `id::text, email, password_hash, role, email_verified_at`
+const userCols = `id::text, email, password_hash, role, email_verified_at, disabled_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	var v *time.Time
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &v); err != nil {
+	var v, d *time.Time
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &v, &d); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, ErrNotFound
 		}
 		return User{}, err
 	}
-	u.EmailVerified = v != nil
+	u.EmailVerified, u.Disabled = v != nil, d != nil
 	return u, nil
 }
 
@@ -159,20 +159,20 @@ func (s *pgStore) UserByID(ctx context.Context, id string) (User, error) {
 
 func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string, verified bool) (User, error) {
 	var u User
-	var verifiedAt *time.Time
+	var verifiedAt, disabledAt *time.Time
 	err := s.db.QueryRow(ctx, `INSERT INTO users (id, email, password_hash, role, email_verified_at)
 		VALUES ($1::uuid, $2, '', $3, CASE WHEN $4::boolean THEN now() END)
 		ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = now(),
 			email_verified_at = COALESCE(users.email_verified_at, EXCLUDED.email_verified_at)
-		RETURNING id::text, email, password_hash, role, email_verified_at`, id, email, RoleMember, verified).
-		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verifiedAt)
+		RETURNING id::text, email, password_hash, role, email_verified_at, disabled_at`, id, email, RoleMember, verified).
+		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verifiedAt, &disabledAt)
 	if err != nil {
 		if isUnique(err) {
 			return User{}, ErrEmailTaken
 		}
 		return User{}, err
 	}
-	u.EmailVerified = verifiedAt != nil
+	u.EmailVerified, u.Disabled = verifiedAt != nil, disabledAt != nil
 	return u, nil
 }
 
@@ -209,7 +209,7 @@ func (s *pgStore) CreateSession(ctx context.Context, userID, digest string, expi
 }
 
 func (s *pgStore) SessionUser(ctx context.Context, digest string) (User, error) {
-	return scanUser(s.db.QueryRow(ctx, `SELECT u.id::text, u.email, u.password_hash, u.role, u.email_verified_at
+	return scanUser(s.db.QueryRow(ctx, `SELECT u.id::text, u.email, u.password_hash, u.role, u.email_verified_at, u.disabled_at
 		FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > now()`, digest))
 }
 
@@ -297,8 +297,8 @@ func (s *pgStore) ReviewProfile(ctx context.Context, id, status string) error {
 }
 
 func (s *pgStore) ApprovedDirectory(ctx context.Context) ([]Student, error) {
-	rows, err := s.db.Query(ctx, `SELECT user_id::text, name, batch, department, upazila FROM profiles
-		WHERE status = 'approved' AND show_in_directory ORDER BY name`)
+	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.upazila FROM profiles p JOIN users u ON u.id = p.user_id
+		WHERE p.status = 'approved' AND p.show_in_directory AND u.disabled_at IS NULL ORDER BY p.name`)
 	if err != nil {
 		return nil, err
 	}

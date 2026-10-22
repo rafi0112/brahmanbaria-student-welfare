@@ -163,11 +163,11 @@ func committeeStoreSuite(t *testing.T, s AuthStore) {
 
 func TestMemCommitteeStoreSuite(t *testing.T) { committeeStoreSuite(t, newMemStore()) }
 
-// TestPostgresCommitteeStoreInTempTables runs the same suite against the real PostgreSQL schema but on TEMPORARY
+// TestPostgresStoresInTempTables runs the committee and CMS suites against the real PostgreSQL schema but on TEMPORARY
 // copies of the tables that exist only on one connection and vanish when it closes. The temp tables shadow the real
 // ones (they come first in the search path), and every new connection re-creates them, so no real row is read
 // or written. Opt in with LIVE_TEMP_TABLES=1 (it reads DATABASE_URL from backend/.env).
-func TestPostgresCommitteeStoreInTempTables(t *testing.T) {
+func TestPostgresStoresInTempTables(t *testing.T) {
 	if os.Getenv("LIVE_TEMP_TABLES") != "1" {
 		t.Skip("set LIVE_TEMP_TABLES=1 to run against PostgreSQL temp tables")
 	}
@@ -179,6 +179,10 @@ func TestPostgresCommitteeStoreInTempTables(t *testing.T) {
 	mig1, _ := migrationFS.ReadFile("migrations/001_auth.sql")
 	mig4, _ := migrationFS.ReadFile("migrations/004_admin_roles.sql")
 	mig5, _ := migrationFS.ReadFile("migrations/005_executive_committee.sql")
+	mig6, _ := migrationFS.ReadFile("migrations/006_cms_members_audit.sql")
+	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
+	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
+		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
 	temp := func(sql string) string {
 		sql = strings.ReplaceAll(sql, "CREATE TABLE IF NOT EXISTS ", "CREATE TEMP TABLE ")
 		sql = strings.ReplaceAll(sql, "CREATE TABLE ", "CREATE TEMP TABLE ")
@@ -197,16 +201,18 @@ func TestPostgresCommitteeStoreInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		if _, err := c.Exec(ctx, temp(string(mig5))); err != nil {
-			return err
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6))} {
+			if _, err := c.Exec(ctx, sql); err != nil {
+				return err
+			}
 		}
 		_ = mig4 // the last-admin trigger is exercised by the auth suite, not needed here
 		var n int
-		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'committees', 'executives', 'committee_audit')`).Scan(&n); err != nil {
+		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'sessions', 'committees', 'executives', 'committee_audit', 'role_changes', 'cms_entries', 'admin_audit')`).Scan(&n); err != nil {
 			return err
 		}
-		if n != 5 {
-			t.Fatalf("expected 5 temp tables on this connection, found %d; refusing to continue", n)
+		if n != 9 {
+			t.Fatalf("expected 9 temp tables on this connection, found %d; refusing to continue", n)
 		}
 		return nil
 	}
@@ -215,25 +221,28 @@ func TestPostgresCommitteeStoreInTempTables(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	committeeStoreSuite(t, &pgStore{db: pool})
+	pg := &pgStore{db: pool}
+	committeeStoreSuite(t, pg)
+	cmsStoreSuite(t, pg)
 }
 
 // ---------------------------------------------------------------- HTTP layer
 
 type fakeImages struct {
-	mu    sync.Mutex
-	puts  []string
-	token string
-	fail  bool
+	mu         sync.Mutex
+	puts       []string
+	token      string
+	fail       bool
+	lastBucket string
 }
 
-func (f *fakeImages) Put(_ context.Context, token, name, ct string, data []byte) error {
+func (f *fakeImages) Put(_ context.Context, token, bucket, name, ct string, data []byte) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.fail {
 		return io.ErrUnexpectedEOF
 	}
-	f.token = token
+	f.token, f.lastBucket = token, bucket
 	f.puts = append(f.puts, name+"|"+ct+"|"+string(data[:4]))
 	return nil
 }
@@ -474,6 +483,10 @@ func jpegBytes(w, h int, trailer string) []byte {
 }
 
 func uploadReq(e *env2, tok string, fields map[string]string, file []byte) *httptest.ResponseRecorder {
+	return uploadReqTo(e, "/api/v1/admin/executive-photo", tok, fields, file)
+}
+
+func uploadReqTo(e *env2, path, tok string, fields map[string]string, file []byte) *httptest.ResponseRecorder {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	for k, v := range fields {
@@ -484,7 +497,7 @@ func uploadReq(e *env2, tok string, fields map[string]string, file []byte) *http
 		_, _ = fw.Write(file)
 	}
 	_ = mw.Close()
-	req := httptest.NewRequest("POST", "/api/v1/admin/executive-photo", &buf)
+	req := httptest.NewRequest("POST", path, &buf)
 	req.RemoteAddr = "9.9.9.9:1000"
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	if tok != "" {

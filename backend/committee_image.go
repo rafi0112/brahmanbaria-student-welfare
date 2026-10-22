@@ -19,6 +19,7 @@ import (
 
 const (
 	photoBucket   = "executive-photos"
+	mediaBucket   = "site-media"
 	maxPhotoBytes = 5 << 20
 	maxPhotoSide  = 8000
 	minPhotoSide  = 64
@@ -37,7 +38,7 @@ var (
 // ImageStore puts one object into the photo bucket on behalf of the signed-in admin. The admin's own access
 // token is forwarded, so Supabase Storage policies (admins only) decide, and no service key exists anywhere.
 type ImageStore interface {
-	Put(ctx context.Context, userToken, name, contentType string, data []byte) error
+	Put(ctx context.Context, userToken, bucket, name, contentType string, data []byte) error
 }
 
 type supabaseStorage struct {
@@ -56,13 +57,13 @@ func newSupabaseStorage(baseURL, apiKey string) *supabaseStorage {
 	return &supabaseStorage{baseURL: baseURL, apiKey: apiKey, client: &http.Client{Timeout: 12 * time.Second}}
 }
 
-// PublicBase is the URL prefix under which the bucket's objects are readable.
-func (s *supabaseStorage) PublicBase() string {
-	return s.baseURL + "/storage/v1/object/public/" + photoBucket + "/"
+// PublicBase is the URL prefix under which a bucket's objects are readable.
+func (s *supabaseStorage) PublicBase(bucket string) string {
+	return s.baseURL + "/storage/v1/object/public/" + bucket + "/"
 }
 
-func (s *supabaseStorage) Put(ctx context.Context, userToken, name, contentType string, data []byte) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.baseURL+"/storage/v1/object/"+photoBucket+"/"+url.PathEscape(name), bytes.NewReader(data))
+func (s *supabaseStorage) Put(ctx context.Context, userToken, bucket, name, contentType string, data []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.baseURL+"/storage/v1/object/"+bucket+"/"+url.PathEscape(name), bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
