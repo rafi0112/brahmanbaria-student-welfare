@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
@@ -183,6 +183,8 @@ export function Admin() {
 
 function AdminBody() {
   const { t, n } = useApp()
+  const { user: me, logout } = useAuth()
+  const go = useNavigate()
   const [tab, setTab] = useState('members')
   const [status, setStatus] = useState('pending')
   const overview = useApi('/admin/overview')
@@ -209,7 +211,13 @@ function AdminBody() {
         </nav>
       </aside>
       <div className="admin-main">
-        <h1>{t('admin.title')}</h1>
+        <div className="admin-top">
+          <h1>{t('admin.title')}</h1>
+          <div className="admin-who">
+            <span className="muted small">{me?.email}</span>
+            <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); go("/") }}>{t('auth.logout')}</button>
+          </div>
+        </div>
         <h2>{t('admin.overview')}</h2>
         <dl className="admin-stats">
           {['pending', 'approved', 'rejected'].map((s) => <div key={s}><dt>{t(`admin.${s}`)}</dt><dd className="num">{n(counts[s] ?? 0)}</dd></div>)}

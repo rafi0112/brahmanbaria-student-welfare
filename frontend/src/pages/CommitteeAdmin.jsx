@@ -246,6 +246,13 @@ export default function CommitteeManager() {
     if (items && !sel && items.length) setSel((items.find((c) => c.status === 'published') || items[0]).id)
   }, [list.data, sel])
 
+  // a form opened lower on the page (phones stack the list above it) is brought into view
+  useEffect(() => {
+    if (!mode) return undefined
+    const id = setTimeout(() => document.querySelector('.cm-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    return () => clearTimeout(id)
+  }, [mode])
+
   const refresh = () => { list.retry(); detail.retry() }
   const run = async (fn, doneKey = 'cm.saved') => {
     setBusy(true); setMsg(null); setErrs(null)
@@ -308,7 +315,7 @@ export default function CommitteeManager() {
           {mode === 'new' && <CommitteeForm busy={busy} errs={errs} onSubmit={createCommittee} onCancel={() => setMode(null)} />}
           {mode !== 'new' && sel && (
             <Data q={detail}>
-              {() => (
+              {() => !c ? <Loading /> : (
                 <>
                   <header className="cm-head">
                     <div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { Logo } from './Sketch.jsx'
 import Icon from './Icon.jsx'
@@ -13,7 +13,9 @@ const NAV = [
 
 function Header() {
   const { t, toggleLang, toggleTheme, isDark } = useApp()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const nav = useNavigate()
+  const signOut = async () => { await logout(); nav('/') }
   const [open, setOpen] = useState(false)
   const loc = useLocation()
   useEffect(() => setOpen(false), [loc.pathname])
@@ -44,7 +46,10 @@ function Header() {
             </svg>
           </button>
           {user
-            ? <Link className="btn btn-dark btn-sm hide-sm" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link>
+            ? <>
+                <Link className="btn btn-dark btn-sm hide-sm" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link>
+                <button className="btn btn-ghost btn-sm hide-sm" onClick={signOut}>{t('auth.logout')}</button>
+              </>
             : <Link className="btn btn-dark btn-sm hide-sm" to="/login">{t('nav.login')}</Link>}
           <button className="icon-btn menu-btn" aria-expanded={open} aria-controls="drawer" aria-label={open ? t('nav.close') : t('nav.menu')} onClick={() => setOpen(!open)}>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -58,7 +63,7 @@ function Header() {
           {NAV.map(([to, k]) => <NavLink key={to} to={to} end={to === '/'}>{t(k)}</NavLink>)}
           <div className="drawer-cta">
             {user
-              ? <Link className="btn btn-dark" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{t('auth.account')}</Link>
+              ? <><Link className="btn btn-dark" to={user.role === 'admin' ? '/admin' : '/dashboard'}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link><button className="btn btn-ghost" onClick={signOut}>{t('auth.logout')}</button></>
               : <><Link className="btn btn-dark" to="/login">{t('nav.login')}</Link><Link className="btn btn-ghost" to="/register">{t('nav.register')}</Link></>}
           </div>
         </div>
