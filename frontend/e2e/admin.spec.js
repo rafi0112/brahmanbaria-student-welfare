@@ -36,10 +36,10 @@ const kid = (page, parent, name) => side(page).locator('.adm-parent').filter({ h
 test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   await login(page)
   await expect(page.locator('header.site-header, .site-header')).toHaveCount(0)
-  for (const label of ['Dashboard', 'Activity', 'Admin management', 'Executive Committee']) {
-    await expect(side(page).getByRole('link', { name: label })).toBeVisible()
+  for (const label of ['Dashboard', 'Activity', 'Membership Requests', 'Members', 'Member Directory', 'Admin management', 'Executive Committee']) {
+    await expect(side(page).getByRole('link', { name: label, exact: true })).toBeVisible()
   }
-  for (const label of ['Membership Requests', 'Members', 'Member Directory', 'Blog', 'Heritage places', 'Gallery']) {
+  for (const label of ['Blog', 'Heritage places', 'Gallery']) {
     await expect(side(page).getByRole('button', { name: label, exact: true })).toBeVisible() // sections with filtered views
   }
 })
@@ -140,14 +140,6 @@ test('blog: a new draft is saved and listed', async ({ page }) => {
 test('nested views: each child opens its filtered list, marks itself current, and survives refresh and back/forward', async ({ page }) => {
   await login(page)
   const cases = [
-    ['Membership Requests', 'Complete profiles', /\/admin\/students\?tab=requests&complete=yes$/],
-    ['Membership Requests', 'Incomplete profiles', /\/admin\/students\?tab=requests&complete=no$/],
-    ['Members', 'Needs review', /\/admin\/students\?tab=members&view=review$/],
-    ['Members', 'Verified', /\/admin\/students\?tab=members&view=verified$/],
-    ['Member Directory', 'Needs verification', /\/admin\/students\?tab=imported&status=awaiting$/],
-    ['Member Directory', 'Verified', /\/admin\/students\?tab=imported&status=verified$/],
-    ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
-    ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
     ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],
     ['Gallery', 'Hidden', /\/admin\/gallery\?status=draft$/],
     ['Gallery', 'Published', /\/admin\/gallery\?status=published$/],
@@ -173,7 +165,7 @@ test('navigating to a view only filters: no write requests are sent', async ({ p
   await login(page)
   const writes = []
   page.on('request', (r) => { if (!['GET', 'HEAD'].includes(r.method()) && r.url().includes('/api/')) writes.push(`${r.method()} ${r.url()}`) })
-  for (const [parent, child] of [['Members', 'Verified'], ['Membership Requests', 'Complete profiles'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
+  for (const [parent, child] of [['Blog', 'Published'], ['Gallery', 'Archived']]) {
     const btn = side(page).getByRole('button', { name: parent, exact: true })
     if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click()
     await kid(page, parent, child).click()
@@ -333,21 +325,29 @@ test('imported directory: add a record by hand, edit it, delete it; no account i
   await expect(page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Person' })).toHaveCount(0)
 })
 
-test('students: two sections, honest empty states and the directory note', async ({ page }) => {
+test('students: a dropdown of three pages, each with its own tabs', async ({ page }) => {
   await login(page)
-  await side(page).getByRole('button', { name: 'Membership Requests', exact: true }).click()
-  await kid(page, 'Membership Requests', 'All pending requests').click()
-  await expect(page).toHaveURL(/tab=requests$/)
-  await expect(page.getByRole('heading', { name: 'Membership Requests' })).toBeVisible()
-  await expect(page.getByText('No members match').or(page.getByText(/no members yet|nobody/i)).first()).toBeVisible()
-  await kid(page, 'Members', 'All').or(side(page).getByRole('button', { name: 'Members', exact: true })).first().click()
-  await side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Members', exact: true }) }).getByRole('link', { name: 'All', exact: true }).click()
-  await expect(page).toHaveURL(/tab=members$/)
-  // the only account is the admin and it has no member profile, so the list is honestly empty; the directory records have no email
+  await expect(side(page).getByRole('button', { name: 'Students', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  const pages = [
+    ['Membership Requests', /tab=requests/, ['All pending requests', 'Complete profiles', 'Incomplete profiles'], [/complete=yes/, /complete=no/]],
+    ['Members', /tab=members/, ['All', 'Needs review', 'Verified'], [/view=review/, /view=verified/]],
+    ['Member Directory', /tab=imported/, ['All', 'Needs verification', 'Verified'], [/status=awaiting/, /status=verified/]],
+  ]
+  for (const [label, url, tabs, urls] of pages) {
+    await side(page).getByRole('link', { name: label, exact: true }).click()
+    await expect(page).toHaveURL(url)
+    await expect(side(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page')
+    for (const t of tabs) await expect(page.locator('.ad-view', { hasText: new RegExp(`^${t}`) }).first()).toBeVisible()
+    for (let i = 0; i < urls.length; i++) { // the second and third tabs change the address and stay inside this page
+      await page.locator('.ad-view', { hasText: new RegExp(`^${tabs[i + 1]}`) }).first().click()
+      await expect(page).toHaveURL(urls[i])
+      await expect(side(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page')
+    }
+  }
+  // the original directory has no accounts to list here, and Members says why
+  await side(page).getByRole('link', { name: 'Members', exact: true }).click()
   await expect(page.locator('.dt tbody tr')).toHaveCount(0)
   await expect(page.getByText(/have no email address, so no account can be created/)).toBeVisible()
-  await page.getByRole('link', { name: 'View directory records' }).click()
-  await expect(page).toHaveURL(/tab=imported/)
 })
 
 test('activation emails: addresses can be saved, sending is honestly unavailable without the Supabase admin key', async ({ page }) => {

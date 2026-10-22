@@ -13,20 +13,20 @@ export const NAV = [
     { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
   ] },
-  // Students has three sections, each with its own tabs. Membership Requests is the pending queue (split by profile completeness);
+  // Students is a dropdown of three plain pages. Each page shows its own tabs (listed here as `tabs`, so the sidebar stays short). Membership Requests is the pending queue (split by profile completeness);
   // Members is every registered account, those needing review and the verified (approved with a confirmed email); Member Directory
   // is the original directory of people (needs verification / verified).
-  { id: 'requests', to: '/admin/students?tab=requests', icon: 'clock', label: 'ad.nav.requests', group: 'students', watch: ['complete'], children: [
+  { id: 'requests', to: '/admin/students?tab=requests', icon: 'clock', label: 'ad.nav.requests', group: 'students', watch: ['complete'], tabs: [
     { id: 'all', label: 'ad.req.all', query: {} },
     { id: 'complete', label: 'ad.req.complete', query: { complete: 'yes' } },
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
-  { id: 'members', to: '/admin/students?tab=members', icon: 'users', label: 'ad.nav.members', group: 'students', watch: ['view'], children: [
+  { id: 'members', to: '/admin/students?tab=members', icon: 'users', label: 'ad.nav.members', group: 'students', watch: ['view'], tabs: [
     { id: 'all', label: 'ad.stu.view.all', query: {} },
     { id: 'review', label: 'ad.mem.review', query: { view: 'review' } },
     { id: 'verified', label: 'ad.mem.verified', query: { view: 'verified' } },
   ] },
-  { id: 'directory', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.directory', group: 'students', watch: ['status'], children: [
+  { id: 'directory', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.directory', group: 'students', watch: ['status'], tabs: [
     { id: 'all', label: 'ad.status.allShort', query: {} },
     { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
     { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
@@ -92,9 +92,10 @@ export function childTo(item, child) {
 
 // The child whose filter the address currently shows, or null when the filters match none of them.
 export function activeChild(item, search = '') {
-  if (!item.children) return null
+  const kids = item.children || item.tabs
+  if (!kids) return null
   const p = new URLSearchParams(search)
-  return item.children.find((c) => item.watch.every((k) => (p.get(k) || '') === (c.query[k] || ''))) || null
+  return kids.find((c) => item.watch.every((k) => (p.get(k) || '') === (c.query[k] || ''))) || null
 }
 
 // Query parameters that describe the view itself (page and page size do not).
