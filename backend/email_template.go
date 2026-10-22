@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// apply-email-template publishes docs/email-templates/invite.html as the "Invite user" email of the Supabase project, using the
+// apply-email-template publishes docs/email-templates/supabase_invite_template.html as the "Invite user" email of the Supabase project, using the
 // Supabase Management API. The Auth admin keys cannot do this: changing email templates needs a personal access token
 // (SUPABASE_ACCESS_TOKEN, created at supabase.com/dashboard/account/tokens). Without --apply it only compares and reports.
 // The token stays in this process: it is never printed or logged.
@@ -103,7 +103,7 @@ func applyInviteTemplate(ctx context.Context, m *mgmt, ref, html, subject string
 
 func runApplyEmailTemplate(args []string) error {
 	apply := false
-	path := "../docs/email-templates/invite.html"
+	path := "../docs/email-templates/supabase_invite_template.html"
 	for _, a := range args {
 		switch {
 		case a == "--apply":
@@ -129,7 +129,7 @@ func runApplyEmailTemplate(args []string) error {
 		return fmt.Errorf("the template does not contain {{ .ConfirmationURL }}; refusing to publish an invitation without its link")
 	}
 	// the leading comment is documentation for people; the published email starts at the doctype
-	if i := strings.Index(html, "<!DOCTYPE html>"); i > 0 {
+	if i := strings.Index(strings.ToLower(html), "<!doctype html>"); i > 0 {
 		html = html[i:]
 	}
 	base := os.Getenv("SUPABASE_MANAGEMENT_URL")
