@@ -20,7 +20,7 @@ the Google button is hidden until `VITE_ENABLE_GOOGLE=true`.
 
 - Test the round trip: button → Google → Supabase → `/dashboard`.
 - Google accounts arrive with a confirmed email and no member details, so the dashboard shows the
-  "Complete your membership application" form (already built). Admin access still requires the address in `ADMIN_EMAILS`.
+  "Complete your membership application" form (already built). Admin access is granted only by the database role (bootstrap command or Admin management), never by Google sign-in.
 - Decide account linking: Supabase links a Google login to an existing email account with the same address.
   We will check that it does not let an unconfirmed email account be taken over.
 - Production later: add the production domain to the Google origins and the Supabase redirect list, and publish the

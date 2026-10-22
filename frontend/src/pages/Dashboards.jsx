@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { api, useApi } from '../lib/api.js'
+import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
-import { Avatar, Badge, Data, Empty, Loading } from '../components/ui.jsx'
+import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
 import { Logo } from '../components/Sketch.jsx'
 
 const LEVELS = ['public', 'members', 'hidden']
@@ -182,6 +182,7 @@ export function Admin() {
 
 function AdminBody() {
   const { t, n } = useApp()
+  const [tab, setTab] = useState('members')
   const [status, setStatus] = useState('pending')
   const overview = useApi('/admin/overview')
   const list = useApi(`/admin/members?status=${status}`)
@@ -214,6 +215,12 @@ function AdminBody() {
           <div><dt>{t('stat.students')}</dt><dd className="num">{stats.data ? n(stats.data.students) : '–'}</dd></div>
         </dl>
 
+        <div className="chips admin-tabs" role="tablist" aria-label={t('admin.title')}>
+          {['members', 'roles'].map((k) => <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{t(`admin.tab.${k}`)}</button>)}
+        </div>
+
+        {tab === 'roles' && <RoleManager />}
+        {tab === 'members' && <>
         <h2>{t('admin.members')}</h2>
         <div className="chips" role="group">
           {['pending', 'approved', 'rejected'].map((s) => <button key={s} className={`chip ${status === s ? 'on' : ''}`} aria-pressed={status === s} onClick={() => setStatus(s)}>{t(`admin.${s}`)}</button>)}
@@ -238,7 +245,8 @@ function AdminBody() {
             </table>
           )}
         </Data>
-        <Data q={stats}>
+        </>}
+        {tab === 'members' && <Data q={stats}>
           {(s) => (
             <>
               <h2>Blood group counts <small className="muted">(aggregate only)</small></h2>
@@ -249,8 +257,113 @@ function AdminBody() {
               </div>
             </>
           )}
-        </Data>
+        </Data>}
       </div>
     </div>
+  )
+}
+
+function useDebounced(value, ms = 300) {
+  const [v, setV] = useState(value)
+  useEffect(() => { const id = setTimeout(() => setV(value), ms); return () => clearTimeout(id) }, [value, ms])
+  return v
+}
+
+// Role management. The buttons only call the API; the Go backend decides what is allowed
+// (admin only, no self-change, verified accounts only, never the last admin).
+function RoleManager() {
+  const { t, n } = useApp()
+  const { user: me } = useAuth()
+  const [q, setQ] = useState('')
+  const [role, setRole] = useState('')
+  const [page, setPage] = useState(1)
+  const dq = useDebounced(q)
+  useEffect(() => { setPage(1) }, [dq, role])
+  const list = useApi(`/admin/users${qs({ q: dq, role, page: page > 1 ? page : '', limit: 20 })}`)
+  const [pending, setPending] = useState(null) // { row, role }
+  const [msg, setMsg] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  const explain = (e) => {
+    if (e.message === 'self_role_change') return 'admin.err.self'
+    if (e.message === 'target_unverified') return 'admin.err.unverified'
+    if (e.message === 'last_admin') return 'admin.err.lastAdmin'
+    if (e.status === 403) return 'admin.err.forbidden'
+    if (e.status === 404) return 'admin.err.notFound'
+    return errorKey(e) || 'admin.failed'
+  }
+  const apply = async () => {
+    setBusy(true); setMsg(null)
+    try {
+      await api(`/admin/users/${pending.row.id}/role`, { method: 'POST', body: JSON.stringify({ role: pending.role }) })
+      setMsg({ tone: 'ok', key: 'admin.roles.done' })
+      list.retry()
+    } catch (e) { setMsg({ tone: 'bad', key: explain(e) }) }
+    finally { setBusy(false); setPending(null) }
+  }
+  useEffect(() => {
+    if (!pending) return undefined
+    const onKey = (e) => e.key === 'Escape' && setPending(null)
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [pending])
+  const label = (r) => r.name || r.email
+
+  return (
+    <section aria-labelledby="roles-h">
+      <h2 id="roles-h">{t('admin.roles.title')}</h2>
+      <p className="muted">{t('admin.roles.lede')}</p>
+      <div className="filters filters-2">
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.roles.search')} aria-label={t('admin.roles.search')} />
+        <select value={role} onChange={(e) => setRole(e.target.value)} aria-label={t('admin.roles.all')}>
+          <option value="">{t('admin.roles.all')}</option>
+          <option value="admin">{t('admin.roles.admin')}</option>
+          <option value="member">{t('admin.roles.member')}</option>
+        </select>
+      </div>
+      <p className="muted small">{t('admin.roles.note')}</p>
+      <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`} role={msg.tone === 'bad' ? 'alert' : 'status'}>{t(msg.key)}</p>}</div>
+      <Data q={list}>
+        {(d) => d.items.length === 0 ? <Empty>{t('admin.roles.none')}</Empty> : (
+          <>
+            <table className="table">
+              <tbody>
+                {d.items.map((r) => {
+                  const self = r.id === me?.id
+                  const admin = r.role === 'admin'
+                  return (
+                    <tr key={r.id}>
+                      <td><Avatar name={label(r)} size={34} /> <strong>{r.name || r.email}</strong>{r.name && <><br /><small className="muted">{r.email}</small></>}</td>
+                      <td>
+                        <Badge tone={admin ? 'gold' : 'muted'}>{t(admin ? 'admin.roles.admin' : 'admin.roles.member')}</Badge>{' '}
+                        <small className={r.emailVerified ? 'muted' : 'err'}>{t(r.emailVerified ? 'admin.roles.verified' : 'admin.roles.unverified')}</small>
+                      </td>
+                      <td className="actions">
+                        {self ? <span className="muted">{t('admin.roles.you')}</span> : admin
+                          ? <button className="btn btn-ghost btn-sm" onClick={() => setPending({ row: r, role: 'member' })}>{t('admin.roles.makeMember')}</button>
+                          : <button className="btn btn-dark btn-sm" disabled={!r.emailVerified} title={r.emailVerified ? undefined : t('admin.err.unverified')} onClick={() => setPending({ row: r, role: 'admin' })}>{t('admin.roles.makeAdmin')}</button>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <p className="muted small">{n(d.total)} · <Link to="/admin" onClick={(e) => { e.preventDefault(); list.retry() }}>↻</Link></p>
+            <Pagination page={d.page} pages={d.pages} onPage={setPage} />
+          </>
+        )}
+      </Data>
+      {pending && (
+        <div className="modal-back" onClick={(e) => e.target === e.currentTarget && setPending(null)}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="role-confirm">
+            <p id="role-confirm">{t(pending.role === 'admin' ? 'admin.roles.confirmPromote' : 'admin.roles.confirmDemote').replace('{who}', `${label(pending.row)} (${pending.row.email})`)}</p>
+            <div className="row">
+              <button className="btn btn-dark" autoFocus disabled={busy} onClick={apply}>{busy ? t('state.loading') : t('admin.roles.confirm')}</button>
+              <button className="btn btn-ghost" disabled={busy} onClick={() => setPending(null)}>{t('admin.roles.cancel')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }

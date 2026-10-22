@@ -5,7 +5,9 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -313,6 +315,159 @@ func (s *pgStore) ApprovedDirectory(ctx context.Context) ([]Student, error) {
 		out = append(out, st)
 	}
 	return out, rows.Err()
+}
+
+var uuidRx = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+const adminLockKey = 727275 // serialises role changes so two admins cannot demote each other at the same time
+
+func (s *pgStore) ListUsers(ctx context.Context, q, role string, limit, offset int) ([]UserRow, int, error) {
+	const where = `FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+		WHERE ($1 = '' OR position(lower($1) in lower(u.email)) > 0 OR position(lower($1) in lower(COALESCE(p.name, ''))) > 0)
+		  AND ($2 = '' OR u.role = $2)`
+	var total int
+	if err := s.db.QueryRow(ctx, `SELECT count(*) `+where, q, role).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.Query(ctx, `SELECT u.id::text, u.email, COALESCE(p.name, ''), u.role, u.email_verified_at IS NOT NULL,
+		COALESCE(p.status, ''), to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') `+where+`
+		ORDER BY u.created_at DESC, u.email LIMIT $3 OFFSET $4`, q, role, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	out := []UserRow{}
+	for rows.Next() {
+		var r UserRow
+		if err := rows.Scan(&r.ID, &r.Email, &r.Name, &r.Role, &r.EmailVerified, &r.MemberStatus, &r.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, r)
+	}
+	return out, total, rows.Err()
+}
+
+func (s *pgStore) SetRole(ctx context.Context, actorID, targetID, role string) (User, error) {
+	if role != RoleMember && role != RoleAdmin {
+		return User{}, ErrInvalidRole
+	}
+	if actorID == targetID {
+		return User{}, ErrSelfRoleChange
+	}
+	if !uuidRx.MatchString(targetID) || !uuidRx.MatchString(actorID) {
+		return User{}, ErrNotFound
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, adminLockKey); err != nil {
+		return User{}, err
+	}
+	t, err := scanUser(tx.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1::uuid FOR UPDATE`, targetID))
+	if err != nil {
+		return User{}, err
+	}
+	if t.Role == role {
+		return t, nil
+	}
+	if role == RoleAdmin && !t.EmailVerified {
+		return User{}, ErrTargetUnverified
+	}
+	if role == RoleMember {
+		var others int
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM users WHERE role = 'admin' AND email_verified_at IS NOT NULL AND id <> $1::uuid`, targetID).Scan(&others); err != nil {
+			return User{}, err
+		}
+		if others < 1 {
+			return User{}, ErrLastAdmin
+		}
+	}
+	a, err := scanUser(tx.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1::uuid`, actorID))
+	if err != nil || a.Role != RoleAdmin || !a.EmailVerified {
+		return User{}, ErrForbidden
+	}
+	if _, err := tx.Exec(ctx, `UPDATE users SET role = $2, updated_at = now() WHERE id = $1::uuid`, targetID, role); err != nil {
+		if isLastAdminTrigger(err) {
+			return User{}, ErrLastAdmin
+		}
+		return User{}, err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO role_changes (target_id, actor_id, old_role, new_role, source) VALUES ($1::uuid, $2::uuid, $3, $4, 'admin_ui')`,
+		targetID, actorID, t.Role, role); err != nil {
+		return User{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, err
+	}
+	t.Role = role
+	return t, nil
+}
+
+func isLastAdminTrigger(err error) bool {
+	var pe *pgconn.PgError
+	return errors.As(err, &pe) && pe.Code == "P0001" && strings.Contains(pe.Message, "last active admin")
+}
+
+// PromoteVerifiedByEmail reads the account from Supabase Auth (auth.users), so "verified" means the email was
+// confirmed there, and never trusts anything a client sent. Idempotent; it only ever adds an admin.
+func (s *pgStore) PromoteVerifiedByEmail(ctx context.Context, email string, apply bool) (User, bool, error) {
+	email = normEmail(email)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return User{}, false, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, adminLockKey); err != nil {
+		return User{}, false, err
+	}
+	var id string
+	var confirmed time.Time
+	err = tx.QueryRow(ctx, `SELECT id::text, email_confirmed_at FROM auth.users
+		WHERE lower(email) = $1 AND email_confirmed_at IS NOT NULL AND deleted_at IS NULL
+		  AND (banned_until IS NULL OR banned_until < now()) LIMIT 1`, email).Scan(&id, &confirmed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM auth.users WHERE lower(email) = $1)`, email).Scan(&exists); err != nil {
+			return User{}, false, err
+		}
+		if exists {
+			return User{}, false, ErrTargetUnverified
+		}
+		return User{}, false, ErrNotFound
+	}
+	if err != nil {
+		return User{}, false, err
+	}
+	var cur string
+	err = tx.QueryRow(ctx, `SELECT role FROM users WHERE id = $1::uuid`, id).Scan(&cur)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return User{}, false, err
+	}
+	if cur == RoleAdmin {
+		return User{ID: id, Email: email, Role: RoleAdmin, EmailVerified: true}, false, nil
+	}
+	if !apply {
+		return User{ID: id, Email: email, Role: RoleMember, EmailVerified: true}, true, nil
+	}
+	old := cur
+	if old == "" {
+		old = RoleMember
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO users (id, email, password_hash, role, email_verified_at)
+		VALUES ($1::uuid, $2, '', 'admin', $3)
+		ON CONFLICT (id) DO UPDATE SET role = 'admin', email = EXCLUDED.email,
+			email_verified_at = COALESCE(users.email_verified_at, EXCLUDED.email_verified_at), updated_at = now()`, id, email, confirmed); err != nil {
+		return User{}, false, err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO role_changes (target_id, actor_id, old_role, new_role, source) VALUES ($1::uuid, NULL, $2, 'admin', 'bootstrap')`, id, old); err != nil {
+		return User{}, false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, false, err
+	}
+	return User{ID: id, Email: email, Role: RoleAdmin, EmailVerified: true}, true, nil
 }
 
 func (s *pgStore) Counts(ctx context.Context) (map[string]int, error) {

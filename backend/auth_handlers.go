@@ -26,7 +26,6 @@ type Auth struct {
 	CookieSecure bool
 	SameSite     http.SameSite
 	Verifier     *supabaseVerifier
-	AdminEmails  map[string]bool // ADMIN_EMAILS: confirmed Supabase accounts with these addresses act as admins
 
 	loginIP, loginEmail, registerIP, mailIP *Limiter
 }
@@ -76,6 +75,8 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("PATCH /api/v1/me/profile", h(a.requireUser(a.updateProfile)))
 	m.HandleFunc("POST /api/v1/me/profile", h(a.requireUser(a.createProfile)))
 	m.HandleFunc("GET /api/v1/admin/overview", h(a.requireAdmin(a.adminOverview)))
+	m.HandleFunc("GET /api/v1/admin/users", h(a.requireAdmin(a.adminUsers)))
+	m.HandleFunc("POST /api/v1/admin/users/{id}/role", h(a.requireAdmin(a.setUserRole)))
 	m.HandleFunc("GET /api/v1/admin/members", h(a.requireAdmin(a.adminMembers)))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/approve", h(a.requireAdmin(a.review(StatusApproved))))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/reject", h(a.requireAdmin(a.review(StatusRejected))))
@@ -119,9 +120,6 @@ func (a *App) currentUser(r *http.Request) (User, bool) {
 					log.Printf("external user %s: %v", external.ID, ensureErr)
 				} else {
 					u.EmailVerified = confirmed // trust Supabase's flag for this request, not our stored copy
-					if u.EmailVerified && a.Auth.AdminEmails[normEmail(u.Email)] {
-						u.Role = RoleAdmin
-					}
 					return u, true
 				}
 			}
@@ -536,4 +534,61 @@ func (a *App) originGuard(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// ---- role management (admins only; every rule is enforced in the store, not only here) ----
+
+func (a *App) adminUsers(w http.ResponseWriter, r *http.Request, _ User) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if utf8.RuneCountInString(q) > 100 {
+		apiError(w, http.StatusBadRequest, "search text is too long")
+		return
+	}
+	role := r.URL.Query().Get("role")
+	if role != "" && role != RoleMember && role != RoleAdmin {
+		apiError(w, http.StatusBadRequest, "unknown role")
+		return
+	}
+	pg, limit := paging(r, 50)
+	rows, total, err := a.Auth.Store.ListUsers(r.Context(), q, role, limit, (pg-1)*limit)
+	if err != nil {
+		log.Printf("list users: %v", err)
+		apiError(w, 500, "could not load")
+		return
+	}
+	pages := (total + limit - 1) / limit
+	if pages == 0 {
+		pages = 1
+	}
+	writeJSON(w, 200, map[string]any{"items": rows, "total": total, "page": pg, "pages": pages})
+}
+
+func (a *App) setUserRole(w http.ResponseWriter, r *http.Request, actor User) {
+	var q struct {
+		Role string `json:"role"`
+	}
+	if !decode(w, r, &q) {
+		return
+	}
+	// The actor comes from the verified token, the target from the URL; nothing about identity or role is read from the body.
+	u, err := a.Auth.Store.SetRole(r.Context(), actor.ID, r.PathValue("id"), q.Role)
+	switch err {
+	case nil:
+		writeJSON(w, 200, map[string]any{"ok": true, "user": map[string]any{"id": u.ID, "email": u.Email, "role": u.Role}})
+	case ErrInvalidRole:
+		apiError(w, http.StatusUnprocessableEntity, "role must be member or admin")
+	case ErrSelfRoleChange:
+		apiError(w, http.StatusForbidden, "self_role_change")
+	case ErrNotFound:
+		apiError(w, http.StatusNotFound, "user not found")
+	case ErrTargetUnverified:
+		apiError(w, http.StatusConflict, "target_unverified")
+	case ErrLastAdmin:
+		apiError(w, http.StatusConflict, "last_admin")
+	case ErrForbidden:
+		apiError(w, http.StatusForbidden, "admin access required")
+	default:
+		log.Printf("set role: %v", err)
+		apiError(w, 500, "could not change the role")
+	}
 }

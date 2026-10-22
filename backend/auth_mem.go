@@ -30,7 +30,11 @@ type memStore struct {
 	profiles map[string]*Profile
 	tokens   map[string]*memToken
 	sessions map[string]*memSession
+	roleLog  []RoleChange
 }
+
+// RoleChange mirrors a row of role_changes (kept in memory for tests).
+type RoleChange struct{ Target, Actor, Old, New, Source string }
 
 func newMemStore() *memStore {
 	return &memStore{users: map[string]*User{}, byEmail: map[string]string{}, profiles: map[string]*Profile{},
@@ -264,6 +268,103 @@ func (m *memStore) Counts(_ context.Context) (map[string]int, error) {
 		c[p.Status]++
 	}
 	return c, nil
+}
+
+func (m *memStore) ListUsers(_ context.Context, q, role string, limit, offset int) ([]UserRow, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	q = strings.ToLower(strings.TrimSpace(q))
+	all := []UserRow{}
+	for id, u := range m.users {
+		name, status := "", ""
+		if p, ok := m.profiles[id]; ok {
+			name, status = p.Name, p.Status
+		}
+		if role != "" && u.Role != role {
+			continue
+		}
+		if q != "" && !strings.Contains(strings.ToLower(u.Email), q) && !strings.Contains(strings.ToLower(name), q) {
+			continue
+		}
+		all = append(all, UserRow{ID: id, Email: u.Email, Name: name, Role: u.Role, EmailVerified: u.EmailVerified, MemberStatus: status})
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Email < all[j].Email })
+	total := len(all)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	return all[offset:end], total, nil
+}
+
+func (m *memStore) otherActiveAdmins(exclude string) int {
+	n := 0
+	for id, u := range m.users {
+		if id != exclude && u.Role == RoleAdmin && u.EmailVerified {
+			n++
+		}
+	}
+	return n
+}
+
+func (m *memStore) SetRole(_ context.Context, actorID, targetID, role string) (User, error) {
+	if role != RoleMember && role != RoleAdmin {
+		return User{}, ErrInvalidRole
+	}
+	if actorID == targetID {
+		return User{}, ErrSelfRoleChange
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.users[targetID]
+	if !ok {
+		return User{}, ErrNotFound
+	}
+	if t.Role == role {
+		return *t, nil
+	}
+	if role == RoleAdmin && !t.EmailVerified {
+		return User{}, ErrTargetUnverified
+	}
+	if role == RoleMember && m.otherActiveAdmins(targetID) < 1 {
+		return User{}, ErrLastAdmin
+	}
+	if a, ok := m.users[actorID]; !ok || a.Role != RoleAdmin || !a.EmailVerified {
+		return User{}, ErrForbidden
+	}
+	m.roleLog = append(m.roleLog, RoleChange{Target: targetID, Actor: actorID, Old: t.Role, New: role, Source: "admin_ui"})
+	t.Role = role
+	return *t, nil
+}
+
+func (m *memStore) PromoteVerifiedByEmail(_ context.Context, email string, apply bool) (User, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id, ok := m.byEmail[normEmail(email)]
+	if !ok {
+		return User{}, false, ErrNotFound
+	}
+	u := m.users[id]
+	if !u.EmailVerified {
+		return User{}, false, ErrTargetUnverified
+	}
+	if u.Role == RoleAdmin {
+		return *u, false, nil
+	}
+	if apply {
+		m.roleLog = append(m.roleLog, RoleChange{Target: id, Old: u.Role, New: RoleAdmin, Source: "bootstrap"})
+		u.Role = RoleAdmin
+	}
+	return *u, true, nil
+}
+
+func (m *memStore) RoleLog() []RoleChange {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]RoleChange{}, m.roleLog...)
 }
 
 func (m *memStore) Ping(context.Context) error { return nil }

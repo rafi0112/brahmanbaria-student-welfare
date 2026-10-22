@@ -9,6 +9,12 @@ import (
 var (
 	ErrNotFound   = errors.New("not found")
 	ErrEmailTaken = errors.New("email already registered")
+
+	ErrSelfRoleChange   = errors.New("cannot change your own role")
+	ErrTargetUnverified = errors.New("account email is not verified")
+	ErrLastAdmin        = errors.New("cannot remove the last active admin")
+	ErrInvalidRole      = errors.New("invalid role")
+	ErrForbidden        = errors.New("forbidden")
 )
 
 const (
@@ -46,6 +52,17 @@ type Profile struct {
 	ShowEmail       string `json:"showEmail"`
 	ShowBlood       string `json:"showBlood"`
 	CreatedAt       string `json:"createdAt,omitempty"`
+}
+
+// UserRow is what admins see in the role-management list.
+type UserRow struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Role          string `json:"role"`
+	EmailVerified bool   `json:"emailVerified"`
+	MemberStatus  string `json:"memberStatus"`
+	CreatedAt     string `json:"createdAt"`
 }
 
 // MemberRow is what admins see in the approval queue.
@@ -99,5 +116,12 @@ type AuthStore interface {
 	ReviewProfile(ctx context.Context, userID, status string) error
 	ApprovedDirectory(ctx context.Context) ([]Student, error)
 	Counts(ctx context.Context) (map[string]int, error)
+
+	// Roles. SetRole enforces every rule itself (self-change, verification, last admin, actor must be an admin)
+	// atomically, so no caller can skip them. PromoteVerifiedByEmail is the operator-only bootstrap: it promotes
+	// an account whose email Supabase has confirmed; with apply=false it only reports what it would do.
+	ListUsers(ctx context.Context, q, role string, limit, offset int) ([]UserRow, int, error)
+	SetRole(ctx context.Context, actorID, targetID, role string) (User, error)
+	PromoteVerifiedByEmail(ctx context.Context, email string, apply bool) (user User, changed bool, err error)
 	Ping(ctx context.Context) error
 }

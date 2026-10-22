@@ -1,6 +1,16 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
+    'admin.tab.members': 'সদস্য অনুমোদন', 'admin.tab.roles': 'অ্যাডমিন ব্যবস্থাপনা', 'admin.roles.title': 'অ্যাডমিন ব্যবস্থাপনা',
+    'admin.roles.lede': 'অ্যাডমিনরা সদস্য অনুমোদন ও ভূমিকা পরিবর্তন করতে পারেন। সদস্য অনুমোদন করলে তিনি অ্যাডমিন হন না।',
+    'admin.roles.search': 'ইমেইল বা নাম দিয়ে খুঁজুন…', 'admin.roles.all': 'সব ভূমিকা', 'admin.roles.admin': 'অ্যাডমিন', 'admin.roles.member': 'সদস্য',
+    'admin.roles.you': 'আপনি', 'admin.roles.makeAdmin': 'অ্যাডমিন করুন', 'admin.roles.makeMember': 'সদস্য করুন', 'admin.roles.verified': 'ইমেইল যাচাইকৃত', 'admin.roles.unverified': 'ইমেইল যাচাই হয়নি',
+    'admin.roles.confirmPromote': '{who} কে অ্যাডমিন করবেন? তিনি সদস্য অনুমোদন ও অন্যদের ভূমিকা বদলাতে পারবেন।',
+    'admin.roles.confirmDemote': '{who} কে সদস্য করবেন? তিনি আর অ্যাডমিন পাতা ব্যবহার করতে পারবেন না।',
+    'admin.roles.confirm': 'নিশ্চিত করুন', 'admin.roles.cancel': 'বাতিল', 'admin.roles.done': 'ভূমিকা বদলানো হয়েছে।', 'admin.roles.none': 'কোনো ব্যবহারকারী পাওয়া যায়নি।',
+    'admin.roles.note': 'ব্যবহারকারী তালিকায় আসেন সাইনইন করার পর। ইমেইল যাচাই না হলে অ্যাডমিন করা যায় না।',
+    'admin.err.self': 'নিজের ভূমিকা নিজে বদলানো যায় না।', 'admin.err.unverified': 'ইমেইল যাচাই না হওয়া অ্যাকাউন্টকে অ্যাডমিন করা যায় না।',
+    'admin.err.lastAdmin': 'শেষ সক্রিয় অ্যাডমিনকে সরানো যায় না।', 'admin.err.forbidden': 'এই কাজের অনুমতি আপনার নেই।', 'admin.err.notFound': 'ব্যবহারকারী পাওয়া যায়নি।',
     'auth.goDashboard': 'ড্যাশবোর্ডে যান', 'auth.recoveryMissing': 'পাসওয়ার্ড রিসেটের ইমেইলে পাঠানো লিংক খুলুন। লিংক ছাড়া নতুন পাসওয়ার্ড দেওয়া যায় না।',
     'dash.complete': 'সদস্য আবেদন সম্পূর্ণ করুন', 'dash.completeNote': 'কমিটি যাচাই করার জন্য আপনার ব্যাচ, বিভাগ ও এলাকা দিন।',
     'auth.unavailable': 'অ্যাকাউন্ট সেবা এখন চালু নেই। কিছুক্ষণ পরে চেষ্টা করুন।', 'auth.rateLimited': 'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
@@ -118,6 +128,16 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
+    'admin.tab.members': 'Member approvals', 'admin.tab.roles': 'Admin management', 'admin.roles.title': 'Admin management',
+    'admin.roles.lede': 'Admins can approve members and change roles. Approving a member never makes them an admin.',
+    'admin.roles.search': 'Search by email or name…', 'admin.roles.all': 'All roles', 'admin.roles.admin': 'Admin', 'admin.roles.member': 'Member',
+    'admin.roles.you': 'You', 'admin.roles.makeAdmin': 'Make admin', 'admin.roles.makeMember': 'Make member', 'admin.roles.verified': 'Email verified', 'admin.roles.unverified': 'Email not verified',
+    'admin.roles.confirmPromote': 'Make {who} an admin? They will be able to approve members and change other people\'s roles.',
+    'admin.roles.confirmDemote': 'Make {who} a regular member? They will lose access to the admin pages immediately.',
+    'admin.roles.confirm': 'Confirm', 'admin.roles.cancel': 'Cancel', 'admin.roles.done': 'Role updated.', 'admin.roles.none': 'No users found.',
+    'admin.roles.note': 'People appear here after they sign in once. An account with an unverified email cannot be made admin.',
+    'admin.err.self': 'You cannot change your own role.', 'admin.err.unverified': 'An account with an unverified email cannot be made admin.',
+    'admin.err.lastAdmin': 'The last active admin cannot be removed.', 'admin.err.forbidden': 'You do not have permission to do that.', 'admin.err.notFound': 'That user was not found.',
     'auth.goDashboard': 'Go to dashboard', 'auth.recoveryMissing': 'Open the link from your password reset email. A new password cannot be set without it.',
     'dash.complete': 'Complete your membership application', 'dash.completeNote': 'Give your batch, department and home area so the committee can verify you.',
     'auth.unavailable': 'The account service is not available right now. Please try again later.', 'auth.rateLimited': 'Too many attempts. Please try again in a while.',

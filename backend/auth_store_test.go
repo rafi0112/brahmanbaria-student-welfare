@@ -119,6 +119,42 @@ func storeSuite(t *testing.T, s AuthStore) {
 	if _, err := s.ProfileByUser(ctx, adm.ID); err != ErrNotFound {
 		t.Fatalf("admins have no profile, got %v", err)
 	}
+
+	// roles: every rule lives in the store, so every implementation must enforce it
+	if _, err := s.SetRole(ctx, adm.ID, adm.ID, RoleMember); err != ErrSelfRoleChange {
+		t.Fatalf("self change: %v", err)
+	}
+	if _, err := s.SetRole(ctx, adm.ID, u.ID, "root"); err != ErrInvalidRole {
+		t.Fatalf("invalid role: %v", err)
+	}
+	nv, err := s.CreateUser(ctx, NewUser{Email: "unverified@example.com", PasswordHash: "h", Role: RoleMember})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SetRole(ctx, adm.ID, nv.ID, RoleAdmin); err != ErrTargetUnverified {
+		t.Fatalf("unverified promotion: %v", err)
+	}
+	if _, err := s.SetRole(ctx, u.ID, adm.ID, RoleMember); err != ErrLastAdmin {
+		t.Fatalf("the only admin must be protected: %v", err)
+	}
+	if got, err := s.SetRole(ctx, adm.ID, u.ID, RoleAdmin); err != nil || got.Role != RoleAdmin {
+		t.Fatalf("promote: %+v %v", got, err)
+	}
+	if got, err := s.SetRole(ctx, u.ID, adm.ID, RoleMember); err != nil || got.Role != RoleMember {
+		t.Fatalf("demote with two admins: %+v %v", got, err)
+	}
+	if _, err := s.SetRole(ctx, adm.ID, u.ID, RoleMember); err != ErrLastAdmin {
+		t.Fatalf("the remaining admin must be protected: %v", err)
+	}
+	if rows, total, err := s.ListUsers(ctx, "SUITE", "", 10, 0); err != nil || total != 1 || len(rows) != 1 || rows[0].Name != "Suite User" || rows[0].Role != RoleAdmin {
+		t.Fatalf("list by name: %+v %d %v", rows, total, err)
+	}
+	if _, total, err := s.ListUsers(ctx, "", RoleAdmin, 10, 0); err != nil || total != 1 {
+		t.Fatalf("list admins: %d %v", total, err)
+	}
+	if rows, total, err := s.ListUsers(ctx, "", "", 2, 2); err != nil || total != 3 || len(rows) != 1 {
+		t.Fatalf("paging: %+v %d %v", rows, total, err)
+	}
 	if err := s.Ping(ctx); err != nil {
 		t.Fatal(err)
 	}

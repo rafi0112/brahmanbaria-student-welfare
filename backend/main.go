@@ -29,6 +29,12 @@ func main() {
 
 	authStore, closeAuth := openAuthStore()
 	defer closeAuth()
+	if len(os.Args) > 1 && os.Args[1] == "bootstrap-admin" {
+		if err := bootstrapAdmins(authStore, os.Args[2:]); err != nil {
+			log.Fatalf("bootstrap-admin: %v", err)
+		}
+		return
+	}
 	if pg, ok := authStore.(*pgStore); ok {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		dbStore, contentErr := pg.Content(ctx, store)
@@ -48,7 +54,6 @@ func main() {
 	if authStore != nil {
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
-		app.Auth.AdminEmails = parseEmailSet(os.Getenv("ADMIN_EMAILS"))
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
 		if app.Auth.Verifier == nil {
 			log.Printf("Supabase bearer auth disabled: configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")
@@ -198,4 +203,59 @@ func env(k, def string) string {
 		return v
 	}
 	return def
+}
+
+// bootstrapAdmins promotes the confirmed Supabase accounts listed in ADMIN_EMAILS to database admins.
+// Run it yourself after registering and confirming your email:
+//
+//	go run . bootstrap-admin           (preview, changes nothing)
+//	go run . bootstrap-admin --apply   (does it)
+//
+// It only ever adds admins, is safe to repeat, and refuses unknown or unconfirmed accounts.
+func bootstrapAdmins(s AuthStore, args []string) error {
+	if s == nil {
+		return fmt.Errorf("DATABASE_URL is not set")
+	}
+	apply := false
+	for _, a := range args {
+		switch a {
+		case "--apply":
+			apply = true
+		default:
+			return fmt.Errorf("unknown argument %q (use --apply to make the change)", a)
+		}
+	}
+	emails := parseEmailSet(os.Getenv("ADMIN_EMAILS"))
+	if len(emails) == 0 {
+		return fmt.Errorf("ADMIN_EMAILS is empty: add the email of your own account to backend/.env")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ok, failed := 0, 0
+	for email := range emails {
+		_, changed, err := s.PromoteVerifiedByEmail(ctx, email, apply)
+		switch {
+		case err == ErrNotFound:
+			failed++
+			fmt.Printf("  %-32s NOT FOUND: register on the site first\n", email)
+		case err == ErrTargetUnverified:
+			failed++
+			fmt.Printf("  %-32s NOT CONFIRMED: open the confirmation email first\n", email)
+		case err != nil:
+			return err
+		case !changed:
+			ok++
+			fmt.Printf("  %-32s already an admin, nothing to do\n", email)
+		case apply:
+			ok++
+			fmt.Printf("  %-32s promoted to admin\n", email)
+		default:
+			ok++
+			fmt.Printf("  %-32s would be promoted (preview only, re-run with --apply)\n", email)
+		}
+	}
+	if ok == 0 && failed > 0 {
+		return fmt.Errorf("no account was promoted")
+	}
+	return nil
 }

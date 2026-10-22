@@ -11,7 +11,7 @@ cd frontend && npm run dev      # http://localhost:5173  (open THIS address, not
 ```
 
 `backend/.env` must contain these names (values stay on your machine): `DATABASE_URL`, `SUPABASE_URL`,
-`SUPABASE_PUBLISHABLE_KEY`, `ADMIN_EMAILS` (the email of the account that should be admin).
+`SUPABASE_PUBLISHABLE_KEY`, `ADMIN_EMAILS` (only used by the first-admin bootstrap command in section 5).
 `frontend/.env` must contain `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 Restart the API after editing `backend/.env`; restart Vite after editing `frontend/.env`.
 
@@ -52,12 +52,27 @@ Supabase dashboard checklist (Authentication): Email provider on, **Confirm emai
 
 ## 5. Admin authorization
 
-1. Make sure `ADMIN_EMAILS` has the admin address, restart the API, sign up that address, confirm the email, log in.
+1. First admin (one time). `ADMIN_EMAILS` alone does NOT grant admin; it only names who the command may promote.
+   1. Sign up with your own address at `/register`, click the confirmation email, log in once.
+   2. Put your address in `backend/.env` as `ADMIN_EMAILS=you@example.com`.
+   3. Restart the API once so migration 004 (roles) is applied, then stop it.
+   4. Preview (changes nothing): `cd backend && go run . bootstrap-admin`
+   5. Apply: `cd backend && go run . bootstrap-admin --apply`. Safe to repeat. It refuses unconfirmed or unknown accounts.
+   6. Start the API, log in again.
 2. Expected: the header button says "Admin panel"; `/admin` lists pending members (member1).
 3. Approve member1. Expected: `/students?q=<member1 name>` lists them (public fields only).
 4. Log in as member1 and open `/admin`. Expected: "This page is for admins only".
 5. API check (server-side enforcement): in the browser dev tools copy no tokens into chat, but you can confirm that
    `curl -i localhost:8080/api/v1/admin/members` (no token) returns 401, and that member1's token gets 403.
+
+### 5b. Admin management (promote a second verified member)
+
+1. Register and confirm a second account (member2) and sign in once so it appears in the list.
+2. As the admin open `/admin` > **Admin management**. Search by email or name; filter by role.
+3. Click **Make admin** next to member2, confirm in the dialog. Expected: "Role updated.", role badge turns Admin; member2 can now open `/admin`.
+4. Expected refusals: your own row shows "You" with no button; an account whose email is not confirmed has a disabled button.
+5. Click **Make member** on member2 and confirm. Then try to demote the only remaining admin (via API) and expect the "last active admin" refusal.
+6. Approving a member in **Member approvals** must not change their role.
 
 ## 6. Clean up
 
