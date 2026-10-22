@@ -44,6 +44,25 @@ export function Credit({ id }) {
   )
 }
 
+// Password box with its own show/hide switch (each field toggles independently).
+export function PasswordInput({ id, ...props }) {
+  const { t } = useApp()
+  const [shown, setShown] = useState(false)
+  const label = t(shown ? 'auth.hidePassword' : 'auth.showPassword')
+  return (
+    <span className="pw">
+      <input id={id} {...props} type={shown ? 'text' : 'password'} />
+      <button type="button" className="pw-toggle" onClick={() => setShown((s) => !s)} aria-pressed={shown} aria-label={label} title={label}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          {shown && <path d="M4 4l16 16" />}
+        </svg>
+      </button>
+    </span>
+  )
+}
+
 export function Loading() {
   const { t } = useApp()
   return <div className="state" role="status" aria-live="polite"><span className="spinner" aria-hidden="true" />{t('state.loading')}</div>

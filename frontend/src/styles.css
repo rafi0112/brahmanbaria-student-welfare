@@ -355,6 +355,10 @@ html[lang='bn'] .script-note { font-family: 'Noto Serif Bengali', serif; font-st
 .picked { align-items: baseline; } .check { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } .ok-text { color: var(--ok); }
 @media (max-width: 760px) { .cm-layout { grid-template-columns: 1fr; } .cm-form .two { grid-template-columns: 1fr; } }
 
+.pw { position: relative; display: block; } .pw input { width: 100%; padding-right: 48px; }
+.pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted, currentColor); border-radius: 50%; cursor: pointer; }
+.pw-toggle:hover, .pw-toggle:focus-visible { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--ink); }
+
 /* ---------- footer ---------- */
 .site-footer { position: relative; z-index: 1; margin-top: 50px; color: var(--on-forest); }
 .footer-wave { display: block; width: 100%; height: clamp(40px, 6vw, 80px); fill: var(--forest); margin-bottom: -1px; }

@@ -1,6 +1,7 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
+    'auth.showPassword': 'পাসওয়ার্ড দেখুন', 'auth.hidePassword': 'পাসওয়ার্ড লুকান',
     'admin.tab.committee': 'কার্যনির্বাহী কমিটি',
     'cm.title': 'কার্যনির্বাহী কমিটি',
     'cm.lede': 'কমিটির মেয়াদ তৈরি করুন, সদস্য যোগ করুন, ছবি দিন এবং প্রকাশ করুন। কাউকে সরালে তাঁর অ্যাকাউন্ট বা প্রোফাইল মোছা হয় না।',
@@ -209,6 +210,7 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
+    'auth.showPassword': 'Show password', 'auth.hidePassword': 'Hide password',
     'admin.tab.committee': 'Executive Committee',
     'cm.title': 'Executive Committee',
     'cm.lede': 'Create a term, add members, add photos and publish. Removing someone never deletes their account or profile.',

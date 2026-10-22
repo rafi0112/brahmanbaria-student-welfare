@@ -5,6 +5,7 @@ import { api, useApi } from '../lib/api.js'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { toApiError } from '../lib/authErrors.js'
 import { Logo } from '../components/Sketch.jsx'
+import { PasswordInput } from '../components/ui.jsx'
 import { googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
@@ -180,8 +181,10 @@ export default function Auth({ mode }) {
             ) : (
               <label key={f} className="field">
                 <span>{t(label[f])}</span>
-                <input id={f} type={f === 'email' ? 'email' : f === 'password' || f === 'confirm' ? 'password' : 'text'}
-                  autoComplete={f === 'email' ? 'email' : f === 'name' ? 'name' : mode === 'login' ? 'current-password' : 'new-password'} {...bind(f)} />
+                {(() => {
+                  const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
+                  return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : 'text'} {...props} />
+                })()}
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             )))}
