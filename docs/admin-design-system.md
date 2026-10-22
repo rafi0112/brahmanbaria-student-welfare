@@ -13,3 +13,10 @@ Everything lives in `frontend/src/admin/admin.css`, scoped to `.adm`, so the pub
 - **Overlays:** menus and palette pop in (120ms), dialogs scale in, record editors open as a right-hand drawer. All motion is CSS and is disabled by `prefers-reduced-motion`.
 - **Gotcha worth remembering:** do not put `container-type`, `transform` or a lingering animation on an ancestor of a `position: fixed` element (menus, dialogs):
   it becomes their containing block. Row menus are portalled into `.adm` for this reason.
+
+## Fourth pass: nested sidebar, favorites and neutral theme
+
+- **Theme**: cool neutral surfaces, charcoal primary button (light) / near-white (dark), indigo only for focus and selection, semantic green/amber/red. Section icons (Lucide, one stroke weight) sit on faint tinted tiles (`.ni-*`).
+- **Sidebar** (`admin/Sidebar.jsx`, destinations in `admin/nav.js`): Dashboard and Activity, collapsible *Community* and *Content* groups (animated grid-row disclosure, chevrons, a group holding the current page reopens itself), then **Favorites**. Ctrl/Cmd+B toggles the icon rail; below 900px it is a drawer.
+- **Favorites** (`lib/favorites.js`, `admin/favorites.jsx`): per-admin, stored in this browser only (`jk-fav:<user id>`), never used for authorization. Star beside any page title adds that exact view (path + filters) with a name and folder. Folders can be created, renamed, deleted (only shortcuts go), collapsed; shortcuts can be renamed, moved up/down, moved between folders or removed through the ⋮ menu, or dragged. Targets are validated against the real admin routes on add and on load; unknown or hostile entries are dropped.
+- **E2E**: `npm run e2e` (Playwright, installed Chrome/Edge). It starts an in-memory API on :8090 with `JK_NO_DOTENV=1` and Vite on :5199 with empty Supabase settings, so it cannot reach the real database or Supabase.

@@ -190,7 +190,11 @@ func createAdmin(s AuthStore) error {
 }
 
 // loadDotEnv reads KEY=VALUE lines from a local .env file without overriding real environment variables.
+// JK_NO_DOTENV=1 skips it entirely, so an isolated test server can never pick up real database or Supabase settings.
 func loadDotEnv(path string) {
+	if os.Getenv("JK_NO_DOTENV") == "1" {
+		return
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { uploadMedia } from '../lib/api.js'
+import { folders, validTarget } from '../lib/favorites.js'
+import { useFavorites } from './favorites.jsx'
+import { navFor } from './nav.js'
+import Icon from './icons.jsx'
 export { slugFrom } from '../lib/slug.js'
 import { useApp } from '../lib/app.jsx'
 import { Pagination } from '../components/ui.jsx'
@@ -67,7 +71,60 @@ export function useErrText() {
 
 /* ---------------------------------------------------------------- display pieces */
 
-export function PageHeader({ title, desc, action, crumbs }) {
+// Star beside a page title: add this exact view (path + filters) to Favorites, choose a name and folder, or remove it again.
+export function PinButton({ label, to: toProp }) {
+  const { t } = useApp()
+  const fav = useFavorites()
+  const loc = useLocation()
+  const to = toProp || `${loc.pathname}${loc.search}`
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [folder, setFolder] = useState('')
+  const [err, setErr] = useState('')
+  const box = useRef(null)
+  const existing = fav?.isFav(to)
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (e) => { if (!box.current?.contains(e.target)) setOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); box.current?.querySelector('button')?.focus() } }
+    addEventListener('mousedown', onDown)
+    addEventListener('keydown', onKey)
+    return () => { removeEventListener('mousedown', onDown); removeEventListener('keydown', onKey) }
+  }, [open])
+  if (!fav || !validTarget(to)) return null
+  const flds = folders(fav.state)
+  const toggle = () => {
+    if (existing) { fav.remove(existing.id); return }
+    const nav = navFor(loc.pathname, loc.search)
+    setName(label || (nav ? t(nav.label) : '')); setFolder(''); setErr(''); setOpen(!open)
+  }
+  const save = (e) => {
+    e.preventDefault()
+    const r = fav.add(name, to, folder || undefined)
+    if (r.ok) setOpen(false); else setErr(t(`ad.fav.err.${r.reason}`))
+  }
+  return (
+    <span className="pin" ref={box}>
+      <button type="button" className={`adm-iconbtn pin-btn ${existing ? 'on' : ''}`} aria-pressed={!!existing} onClick={toggle}
+        aria-label={t(existing ? 'ad.fav.unpin' : 'ad.fav.pin')} title={t(existing ? 'ad.fav.unpin' : 'ad.fav.pin')}><Icon name="star" size={16} /></button>
+      {open && (
+        <form className="pin-pop" onSubmit={save} role="dialog" aria-label={t('ad.fav.pin')}>
+          <label className="field compact"><span>{t('ad.fav.name')}</span><input autoFocus value={name} maxLength={40} onChange={(e) => setName(e.target.value)} /></label>
+          <label className="field compact"><span>{t('ad.fav.folder')}</span>
+            <select value={folder} onChange={(e) => setFolder(e.target.value)}>
+              <option value="">{t('ad.fav.noFolder')}</option>
+              {flds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </label>
+          {err && <small className="err" role="alert">{err}</small>}
+          <div className="row"><button type="submit" className="btn btn-dark btn-sm">{t('ad.fav.add')}</button><button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>{t('admin.roles.cancel')}</button></div>
+        </form>
+      )}
+    </span>
+  )
+}
+
+export function PageHeader({ title, desc, action, crumbs, pin = true }) {
   return (
     <header className="ad-head">
       {crumbs && (
@@ -78,7 +135,7 @@ export function PageHeader({ title, desc, action, crumbs }) {
         </nav>
       )}
       <div className="ad-head-row">
-        <div><h2>{title}</h2>{desc && <p className="muted">{desc}</p>}</div>
+        <div><div className="ad-title"><h2>{title}</h2>{pin && <PinButton label={typeof title === 'string' ? title : undefined} />}</div>{desc && <p className="muted">{desc}</p>}</div>
         {action && <div className="ad-head-action">{action}</div>}
       </div>
     </header>
@@ -323,7 +380,7 @@ export function EmptyState({ title, text, action }) {
 
 // "More actions" menu: a button that opens a short list. Opens with click/Enter, moves with the arrow keys, closes with Escape.
 // It is positioned with fixed coordinates so a table's overflow never clips it.
-export function RowMenu({ label, items }) {
+export function RowMenu({ label, items, className = '', icon }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, right: 0 })
   const btn = useRef(null)
@@ -352,8 +409,8 @@ export function RowMenu({ label, items }) {
   if (live.length === 0) return null
   return (
     <>
-      <button ref={btn} type="button" className="btn btn-ghost btn-sm ad-more" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>
-        <span aria-hidden="true">⋯</span>
+      <button ref={btn} type="button" className={`btn btn-ghost btn-sm ad-more ${className}`} aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>
+        <Icon name="more" size={16} />
       </button>
       {open && createPortal(
         <ul ref={list} role="menu" className="ad-menu" aria-label={label} style={{ top: pos.top, right: pos.right }}>
