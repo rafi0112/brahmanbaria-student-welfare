@@ -155,21 +155,22 @@ func (s *pgStore) UserByID(ctx context.Context, id string) (User, error) {
 	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1::uuid`, id))
 }
 
-func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string) (User, error) {
+func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string, verified bool) (User, error) {
 	var u User
-	var verified *time.Time
+	var verifiedAt *time.Time
 	err := s.db.QueryRow(ctx, `INSERT INTO users (id, email, password_hash, role, email_verified_at)
-		VALUES ($1::uuid, $2, '', $3, now())
-		ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = now()
-		RETURNING id::text, email, password_hash, role, email_verified_at`, id, email, RoleMember).
-		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verified)
+		VALUES ($1::uuid, $2, '', $3, CASE WHEN $4::boolean THEN now() END)
+		ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = now(),
+			email_verified_at = COALESCE(users.email_verified_at, EXCLUDED.email_verified_at)
+		RETURNING id::text, email, password_hash, role, email_verified_at`, id, email, RoleMember, verified).
+		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verifiedAt)
 	if err != nil {
 		if isUnique(err) {
 			return User{}, ErrEmailTaken
 		}
 		return User{}, err
 	}
-	u.EmailVerified = verified != nil
+	u.EmailVerified = verifiedAt != nil
 	return u, nil
 }
 

@@ -45,6 +45,17 @@ var (
 )
 
 func (a *App) authRoutes(m *http.ServeMux) {
+	// Credential endpoints of the built-in (non-Supabase) accounts. They are switched off when Supabase
+	// Auth is configured so there is a single source of truth for passwords, confirmations and resets.
+	local := func(f func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if a.Auth != nil && a.Auth.Verifier != nil {
+				apiError(w, http.StatusGone, "use Supabase Auth for this action")
+				return
+			}
+			f(w, r)
+		}
+	}
 	h := func(f func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			if a.Auth == nil {
@@ -54,13 +65,13 @@ func (a *App) authRoutes(m *http.ServeMux) {
 			f(w, r)
 		}
 	}
-	m.HandleFunc("POST /api/v1/auth/register", h(a.register))
-	m.HandleFunc("POST /api/v1/auth/verify-email", h(a.verifyEmail))
-	m.HandleFunc("POST /api/v1/auth/resend-verification", h(a.resendVerification))
-	m.HandleFunc("POST /api/v1/auth/login", h(a.login))
+	m.HandleFunc("POST /api/v1/auth/register", h(local(a.register)))
+	m.HandleFunc("POST /api/v1/auth/verify-email", h(local(a.verifyEmail)))
+	m.HandleFunc("POST /api/v1/auth/resend-verification", h(local(a.resendVerification)))
+	m.HandleFunc("POST /api/v1/auth/login", h(local(a.login)))
 	m.HandleFunc("POST /api/v1/auth/logout", h(a.logout))
-	m.HandleFunc("POST /api/v1/auth/forgot-password", h(a.forgotPassword))
-	m.HandleFunc("POST /api/v1/auth/reset-password", h(a.resetPassword))
+	m.HandleFunc("POST /api/v1/auth/forgot-password", h(local(a.forgotPassword)))
+	m.HandleFunc("POST /api/v1/auth/reset-password", h(local(a.resetPassword)))
 	m.HandleFunc("GET /api/v1/auth/me", h(a.me))
 	m.HandleFunc("PATCH /api/v1/me/profile", h(a.requireUser(a.updateProfile)))
 	m.HandleFunc("POST /api/v1/me/profile", h(a.requireUser(a.createProfile)))
@@ -102,9 +113,12 @@ func (a *App) currentUser(r *http.Request) (User, bool) {
 		if strings.HasPrefix(header, "Bearer ") {
 			external, err := a.Auth.Verifier.verify(r.Context(), strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")))
 			if err == nil {
-				u, ensureErr := a.Auth.Store.EnsureExternalUser(r.Context(), external.ID, normEmail(external.Email))
-				if ensureErr == nil {
-					u.EmailVerified = external.EmailConfirmedAt != ""
+				confirmed := external.EmailConfirmedAt != ""
+				u, ensureErr := a.Auth.Store.EnsureExternalUser(r.Context(), external.ID, normEmail(external.Email), confirmed)
+				if ensureErr != nil {
+					log.Printf("external user %s: %v", external.ID, ensureErr)
+				} else {
+					u.EmailVerified = confirmed // trust Supabase's flag for this request, not our stored copy
 					if u.EmailVerified && a.Auth.AdminEmails[normEmail(u.Email)] {
 						u.Role = RoleAdmin
 					}

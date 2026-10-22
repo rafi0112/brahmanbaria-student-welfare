@@ -1,6 +1,7 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
+    'auth.goDashboard': 'ড্যাশবোর্ডে যান', 'auth.recoveryMissing': 'পাসওয়ার্ড রিসেটের ইমেইলে পাঠানো লিংক খুলুন। লিংক ছাড়া নতুন পাসওয়ার্ড দেওয়া যায় না।',
     'dash.complete': 'সদস্য আবেদন সম্পূর্ণ করুন', 'dash.completeNote': 'কমিটি যাচাই করার জন্য আপনার ব্যাচ, বিভাগ ও এলাকা দিন।',
     'auth.unavailable': 'অ্যাকাউন্ট সেবা এখন চালু নেই। কিছুক্ষণ পরে চেষ্টা করুন।', 'auth.rateLimited': 'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
     'auth.badLogin': 'ইমেইল বা পাসওয়ার্ড ভুল।', 'auth.notVerified': 'আগে ইমেইল যাচাই করুন। যাচাইয়ের লিংক আবার পাঠাতে পারেন।',
@@ -117,6 +118,7 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
+    'auth.goDashboard': 'Go to dashboard', 'auth.recoveryMissing': 'Open the link from your password reset email. A new password cannot be set without it.',
     'dash.complete': 'Complete your membership application', 'dash.completeNote': 'Give your batch, department and home area so the committee can verify you.',
     'auth.unavailable': 'The account service is not available right now. Please try again later.', 'auth.rateLimited': 'Too many attempts. Please try again in a while.',
     'auth.badLogin': 'Incorrect email or password.', 'auth.notVerified': 'Verify your email first. You can send the link again.',

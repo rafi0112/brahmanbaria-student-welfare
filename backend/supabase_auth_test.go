@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -91,5 +92,45 @@ func TestSupabaseBearerAuth(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&calls) - before; got != 0 {
 		t.Fatalf("expected cached verification, saw %d extra Supabase calls", got)
+	}
+}
+
+func TestSupabaseUnverifiedUsersAreHeldBack(t *testing.T) {
+	var calls int32
+	srv := fakeSupabase(t, &calls)
+	e := authApp(t)
+	e.app.Auth.Verifier = newSupabaseVerifier(srv.URL, "pub-key")
+
+	// the account is visible to itself, flagged unverified, and nothing that needs a member works
+	me := e.do("GET", "/api/v1/auth/me", nil, nil, bearer("unconfirmed-boss")...)
+	if me.Code != 200 || !strings.Contains(me.Body.String(), `"emailVerified":false`) {
+		t.Fatalf("unverified me: %d %s", me.Code, me.Body)
+	}
+	body := map[string]any{"name": "Nope", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}
+	for _, c := range []struct{ method, path string }{{"POST", "/api/v1/me/profile"}, {"PATCH", "/api/v1/me/profile"}, {"GET", "/api/v1/admin/members"}} {
+		rec := e.do(c.method, c.path, body, nil, bearer("unconfirmed-boss")...)
+		if rec.Code != 403 || !strings.Contains(rec.Body.String(), "email_not_verified") {
+			t.Fatalf("%s %s should be 403 email_not_verified, got %d %s", c.method, c.path, rec.Code, rec.Body)
+		}
+	}
+	// the stored copy must not claim verification Supabase never gave
+	u, err := e.mem.UserByID(context.Background(), "00000000-0000-0000-0000-0000000000c3")
+	if err != nil || u.EmailVerified {
+		t.Fatalf("stored user must stay unverified: %+v %v", u, err)
+	}
+}
+
+func TestLocalCredentialEndpointsOffWhenSupabaseIsOn(t *testing.T) {
+	var calls int32
+	srv := fakeSupabase(t, &calls)
+	e := authApp(t)
+	e.app.Auth.Verifier = newSupabaseVerifier(srv.URL, "pub-key")
+	for _, path := range []string{"register", "login", "verify-email", "resend-verification", "forgot-password", "reset-password"} {
+		if rec := e.do("POST", "/api/v1/auth/"+path, map[string]string{"email": "a@example.com"}, nil); rec.Code != http.StatusGone {
+			t.Errorf("%s should be 410 with Supabase on, got %d", path, rec.Code)
+		}
+	}
+	if rec := e.do("POST", "/api/v1/auth/logout", nil, nil); rec.Code != 200 {
+		t.Fatalf("logout should stay available, got %d", rec.Code)
 	}
 }

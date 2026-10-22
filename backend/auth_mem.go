@@ -75,16 +75,17 @@ func (m *memStore) UserByID(_ context.Context, id string) (User, error) {
 	return User{}, ErrNotFound
 }
 
-func (m *memStore) EnsureExternalUser(_ context.Context, id, email string) (User, error) {
+func (m *memStore) EnsureExternalUser(_ context.Context, id, email string, verified bool) (User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if u, ok := m.users[id]; ok {
+		u.EmailVerified = u.EmailVerified || verified
 		return *u, nil
 	}
 	if _, exists := m.byEmail[email]; exists {
 		return User{}, ErrEmailTaken
 	}
-	u := &User{ID: id, Email: email, Role: RoleMember, EmailVerified: true}
+	u := &User{ID: id, Email: email, Role: RoleMember, EmailVerified: verified}
 	m.users[id], m.byEmail[email] = u, id
 	return *u, nil
 }
