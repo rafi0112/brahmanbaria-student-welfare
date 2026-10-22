@@ -13,7 +13,9 @@ export const NAV = [
     { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
   ] },
-  // Students is a dropdown of three plain pages. Each page shows its own tabs (listed here as `tabs`, so the sidebar stays short). Membership Requests is the pending queue (split by profile completeness);
+  // Students is a dropdown of two plain pages. Membership Requests is the pending queue (tabs: all, complete, incomplete profiles).
+  // Membership Directory holds everyone: registered members (all / needs review / verified) and the original directory records
+  // (all / needs verification / verified), switched inside the page.
   // Members is every registered account, those needing review and the verified (approved with a confirmed email); Member Directory
   // is the original directory of people (needs verification / verified).
   { id: 'requests', to: '/admin/students?tab=requests', icon: 'clock', label: 'ad.nav.requests', group: 'students', watch: ['complete'], tabs: [
@@ -21,16 +23,7 @@ export const NAV = [
     { id: 'complete', label: 'ad.req.complete', query: { complete: 'yes' } },
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
-  { id: 'members', to: '/admin/students?tab=members', icon: 'users', label: 'ad.nav.members', group: 'students', watch: ['view'], tabs: [
-    { id: 'all', label: 'ad.stu.view.all', query: {} },
-    { id: 'review', label: 'ad.mem.review', query: { view: 'review' } },
-    { id: 'verified', label: 'ad.mem.verified', query: { view: 'verified' } },
-  ] },
-  { id: 'directory', to: '/admin/students?tab=imported', icon: 'directory', label: 'ad.nav.directory', group: 'students', watch: ['status'], tabs: [
-    { id: 'all', label: 'ad.status.allShort', query: {} },
-    { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
-    { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
-  ] },
+  { id: 'directory', to: '/admin/students?tab=members', icon: 'directory', label: 'ad.nav.directory', group: 'students' },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
   // Blog and gallery share one rule: an empty status is the working set (everything not archived).
@@ -75,7 +68,7 @@ export function navFor(pathname, search = '') {
     const st = p.get('status')
     if (tab === 'imported') return NAV.find((n) => n.id === 'directory')
     const members = tab === 'members' || (!tab && st && st !== 'pending')
-    return NAV.find((n) => n.id === (members ? 'members' : 'requests'))
+    return NAV.find((n) => n.id === (members ? 'directory' : 'requests'))
   }
   return NAV.find((n) => !n.to.includes('?') && n.to !== '/admin' && (pathname === n.to || pathname.startsWith(`${n.to}/`)))
 }

@@ -37,7 +37,7 @@ test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   await login(page)
   await expect(page.locator('header.site-header, .site-header')).toHaveCount(0)
   await side(page).getByRole('button', { name: 'Students', exact: true }).click() // opens like Messages
-  for (const label of ['Dashboard', 'Activity', 'Membership Requests', 'Members', 'Member Directory', 'Admin management', 'Executive Committee']) {
+  for (const label of ['Dashboard', 'Activity', 'Membership Requests', 'Membership Directory', 'Admin management', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label, exact: true })).toBeVisible()
   }
   for (const label of ['Blog', 'Heritage places', 'Gallery']) {
@@ -326,17 +326,16 @@ test('imported directory: add a record by hand, edit it, delete it; no account i
   await expect(page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Person' })).toHaveCount(0)
 })
 
-test('students: a dropdown of three pages, each with its own tabs', async ({ page }) => {
+test('students: a dropdown of two pages, each with its own tabs', async ({ page }) => {
   await login(page)
   const students = side(page).getByRole('button', { name: 'Students', exact: true })
   await expect(students).toHaveAttribute('aria-expanded', 'false')
   await students.click()
   await expect(students).toHaveAttribute('aria-expanded', 'true')
-  await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(3)
+  await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(2)
   const pages = [
     ['Membership Requests', /tab=requests/, ['All pending requests', 'Complete profiles', 'Incomplete profiles'], [/complete=yes/, /complete=no/]],
-    ['Members', /tab=members/, ['All', 'Needs review', 'Verified'], [/view=review/, /view=verified/]],
-    ['Member Directory', /tab=imported/, ['All', 'Needs verification', 'Verified'], [/status=awaiting/, /status=verified/]],
+    ['Membership Directory', /tab=members/, ['All', 'Needs review', 'Verified'], [/view=review/, /view=verified/]],
   ]
   for (const [label, url, tabs, urls] of pages) {
     await side(page).getByRole('link', { name: label, exact: true }).click()
@@ -349,8 +348,13 @@ test('students: a dropdown of three pages, each with its own tabs', async ({ pag
       await expect(side(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page')
     }
   }
+  // the directory page also holds the original directory records, with their own three tabs
+  await page.getByRole('tab', { name: 'Directory records' }).click()
+  await expect(page).toHaveURL(/tab=imported/)
+  await expect(side(page).getByRole('link', { name: 'Membership Directory', exact: true })).toHaveAttribute('aria-current', 'page')
+  for (const t of ['All', 'Needs verification', 'Verified']) await expect(page.locator('.ad-view', { hasText: new RegExp(`^${t}`) }).first()).toBeVisible()
+  await page.getByRole('tab', { name: 'Registered members' }).click()
   // the original directory has no accounts to list here, and Members says why
-  await side(page).getByRole('link', { name: 'Members', exact: true }).click()
   await expect(page.locator('.dt tbody tr')).toHaveCount(0)
   await expect(page.getByText(/have no email address, so no account can be created/)).toBeVisible()
 })

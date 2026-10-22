@@ -28,8 +28,15 @@ export default function StudentsAdmin() {
   const mode = studentsMode(sp)
   return (
     <section aria-labelledby="stu-h">
-      <PageHeader title={<span id="stu-h">{t(mode === 'imported' ? 'ad.stu.tab.imported' : mode === 'members' ? 'ad.nav.members' : 'ad.nav.requests')}</span>}
-        desc={t(mode === 'imported' ? 'ad.stu.desc' : mode === 'members' ? 'ad.mem.desc' : 'ad.req.desc')} />
+      <PageHeader title={<span id="stu-h">{t(mode === 'requests' ? 'ad.nav.requests' : 'ad.nav.directory')}</span>}
+        desc={t(mode === 'requests' ? 'ad.req.desc' : 'ad.dir.desc')} />
+      {mode !== 'requests' && (
+        <div className="chips" role="tablist" aria-label={t('ad.nav.directory')}>
+          {[['members', 'ad.dir.registered'], ['imported', 'ad.dir.records']].map(([k, label]) => (
+            <Link key={k} role="tab" aria-selected={mode === k} className={`chip ${mode === k ? 'on' : ''}`} to={k === 'members' ? '/admin/students?tab=members' : '/admin/students?tab=imported'}>{t(label)}</Link>
+          ))}
+        </div>
+      )}
       {mode === 'imported' ? <Imported /> : <Members mode={mode} key={mode} />}
     </section>
   )
