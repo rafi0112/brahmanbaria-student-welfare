@@ -61,8 +61,19 @@ Supabase dashboard checklist (Authentication): Email provider on, **Confirm emai
 
 ## 6. Clean up
 
-Supabase → Authentication → Users: delete the test users. In the SQL editor:
-`delete from users where email like 'you+member%';` (cascades to profiles).
+Only after you have checked the preview below. Nothing here touches `content_documents` (students, alumni, places...).
+Foreign keys verified on the live schema: `profiles`, `sessions`, `email_tokens` reference `users` with `ON DELETE CASCADE`.
+
+1. Supabase → Authentication → Users: delete the test users there (this does not remove our own `users` rows).
+2. SQL editor, preview first and confirm that only your test addresses are listed (never your admin address):
+   `select id, email, role from users where email like 'you+member%';`
+3. Then, in one transaction you can roll back:
+   ```sql
+   begin;
+   delete from users where email like 'you+member%' and role = 'member';
+   -- check the reported row count, then:
+   commit;   -- or: rollback;
+   ```
 
 ## What to report back
 

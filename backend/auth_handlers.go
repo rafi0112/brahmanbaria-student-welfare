@@ -459,6 +459,10 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}
+	if existing, err := a.Auth.Store.ProfileByUser(r.Context(), u.ID); err == nil && existing.Status == StatusApproved {
+		apiError(w, http.StatusConflict, "profile_locked") // approved details change only through the committee
+		return
+	}
 	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
 		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
 		Upazila: q.Upazila, Union: q.Union,

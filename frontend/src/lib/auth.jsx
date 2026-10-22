@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
     refresh,
     set: (d) => setState({ user: d.user, profile: d.profile, loading: false }),
     async logout() {
-      if (supabase) await supabase.auth.signOut()
+      if (supabase) await supabase.auth.signOut({ scope: 'local' })
       try { await api('/auth/logout', { method: 'POST' }) } catch { /* cookie may already be gone */ }
       setState({ user: null, profile: null, loading: false })
     },

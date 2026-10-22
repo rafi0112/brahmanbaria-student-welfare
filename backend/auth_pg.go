@@ -258,7 +258,8 @@ func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error
 		VALUES ($1::uuid, $2, $3, $4, $5, $6, COALESCE($7, ''), COALESCE($8, ''),
 			'pending', true, 'hidden', 'members', 'members')
 		ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch,
-			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name`,
+			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name,
+			status = CASE WHEN profiles.status = 'rejected' THEN 'pending' ELSE profiles.status END`,
 		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup)
 	return err
 }

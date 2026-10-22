@@ -204,6 +204,13 @@ func (m *memStore) UpdateProfile(_ context.Context, id string, c ProfilePatch) e
 func (m *memStore) UpsertProfile(_ context.Context, id string, p Profile) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if cur, ok := m.profiles[id]; ok {
+		cur.Name, cur.Batch, cur.Department, cur.Upazila, cur.Union = p.Name, p.Batch, p.Department, p.Upazila, p.Union
+		if cur.Status == StatusRejected {
+			cur.Status = StatusPending
+		}
+		return nil
+	}
 	p.UserID, p.Status, p.ShowInDirectory = id, StatusPending, true
 	p.ShowPhone, p.ShowEmail, p.ShowBlood = "hidden", "members", "members"
 	p.CreatedAt = time.Now().UTC().Format(time.RFC3339)

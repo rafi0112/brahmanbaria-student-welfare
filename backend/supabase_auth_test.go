@@ -134,3 +134,57 @@ func TestLocalCredentialEndpointsOffWhenSupabaseIsOn(t *testing.T) {
 		t.Fatalf("logout should stay available, got %d", rec.Code)
 	}
 }
+
+func TestClientCannotChooseRoleOrIdentity(t *testing.T) {
+	var calls int32
+	srv := fakeSupabase(t, &calls)
+	e := authApp(t)
+	e.app.Auth.Verifier = newSupabaseVerifier(srv.URL, "pub-key")
+	e.app.Auth.AdminEmails = parseEmailSet("boss@example.com")
+
+	// extra fields and headers that claim a role or another user's id are ignored
+	body := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti",
+		"role": "admin", "userId": "00000000-0000-0000-0000-0000000000a1", "email": "boss@example.com"}
+	rec := e.do("POST", "/api/v1/me/profile", body, nil, append(bearer("member-token"), "X-Role", "admin", "X-User-Id", "00000000-0000-0000-0000-0000000000a1")...)
+	if rec.Code != 201 || strings.Contains(rec.Body.String(), `"role":"admin"`) || !strings.Contains(rec.Body.String(), `"id":"00000000-0000-0000-0000-0000000000b2"`) {
+		t.Fatalf("profile must belong to the token's user with role member: %d %s", rec.Code, rec.Body)
+	}
+	if got := e.do("GET", "/api/v1/admin/members", nil, nil, append(bearer("member-token"), "X-Role", "admin")...); got.Code != 403 {
+		t.Fatalf("a role header must not grant admin, got %d", got.Code)
+	}
+	// the admin's profile list contains only the member created above, under the member's own id
+	list := e.do("GET", "/api/v1/admin/members", nil, nil, bearer("admin-token")...)
+	var l struct{ Items []MemberRow }
+	_ = json.Unmarshal(list.Body.Bytes(), &l)
+	if list.Code != 200 || len(l.Items) != 1 || l.Items[0].UserID != "00000000-0000-0000-0000-0000000000b2" {
+		t.Fatalf("unexpected members: %d %s", list.Code, list.Body)
+	}
+}
+
+func TestApprovedProfileIsLockedAndRejectedCanReapply(t *testing.T) {
+	var calls int32
+	srv := fakeSupabase(t, &calls)
+	e := authApp(t)
+	e.app.Auth.Verifier = newSupabaseVerifier(srv.URL, "pub-key")
+	e.app.Auth.AdminEmails = parseEmailSet("boss@example.com")
+	mine := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}
+	e.do("POST", "/api/v1/me/profile", mine, nil, bearer("member-token")...)
+	const id = "00000000-0000-0000-0000-0000000000b2"
+
+	// rejected, then re-submitted: back in the queue with the new details
+	e.do("POST", "/api/v1/admin/members/"+id+"/reject", nil, nil, bearer("admin-token")...)
+	mine["department"] = "Marketing"
+	if rec := e.do("POST", "/api/v1/me/profile", mine, nil, bearer("member-token")...); rec.Code != 201 || !strings.Contains(rec.Body.String(), `"status":"pending"`) || !strings.Contains(rec.Body.String(), "Marketing") {
+		t.Fatalf("re-submission after rejection: %d %s", rec.Code, rec.Body)
+	}
+	// approved: details can no longer be rewritten by the member
+	e.do("POST", "/api/v1/admin/members/"+id+"/approve", nil, nil, bearer("admin-token")...)
+	mine["department"] = "Law"
+	if rec := e.do("POST", "/api/v1/me/profile", mine, nil, bearer("member-token")...); rec.Code != 409 {
+		t.Fatalf("approved profile must be locked, got %d %s", rec.Code, rec.Body)
+	}
+	me := e.do("GET", "/api/v1/auth/me", nil, nil, bearer("member-token")...)
+	if !strings.Contains(me.Body.String(), "Marketing") || strings.Contains(me.Body.String(), `"department":"Law"`) {
+		t.Fatalf("approved details changed: %s", me.Body)
+	}
+}
