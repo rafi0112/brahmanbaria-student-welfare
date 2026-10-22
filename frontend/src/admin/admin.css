@@ -472,3 +472,12 @@
 .adm .vmark { display: inline-flex; vertical-align: -3px; margin-left: 5px; color: var(--ni-sky); }
 .adm .ad-matches { display: grid; gap: 8px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--a-line); border-radius: var(--a-r); }
 .adm .ad-matches legend { padding: 0 6px; color: var(--a-text-2); font-size: .8125rem; }
+
+/* promote-member search */
+.adm .pm-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 2px; }
+.adm .pm-row { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--a-r); background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.adm .pm-row:hover:not(:disabled) { background: var(--a-hover); }
+.adm .pm-row:disabled { cursor: not-allowed; opacity: .75; }
+.adm .pm-id { display: grid; min-width: 0; } .adm .pm-id small, .adm .pm-id strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm .pm-state { display: grid; justify-items: end; gap: 2px; font-size: .75rem; }
+.adm .pm-why { grid-column: 2 / -1; color: var(--a-warn); font-size: .75rem; }

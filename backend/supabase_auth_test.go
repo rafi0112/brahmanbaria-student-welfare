@@ -288,6 +288,7 @@ func TestPromoteAndDemoteWithImmediateEffect(t *testing.T) {
 	if rec := setRole(e, "admin-token", "00000000-0000-0000-0000-0000000000ff", "admin"); rec.Code != 404 {
 		t.Fatalf("unknown user should be 404, got %d", rec.Code)
 	}
+	e.approve(t, idMember)
 	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"role":"admin"`) {
 		t.Fatalf("promote: %d %s", rec.Code, rec.Body)
 	}
@@ -325,6 +326,7 @@ func TestAdminsMayLeaveOnlyWhileAnotherAdminRemains(t *testing.T) {
 		t.Fatalf("the only admin must not be able to leave: %d %s", rec.Code, rec.Body)
 	}
 	// with a second verified admin they may step down, and lose access at once
+	e.approve(t, idMember)
 	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 200 {
 		t.Fatalf("promote second admin: %d %s", rec.Code, rec.Body)
 	}
@@ -343,6 +345,7 @@ func TestUnverifiedAccountsCannotBePromoted(t *testing.T) {
 	e := supaApp(t)
 	e.makeAdmin(t, "admin-token", emailAdmin)
 	e.touch("unconfirmed-token")
+	e.approve(t, idUnverif)
 	rec := setRole(e, "admin-token", idUnverif, "admin")
 	if rec.Code != 409 || !strings.Contains(rec.Body.String(), "target_unverified") {
 		t.Fatalf("promoting an unverified account should be 409: %d %s", rec.Code, rec.Body)

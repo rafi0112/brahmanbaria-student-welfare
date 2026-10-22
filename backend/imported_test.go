@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"context"
 	"net/http"
 	"testing"
@@ -133,3 +134,40 @@ func importedStoreSuite(t *testing.T, s AuthStore) {
 }
 
 func TestMemImportedStoreSuite(t *testing.T) { importedStoreSuite(t, newMemStore()) }
+
+// approve gives an existing account an approved member profile, the precondition for promoting it to administrator.
+func (e *env2) approve(t *testing.T, id string) {
+	t.Helper()
+	ctx := context.Background()
+	if err := e.mem.UpsertProfile(ctx, id, Profile{UserID: id, Name: "Approved Person", Batch: 17, Department: "Finance", Upazila: "kasba", Union: "Kuti"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.mem.ReviewMember(ctx, "", id, StatusApproved); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPromotionRequiresApprovedMembership(t *testing.T) {
+	e := supaApp(t)
+	e.makeAdmin(t, "admin-token", emailAdmin)
+	e.touch("member-token")
+	// no member profile / pending profile: refused, and nothing changes
+	rec := setRole(e, "admin-token", idMember, "admin")
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), "target_unapproved") {
+		t.Fatalf("a member without an approved membership must not be promoted: %d %s", rec.Code, rec.Body)
+	}
+	ctx := context.Background()
+	if err := e.mem.UpsertProfile(ctx, idMember, Profile{UserID: idMember, Name: "Pending Person", Batch: 17, Department: "Finance", Upazila: "kasba", Union: "Kuti"}); err != nil {
+		t.Fatal(err)
+	}
+	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 409 {
+		t.Fatalf("pending membership: %d", rec.Code)
+	}
+	if u, _ := e.mem.UserByID(ctx, idMember); u.Role != RoleMember {
+		t.Fatal("role changed despite the refusal")
+	}
+	_ = e.mem.ReviewMember(ctx, "", idMember, StatusApproved)
+	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 200 {
+		t.Fatalf("approved and verified member should be promotable: %d %s", rec.Code, rec.Body)
+	}
+}

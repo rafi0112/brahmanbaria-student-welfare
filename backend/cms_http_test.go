@@ -552,6 +552,7 @@ func TestDashboardReflectsRealData(t *testing.T) {
 func TestRoleHistoryEndpoint(t *testing.T) {
 	e := cmsApp(t)
 	e.touch("member-token")
+	e.approve(t, idMember)
 	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 200 {
 		t.Fatalf("promote: %d %s", rec.Code, rec.Body)
 	}

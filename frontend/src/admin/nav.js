@@ -25,11 +25,7 @@ export const NAV = [
     { id: 'awaiting', label: 'ad.imp.awaiting', query: { status: 'awaiting' } },
     { id: 'verified', label: 'ad.imp.verified', query: { status: 'verified' } },
   ] },
-  { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people', watch: ['role'], children: [
-    { id: 'all', label: 'ad.roles.view.all', query: {} },
-    { id: 'admin', label: 'admin.roles.admin', query: { role: 'admin' } },
-    { id: 'member', label: 'admin.roles.member', query: { role: 'member' } },
-  ] },
+  { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
   // Blog and gallery share one rule: an empty status is the working set (everything not archived).
   { id: 'blog', to: '/admin/blog', icon: 'blog', label: 'admin.nav.blog', group: 'content', watch: ['status'], children: [

@@ -36,10 +36,10 @@ const kid = (page, parent, name) => side(page).locator('.adm-parent').filter({ h
 test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   await login(page)
   await expect(page.locator('header.site-header, .site-header')).toHaveCount(0)
-  for (const label of ['Dashboard', 'Activity', 'Executive Committee']) {
+  for (const label of ['Dashboard', 'Activity', 'Admin management', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label })).toBeVisible()
   }
-  for (const label of ['Students', 'Admin management', 'Blog', 'Heritage places', 'Gallery']) {
+  for (const label of ['Students', 'Blog', 'Heritage places', 'Gallery']) {
     await expect(side(page).getByRole('button', { name: label, exact: true })).toBeVisible() // sections with filtered views
   }
 })
@@ -138,8 +138,6 @@ test('nested views: each child opens its filtered list, marks itself current, an
   const cases = [
     ['Students', 'Pending', /\/admin\/students\?status=pending$/],
     ['Students', 'Incomplete profiles', /\/admin\/students\?complete=no$/],
-    ['Admin management', 'Admin', /\/admin\?tab=roles&role=admin$/],
-    ['Admin management', 'Member', /\/admin\?tab=roles&role=member$/],
     ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
     ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
     ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],
@@ -167,7 +165,7 @@ test('navigating to a view only filters: no write requests are sent', async ({ p
   await login(page)
   const writes = []
   page.on('request', (r) => { if (!['GET', 'HEAD'].includes(r.method()) && r.url().includes('/api/')) writes.push(`${r.method()} ${r.url()}`) })
-  for (const [parent, child] of [['Students', 'Pending'], ['Blog', 'Published'], ['Gallery', 'Archived'], ['Admin management', 'Admin']]) {
+  for (const [parent, child] of [['Students', 'Pending'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
     const btn = side(page).getByRole('button', { name: parent, exact: true })
     if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click()
     await kid(page, parent, child).click()
@@ -285,4 +283,19 @@ test('imported directory: verify a record, see the mark, and it persists; linkin
   await page.getByRole('menuitem', { name: 'Remove verification' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Remove verification' }).click()
   await expect(page.getByText('Verification removed.')).toBeVisible()
+})
+
+test('admin management lists only administrators and explains who cannot be promoted', async ({ page }) => {
+  await login(page)
+  await side(page).getByRole('link', { name: 'Admin management' }).click()
+  await expect(page.locator('.dt tbody tr')).toHaveCount(1)
+  await expect(page.locator('.dt tbody tr').first()).toContainText(E2E.email)
+  await page.getByRole('button', { name: 'Promote member' }).click()
+  const dlg = page.getByRole('dialog', { name: 'Promote member' })
+  await dlg.getByRole('textbox').pressSequentially('e2e-admin', { delay: 10 })
+  const row = dlg.locator('.pm-row').first()
+  await expect(row).toBeDisabled() // an administrator is listed, with the reason
+  await expect(row).toContainText('Already an administrator')
+  await page.keyboard.press('Escape')
+  await expect(dlg).toBeHidden()
 })

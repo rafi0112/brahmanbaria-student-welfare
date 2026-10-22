@@ -8,14 +8,13 @@ test('child links keep the parent route and add only their own filter', () => {
   assert.equal(childTo(item('students'), item('students').children[1]), '/admin/students?status=pending')
   assert.equal(childTo(item('students'), item('students').children[0]), '/admin/students')
   assert.equal(childTo(item('students'), item('students').children[4]), '/admin/students?complete=no')
-  assert.equal(childTo(item('roles'), item('roles').children[1]), '/admin?tab=roles&role=admin')
-  assert.equal(childTo(item('roles'), item('roles').children[0]), '/admin?tab=roles')
+  assert.equal(item('roles').children, undefined) // administrators only: no Everyone/Member views
   assert.equal(childTo(item('blog'), item('blog').children[0]), '/admin/blog?status=all')
   assert.equal(childTo(item('gallery'), item('gallery').children[2]), '/admin/gallery?status=draft')
 })
 
 test('the current child is decided by the address, and exactly one child matches', () => {
-  for (const id of ['students', 'roles', 'blog', 'heritage', 'gallery', 'imported', 'contact']) {
+  for (const id of ['students', 'blog', 'heritage', 'gallery', 'imported', 'contact']) {
     const it = item(id)
     for (const c of it.children) {
       const to = childTo(it, c)

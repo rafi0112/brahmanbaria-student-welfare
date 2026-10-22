@@ -602,6 +602,24 @@ func (a *App) setUserRole(w http.ResponseWriter, r *http.Request, actor User) {
 	if !decode(w, r, &q) {
 		return
 	}
+	// Promotion needs an approved membership (the store separately requires a confirmed email). Demotion has no such condition.
+	if q.Role == RoleAdmin {
+		if m, merr := a.Auth.Store.MemberAdmin(r.Context(), r.PathValue("id")); merr == nil {
+			if m.Disabled {
+				apiError(w, http.StatusConflict, "target_disabled")
+				return
+			}
+			if m.Role != RoleAdmin && m.Status != StatusApproved {
+				apiError(w, http.StatusConflict, "target_unapproved")
+				return
+			}
+		} else if merr == ErrNotFound {
+			if _, uerr := a.Auth.Store.UserByID(r.Context(), r.PathValue("id")); uerr == nil {
+				apiError(w, http.StatusConflict, "target_unapproved") // an account with no member profile has no approved membership
+				return
+			}
+		}
+	}
 	// The actor comes from the verified token, the target from the URL; nothing about identity or role is read from the body.
 	u, err := a.Auth.Store.SetRole(r.Context(), actor.ID, r.PathValue("id"), q.Role)
 	switch err {
