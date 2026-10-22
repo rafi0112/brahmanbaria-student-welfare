@@ -309,7 +309,7 @@ func TestPromoteAndDemoteWithImmediateEffect(t *testing.T) {
 	}
 }
 
-func TestNobodyCanChangeTheirOwnRole(t *testing.T) {
+func TestAdminsMayLeaveOnlyWhileAnotherAdminRemains(t *testing.T) {
 	e := supaApp(t)
 	e.makeAdmin(t, "admin-token", emailAdmin)
 	e.touch("member-token")
@@ -319,12 +319,23 @@ func TestNobodyCanChangeTheirOwnRole(t *testing.T) {
 	if got := e.role(t, "member-token"); got != RoleMember {
 		t.Fatalf("member promoted themselves: %s", got)
 	}
+	// the only admin cannot remove themselves
 	rec := setRole(e, "admin-token", idAdmin, "member")
-	if rec.Code != 403 || !strings.Contains(rec.Body.String(), "self_role_change") {
-		t.Fatalf("an admin must not demote themselves: %d %s", rec.Code, rec.Body)
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), "last_admin") {
+		t.Fatalf("the only admin must not be able to leave: %d %s", rec.Code, rec.Body)
 	}
-	if got := e.role(t, "admin-token"); got != RoleAdmin {
-		t.Fatalf("admin was demoted: %s", got)
+	// with a second verified admin they may step down, and lose access at once
+	if rec := setRole(e, "admin-token", idMember, "admin"); rec.Code != 200 {
+		t.Fatalf("promote second admin: %d %s", rec.Code, rec.Body)
+	}
+	if rec := setRole(e, "admin-token", idAdmin, "member"); rec.Code != 200 {
+		t.Fatalf("an admin should be able to leave when another remains: %d %s", rec.Code, rec.Body)
+	}
+	if got := e.role(t, "admin-token"); got != RoleMember {
+		t.Fatalf("admin did not step down: %s", got)
+	}
+	if got := e.role(t, "member-token"); got != RoleAdmin {
+		t.Fatalf("remaining admin lost their role: %s", got)
 	}
 }
 
@@ -370,7 +381,7 @@ func TestTheLastAdminIsProtected(t *testing.T) {
 	if rec := setRole(e, "admin2-token", idAdmin, "member"); rec.Code != 403 {
 		t.Fatalf("a demoted admin must not demote anyone, got %d", rec.Code)
 	}
-	if rec := setRole(e, "admin-token", idAdmin, "member"); rec.Code != 403 {
+	if rec := setRole(e, "admin-token", idAdmin, "member"); rec.Code != 409 {
 		t.Fatalf("the last admin must not demote themselves, got %d", rec.Code)
 	}
 	if got := e.role(t, "admin-token"); got != RoleAdmin {

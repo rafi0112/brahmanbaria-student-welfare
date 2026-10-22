@@ -577,8 +577,6 @@ func (a *App) setUserRole(w http.ResponseWriter, r *http.Request, actor User) {
 		writeJSON(w, 200, map[string]any{"ok": true, "user": map[string]any{"id": u.ID, "email": u.Email, "role": u.Role}})
 	case ErrInvalidRole:
 		apiError(w, http.StatusUnprocessableEntity, "role must be member or admin")
-	case ErrSelfRoleChange:
-		apiError(w, http.StatusForbidden, "self_role_change")
 	case ErrNotFound:
 		apiError(w, http.StatusNotFound, "user not found")
 	case ErrTargetUnverified:

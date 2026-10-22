@@ -285,7 +285,6 @@ function RoleManager() {
   const [busy, setBusy] = useState(false)
 
   const explain = (e) => {
-    if (e.message === 'self_role_change') return 'admin.err.self'
     if (e.message === 'target_unverified') return 'admin.err.unverified'
     if (e.message === 'last_admin') return 'admin.err.lastAdmin'
     if (e.status === 403) return 'admin.err.forbidden'
@@ -333,14 +332,14 @@ function RoleManager() {
                   const admin = r.role === 'admin'
                   return (
                     <tr key={r.id}>
-                      <td><Avatar name={label(r)} size={34} /> <strong>{r.name || r.email}</strong>{r.name && <><br /><small className="muted">{r.email}</small></>}</td>
+                      <td><Avatar name={label(r)} size={34} /> <strong>{r.name || r.email}</strong>{self && <> <Badge tone="muted">{t('admin.roles.you')}</Badge></>}{r.name && <><br /><small className="muted">{r.email}</small></>}</td>
                       <td>
                         <Badge tone={admin ? 'gold' : 'muted'}>{t(admin ? 'admin.roles.admin' : 'admin.roles.member')}</Badge>{' '}
                         <small className={r.emailVerified ? 'muted' : 'err'}>{t(r.emailVerified ? 'admin.roles.verified' : 'admin.roles.unverified')}</small>
                       </td>
                       <td className="actions">
-                        {self ? <span className="muted">{t('admin.roles.you')}</span> : admin
-                          ? <button className="btn btn-ghost btn-sm" onClick={() => setPending({ row: r, role: 'member' })}>{t('admin.roles.makeMember')}</button>
+                        {admin
+                          ? <button className="btn btn-ghost btn-sm" onClick={() => setPending({ row: r, role: 'member' })}>{t(self ? 'admin.roles.leave' : 'admin.roles.makeMember')}</button>
                           : <button className="btn btn-dark btn-sm" disabled={!r.emailVerified} title={r.emailVerified ? undefined : t('admin.err.unverified')} onClick={() => setPending({ row: r, role: 'admin' })}>{t('admin.roles.makeAdmin')}</button>}
                       </td>
                     </tr>
@@ -356,7 +355,7 @@ function RoleManager() {
       {pending && (
         <div className="modal-back" onClick={(e) => e.target === e.currentTarget && setPending(null)}>
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="role-confirm">
-            <p id="role-confirm">{t(pending.role === 'admin' ? 'admin.roles.confirmPromote' : 'admin.roles.confirmDemote').replace('{who}', `${label(pending.row)} (${pending.row.email})`)}</p>
+            <p id="role-confirm">{t(pending.role === 'admin' ? 'admin.roles.confirmPromote' : pending.row.id === me?.id ? 'admin.roles.confirmLeave' : 'admin.roles.confirmDemote').replace('{who}', `${label(pending.row)} (${pending.row.email})`)}</p>
             <div className="row">
               <button className="btn btn-dark" autoFocus disabled={busy} onClick={apply}>{busy ? t('state.loading') : t('admin.roles.confirm')}</button>
               <button className="btn btn-ghost" disabled={busy} onClick={() => setPending(null)}>{t('admin.roles.cancel')}</button>

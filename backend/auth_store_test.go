@@ -121,8 +121,11 @@ func storeSuite(t *testing.T, s AuthStore) {
 	}
 
 	// roles: every rule lives in the store, so every implementation must enforce it
-	if _, err := s.SetRole(ctx, adm.ID, adm.ID, RoleMember); err != ErrSelfRoleChange {
-		t.Fatalf("self change: %v", err)
+	if _, err := s.SetRole(ctx, adm.ID, adm.ID, RoleMember); err != ErrLastAdmin {
+		t.Fatalf("the only admin cannot leave: %v", err)
+	}
+	if _, err := s.SetRole(ctx, u.ID, u.ID, RoleAdmin); err != ErrForbidden {
+		t.Fatalf("a member cannot promote themselves: %v", err)
 	}
 	if _, err := s.SetRole(ctx, adm.ID, u.ID, "root"); err != ErrInvalidRole {
 		t.Fatalf("invalid role: %v", err)

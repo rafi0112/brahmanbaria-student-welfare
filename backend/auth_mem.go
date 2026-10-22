@@ -314,9 +314,6 @@ func (m *memStore) SetRole(_ context.Context, actorID, targetID, role string) (U
 	if role != RoleMember && role != RoleAdmin {
 		return User{}, ErrInvalidRole
 	}
-	if actorID == targetID {
-		return User{}, ErrSelfRoleChange
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	t, ok := m.users[targetID]

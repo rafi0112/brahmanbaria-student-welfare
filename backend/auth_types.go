@@ -10,7 +10,6 @@ var (
 	ErrNotFound   = errors.New("not found")
 	ErrEmailTaken = errors.New("email already registered")
 
-	ErrSelfRoleChange   = errors.New("cannot change your own role")
 	ErrTargetUnverified = errors.New("account email is not verified")
 	ErrLastAdmin        = errors.New("cannot remove the last active admin")
 	ErrInvalidRole      = errors.New("invalid role")

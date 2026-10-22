@@ -351,9 +351,6 @@ func (s *pgStore) SetRole(ctx context.Context, actorID, targetID, role string) (
 	if role != RoleMember && role != RoleAdmin {
 		return User{}, ErrInvalidRole
 	}
-	if actorID == targetID {
-		return User{}, ErrSelfRoleChange
-	}
 	if !uuidRx.MatchString(targetID) || !uuidRx.MatchString(actorID) {
 		return User{}, ErrNotFound
 	}
