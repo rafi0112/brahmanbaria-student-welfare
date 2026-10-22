@@ -12,7 +12,7 @@
 
 Server (`backend/.env`, never committed; names only here)
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (already present).
-- `SUPABASE_SERVICE_ROLE_KEY`: **not present in this project at the time of writing**, so *Send activation email* answers "not configured" and the admin screen shows a banner. Add it only to `backend/.env`.
+- `SUPABASE_SECRET_KEY`: the new Secret key (`sb_secret_...`, Project Settings, API Keys). It is not a JWT, so it is sent only in the `apikey` header. `SUPABASE_SERVICE_ROLE_KEY` (legacy JWT, sent in both headers) is still accepted as a fallback; the secret key wins when both are set. A publishable key is never used. At startup the server asks Supabase Auth's admin API for one user (a read-only check) and logs whether the key was accepted, refused or could not be checked; the admin screen shows the same state. The key never leaves the Go process.
 - `INVITE_MAX_PER_HOUR=20`, `INVITE_MAX_PER_DAY=100`, `INVITE_RESEND_COOLDOWN_MINUTES=60`, `INVITE_LINK_EXPIRY_HOURS=24`, `INVITE_REDIRECT_URL` (default `FRONTEND_URL/activate`).
 
 Supabase dashboard (the keys this project has cannot read these; verify by hand)
@@ -24,5 +24,8 @@ Supabase dashboard (the keys this project has cannot read these; verify by hand)
 
 Gmail limits belong to Google and vary. Google documents a temporary sending restriction for personal accounts above roughly 500 messages a day or 500 recipients in one message. The application defaults (20 per hour, 100 per day) are conservative safety values, not guarantees about Gmail capacity.
 
+## Failure classes the admin sees
+Missing key (`invite_not_configured`), refused key (`invite_key_invalid`), Supabase could not deliver through its SMTP (`smtp_failed`), recipient rejected (`invalid_recipient`), Supabase rate limit (`provider_rate_limited`), our own hourly/daily limits and cooldown (`limit_hour`, `limit_day`, `cooldown`), address already has an account (`account_exists`).
+
 ## Not verified in this build
-No real invitation was sent: the service-role key is absent and no test mailbox was provided. The Supabase client is covered against a fake Auth server, and the whole workflow against an in-memory store and PostgreSQL temporary tables. Still to verify by hand once the key exists: delivery through the Google SMTP, the template in Gmail, Outlook and mobile clients, the redirect, and expired or already-used links.
+No real invitation was sent because no controlled test recipient is configured (set `INVITE_TEST_RECIPIENT` only if you want a scripted send; the admin screen can also send one by hand). The Supabase client is covered against a fake Auth server, and the whole workflow against an in-memory store and PostgreSQL temporary tables. Still to verify by hand once the key exists: delivery through the Google SMTP, the template in Gmail, Outlook and mobile clients, the redirect, and expired or already-used links.

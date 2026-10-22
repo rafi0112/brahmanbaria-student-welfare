@@ -31,6 +31,8 @@ var (
 	ErrInviteRateLimited = errors.New("Supabase Auth is rate limiting email")
 	ErrInviteNotAllowed  = errors.New("the Supabase admin key was refused")
 	ErrInviteCompleted   = errors.New("this person has already activated their account")
+	ErrInviteBadAddress  = errors.New("Supabase Auth rejected the recipient address")
+	ErrInviteSMTP        = errors.New("Supabase Auth could not deliver the email through its SMTP settings")
 )
 
 type DirectoryInvite struct {
@@ -64,8 +66,39 @@ type Inviter interface {
 
 type supabaseAdmin struct {
 	baseURL string
-	key     string // service-role key: server side only, never logged, never sent to the browser
+	key     string // secret or legacy service-role key: server side only, never logged, never sent to the browser
 	client  *http.Client
+}
+
+// Kind says which generation of key this is. New secret keys (sb_secret_...) are opaque strings, not JWTs, so they travel only
+// in the apikey header; sending one as a Bearer token is rejected. Legacy service-role keys are JWTs and need both headers.
+func (s *supabaseAdmin) Kind() string {
+	if strings.HasPrefix(s.key, "sb_secret_") {
+		return "secret"
+	}
+	if strings.Count(s.key, ".") == 2 {
+		return "legacy-jwt"
+	}
+	return "unknown"
+}
+
+func (s *supabaseAdmin) setAuth(req *http.Request) {
+	req.Header.Set("apikey", s.key)
+	if s.Kind() != "secret" {
+		req.Header.Set("Authorization", "Bearer "+s.key)
+	}
+}
+
+// pickAdminKey prefers the new secret key and falls back to the legacy service-role key. It also refuses values that are
+// plainly the wrong kind of key (a publishable/anon key is public by design and has no admin rights).
+func pickAdminKey(secret, legacy string) (key, source string) {
+	for _, c := range []struct{ v, name string }{{secret, "SUPABASE_SECRET_KEY"}, {legacy, "SUPABASE_SERVICE_ROLE_KEY"}} {
+		v := strings.Trim(strings.TrimSpace(c.v), `"'`)
+		if v != "" && !strings.HasPrefix(v, "sb_publishable_") {
+			return v, c.name
+		}
+	}
+	return "", ""
 }
 
 func newSupabaseAdmin(baseURL, key string) *supabaseAdmin {
@@ -80,6 +113,29 @@ func newSupabaseAdmin(baseURL, key string) *supabaseAdmin {
 	return &supabaseAdmin{baseURL: baseURL, key: key, client: &http.Client{Timeout: 15 * time.Second}}
 }
 
+// Check asks Supabase Auth's admin API for one user. It sends nothing and changes nothing; it only proves the key is accepted.
+// The result never contains the key.
+func (s *supabaseAdmin) Check(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+"/auth/v1/admin/users?page=1&per_page=1", nil)
+	if err != nil {
+		return err
+	}
+	s.setAuth(req)
+	res, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("could not reach Supabase Auth")
+	}
+	defer res.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10))
+	switch {
+	case res.StatusCode >= 200 && res.StatusCode < 300:
+		return nil
+	case res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden:
+		return ErrInviteNotAllowed
+	}
+	return fmt.Errorf("Supabase Auth answered HTTP %d to the key check", res.StatusCode)
+}
+
 func (s *supabaseAdmin) Invite(ctx context.Context, email, redirectTo string) (string, error) {
 	endpoint := s.baseURL + "/auth/v1/invite"
 	if redirectTo != "" {
@@ -91,8 +147,7 @@ func (s *supabaseAdmin) Invite(ctx context.Context, email, redirectTo string) (s
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("apikey", s.key)
-	req.Header.Set("Authorization", "Bearer "+s.key)
+	s.setAuth(req)
 	req.Header.Set("Content-Type", "application/json")
 	res, err := s.client.Do(req)
 	if err != nil {
@@ -115,6 +170,10 @@ func (s *supabaseAdmin) Invite(ctx context.Context, email, redirectTo string) (s
 		return "", ErrInviteRateLimited
 	case res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden:
 		return "", ErrInviteNotAllowed
+	case out.ErrorCode == "email_address_invalid" || out.ErrorCode == "validation_failed" || (res.StatusCode < 500 && strings.Contains(strings.ToLower(out.Msg), "email") && strings.Contains(strings.ToLower(out.Msg), "invalid")):
+		return "", ErrInviteBadAddress
+	case res.StatusCode >= 500 && (strings.Contains(strings.ToLower(out.Msg), "sending") || strings.Contains(strings.ToLower(out.Msg), "smtp") || out.ErrorCode == "email_provider_disabled" || out.ErrorCode == "unexpected_failure"):
+		return "", ErrInviteSMTP // the invitation itself was valid; Supabase's mail transport failed
 	}
 	return "", fmt.Errorf("supabase answered HTTP %d (%s)", res.StatusCode, out.ErrorCode)
 }
@@ -144,6 +203,36 @@ func loadInviteConfig(frontendURL string) InviteConfig {
 	}
 	return InviteConfig{PerHour: envInt("INVITE_MAX_PER_HOUR", 20), PerDay: envInt("INVITE_MAX_PER_DAY", 100),
 		Cooldown: time.Duration(envInt("INVITE_RESEND_COOLDOWN_MINUTES", 60)) * time.Minute, ExpiryHours: envInt("INVITE_LINK_EXPIRY_HOURS", 24), Redirect: redirect}
+}
+
+// keyState is what the startup check learned about the admin key: missing | checking | valid | invalid | unreachable.
+var (
+	keyMu    sync.Mutex
+	keyState = "missing"
+	keyKind  = ""
+)
+
+func setKeyState(state, kind string) { keyMu.Lock(); keyState, keyKind = state, kind; keyMu.Unlock() }
+func getKeyState() (string, string) { keyMu.Lock(); defer keyMu.Unlock(); return keyState, keyKind }
+
+// verifyAdminKey runs the harmless check once and logs a clear diagnostic. It is called at startup and again before a send when
+// the last result was inconclusive.
+func verifyAdminKey(ctx context.Context, adm *supabaseAdmin, source string) {
+	setKeyState("checking", adm.Kind())
+	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	err := adm.Check(cctx)
+	switch {
+	case err == nil:
+		setKeyState("valid", adm.Kind())
+		log.Printf("member invitations ready: Supabase accepted the admin key from %s (%s key)", source, adm.Kind())
+	case errors.Is(err, ErrInviteNotAllowed):
+		setKeyState("invalid", adm.Kind())
+		log.Printf("member invitations DISABLED: Supabase refused the key from %s (%s key). Copy the Secret key (sb_secret_...) from Supabase Project Settings > API Keys into SUPABASE_SECRET_KEY, and check that a legacy service_role key has not been disabled or rotated.", source, adm.Kind())
+	default:
+		setKeyState("unreachable", adm.Kind())
+		log.Printf("member invitations: the admin key could not be checked (%v); it will be checked again before the next send", err)
+	}
 }
 
 var inviteMu sync.Mutex // one send at a time, so two clicks cannot slip past the cooldown or the limits
@@ -226,6 +315,16 @@ func (a *App) sendInvite(ctx context.Context, actor User, id string) (inv Direct
 	if a.Auth.Inviter == nil {
 		return inv, "invite_not_configured", http.StatusServiceUnavailable, nil
 	}
+	if adm, ok := a.Auth.Inviter.(*supabaseAdmin); ok {
+		if st, _ := getKeyState(); st != "valid" {
+			if st != "invalid" {
+				verifyAdminKey(ctx, adm, "the configured key") // inconclusive so far: try again now
+			}
+			if st, _ = getKeyState(); st == "invalid" {
+				return inv, "invite_key_invalid", http.StatusServiceUnavailable, nil
+			}
+		}
+	}
 	cfg := a.Auth.Invite
 	if inv.LastSentAt != "" && inv.Status != "failed" {
 		if t, perr := time.Parse(time.RFC3339, inv.LastSentAt); perr == nil && time.Since(t) < cfg.Cooldown {
@@ -262,7 +361,14 @@ func (a *App) sendInvite(ctx context.Context, actor User, id string) (inv Direct
 		_ = a.Auth.Store.RecordInvite(ctx, id, false, "", "provider rate limit")
 		return inv, "provider_rate_limited", http.StatusTooManyRequests, nil
 	case errors.Is(ierr, ErrInviteNotAllowed):
-		return inv, "invite_not_configured", http.StatusServiceUnavailable, nil
+		setKeyState("invalid", "")
+		return inv, "invite_key_invalid", http.StatusServiceUnavailable, nil
+	case errors.Is(ierr, ErrInviteBadAddress):
+		_ = a.Auth.Store.RecordInvite(ctx, id, false, "", "recipient rejected")
+		return inv, "invalid_recipient", http.StatusUnprocessableEntity, nil
+	case errors.Is(ierr, ErrInviteSMTP):
+		_ = a.Auth.Store.RecordInvite(ctx, id, false, "", "email delivery failed in Supabase SMTP")
+		return inv, "smtp_failed", http.StatusBadGateway, nil
 	default:
 		log.Printf("invite: %v", ierr)
 		_ = a.Auth.Store.RecordInvite(ctx, id, false, "", "provider error")
@@ -312,7 +418,7 @@ func (a *App) inviteBulk(w http.ResponseWriter, r *http.Request, u User) {
 			sent++
 		case "account_exists", "no_email", "already_completed", "cooldown", "not_found":
 			skipped++
-		case "limit_hour", "limit_day", "provider_rate_limited", "invite_not_configured":
+		case "limit_hour", "limit_day", "provider_rate_limited", "invite_not_configured", "invite_key_invalid":
 			stopped = code
 		default:
 			failed++
@@ -334,7 +440,13 @@ func (a *App) inviteStatus(w http.ResponseWriter, r *http.Request, _ User) {
 	for _, inv := range invites {
 		counts[inv.Status]++
 	}
-	writeJSON(w, 200, map[string]any{"configured": a.Auth.Inviter != nil, "perHour": cfg.PerHour, "perDay": cfg.PerDay, "usedHour": h, "usedDay": d,
+	ks, kk := getKeyState()
+	if a.Auth.Inviter == nil {
+		ks = "missing"
+	} else if _, real := a.Auth.Inviter.(*supabaseAdmin); !real {
+		ks, kk = "valid", "test"
+	}
+	writeJSON(w, 200, map[string]any{"configured": a.Auth.Inviter != nil && ks != "invalid", "keyStatus": ks, "keyKind": kk, "perHour": cfg.PerHour, "perDay": cfg.PerDay, "usedHour": h, "usedDay": d,
 		"cooldownMinutes": int(cfg.Cooldown / time.Minute), "linkExpiryHours": cfg.ExpiryHours, "counts": counts})
 }
 

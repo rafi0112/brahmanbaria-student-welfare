@@ -78,10 +78,13 @@ func main() {
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
 		go purgeContactLoop(context.Background(), authStore)
-		if adm := newSupabaseAdmin(env("SUPABASE_URL", ""), os.Getenv("SUPABASE_SERVICE_ROLE_KEY")); adm != nil {
-			app.Auth.Inviter = adm
+		if key, source := pickAdminKey(os.Getenv("SUPABASE_SECRET_KEY"), os.Getenv("SUPABASE_SERVICE_ROLE_KEY")); key == "" {
+			log.Printf("member invitations disabled: set SUPABASE_SECRET_KEY (sb_secret_...) in backend/.env; server side only")
+		} else if adm := newSupabaseAdmin(env("SUPABASE_URL", ""), key); adm == nil {
+			log.Printf("member invitations disabled: SUPABASE_URL is not set")
 		} else {
-			log.Printf("member invitations disabled: set SUPABASE_SERVICE_ROLE_KEY in backend/.env (server side only)")
+			app.Auth.Inviter = adm
+			go verifyAdminKey(context.Background(), adm, source)
 		}
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
 		if st := newSupabaseStorage(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", "")); st != nil {

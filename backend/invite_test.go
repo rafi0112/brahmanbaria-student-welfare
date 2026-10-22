@@ -363,3 +363,108 @@ func TestSupabaseAdminClientAgainstAFakeAuthServer(t *testing.T) {
 		t.Fatalf("server error must be an error without secrets: %v", err)
 	}
 }
+
+func TestAdminKeyKindsHeadersAndSelection(t *testing.T) {
+	var gotKey, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotKey, gotAuth = r.Header.Get("apikey"), r.Header.Get("Authorization")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"users":[]}`))
+	}))
+	defer srv.Close()
+	secret := newSupabaseAdmin(srv.URL, "sb_secret_abc123")
+	if secret.Kind() != "secret" || secret.Check(context.Background()) != nil || gotKey != "sb_secret_abc123" || gotAuth != "" {
+		t.Fatalf("a secret key travels only in apikey (it is not a JWT): kind=%s key=%q auth=%q", secret.Kind(), gotKey, gotAuth)
+	}
+	legacy := newSupabaseAdmin(srv.URL, "aaa.bbb.ccc")
+	if legacy.Kind() != "legacy-jwt" || legacy.Check(context.Background()) != nil || gotKey != "aaa.bbb.ccc" || gotAuth != "Bearer aaa.bbb.ccc" {
+		t.Fatalf("a legacy JWT key needs both headers: kind=%s auth=%q", legacy.Kind(), gotAuth)
+	}
+	for _, c := range []struct{ secret, legacy, want, source string }{
+		{"sb_secret_new", "a.b.c", "sb_secret_new", "SUPABASE_SECRET_KEY"},
+		{"", "a.b.c", "a.b.c", "SUPABASE_SERVICE_ROLE_KEY"},
+		{" \"sb_secret_q\" ", "", "sb_secret_q", "SUPABASE_SECRET_KEY"},
+		{"sb_publishable_oops", "", "", ""}, // a publishable key is public and has no admin rights: never used
+		{"", "", "", ""},
+	} {
+		if k, src := pickAdminKey(c.secret, c.legacy); k != c.want || src != c.source {
+			t.Errorf("pickAdminKey(%q,%q) = %q,%q", c.secret, c.legacy, k, src)
+		}
+	}
+}
+
+func TestInviteFailureClassesAreDistinct(t *testing.T) {
+	status, reply := 500, `{"error_code":"unexpected_failure","msg":"Error sending invite email"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(status); _, _ = w.Write([]byte(reply)) }))
+	defer srv.Close()
+	adm := newSupabaseAdmin(srv.URL, "sb_secret_x")
+	for _, c := range []struct {
+		status int
+		body   string
+		want   error
+	}{
+		{500, `{"error_code":"unexpected_failure","msg":"Error sending invite email"}`, ErrInviteSMTP},
+		{400, `{"error_code":"email_address_invalid","msg":"Email address \"x\" is invalid"}`, ErrInviteBadAddress},
+		{422, `{"error_code":"validation_failed","msg":"Unable to validate email address: invalid format"}`, ErrInviteBadAddress},
+		{429, `{"error_code":"over_email_send_rate_limit","msg":"email rate limit exceeded"}`, ErrInviteRateLimited},
+		{401, `{"msg":"Invalid API key"}`, ErrInviteNotAllowed},
+		{422, `{"error_code":"email_exists","msg":"A user with this email address has already been registered"}`, ErrInviteExists},
+	} {
+		status, reply = c.status, c.body
+		if _, err := adm.Invite(context.Background(), "x@example.org", ""); err != c.want {
+			t.Errorf("%d %s: got %v want %v", c.status, c.body, err, c.want)
+		}
+	}
+}
+
+func TestInviteReportsARefusedKeyAndMapsEachFailureForTheAdmin(t *testing.T) {
+	e, _, admin := inviteEnv(t)
+	id := e.app.Store.Students[0].ID
+	setEmail(e, admin, id, "keycheck@example.org")
+	status := 401
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(status); _, _ = w.Write([]byte(`{"msg":"Invalid API key"}`)) }))
+	defer srv.Close()
+	e.app.Auth.Inviter = newSupabaseAdmin(srv.URL, "sb_secret_wrong")
+	setKeyState("checking", "secret")
+	defer setKeyState("missing", "")
+	rec := sendInviteReq(e, admin, id)
+	if rec.Code != 503 || !strings.Contains(rec.Body.String(), "invite_key_invalid") || strings.Contains(rec.Body.String(), "sb_secret") {
+		t.Fatalf("a refused key must be reported as such, without the key: %d %s", rec.Code, rec.Body)
+	}
+	if inv, _ := e.mem.InviteFor(context.Background(), id); inv.Status != "saved" || inv.SendCount != 0 {
+		t.Fatalf("nothing may be recorded as sent: %+v", inv)
+	}
+	if st := e.do("GET", "/api/v1/admin/invitations/status", nil, admin); !strings.Contains(st.Body.String(), `"keyStatus":"invalid"`) || !strings.Contains(st.Body.String(), `"configured":false`) {
+		t.Fatalf("status must say the key is invalid: %s", st.Body)
+	}
+	// once the key is accepted, the failure classes of the invitation call reach the admin as distinct answers
+	status = 200
+	setKeyState("checking", "secret")
+	inviteReply, inviteStatus := `{"error_code":"unexpected_failure","msg":"Error sending invite email"}`, 500
+	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/invite") {
+			w.WriteHeader(inviteStatus)
+			_, _ = w.Write([]byte(inviteReply))
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"users":[]}`))
+	}))
+	defer srv2.Close()
+	e.app.Auth.Inviter = newSupabaseAdmin(srv2.URL, "sb_secret_ok")
+	if rec := sendInviteReq(e, admin, id); rec.Code != 502 || !strings.Contains(rec.Body.String(), "smtp_failed") {
+		t.Fatalf("SMTP failure: %d %s", rec.Code, rec.Body)
+	}
+	inviteStatus, inviteReply = 400, `{"error_code":"email_address_invalid","msg":"Email address is invalid"}`
+	if rec := sendInviteReq(e, admin, id); rec.Code != 422 || !strings.Contains(rec.Body.String(), "invalid_recipient") {
+		t.Fatalf("invalid recipient: %d %s", rec.Code, rec.Body)
+	}
+	inviteStatus, inviteReply = 429, `{"error_code":"over_email_send_rate_limit","msg":"rate"}`
+	if rec := sendInviteReq(e, admin, id); rec.Code != 429 || !strings.Contains(rec.Body.String(), "provider_rate_limited") {
+		t.Fatalf("rate limit: %d %s", rec.Code, rec.Body)
+	}
+	inviteStatus, inviteReply = 200, `{"id":"22222222-2222-2222-2222-222222222222"}`
+	if rec := sendInviteReq(e, admin, id); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"status":"sent"`) {
+		t.Fatalf("success: %d %s", rec.Code, rec.Body)
+	}
+}

@@ -39,7 +39,7 @@ test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   for (const label of ['Dashboard', 'Activity', 'Admin management', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label })).toBeVisible()
   }
-  for (const label of ['Membership Requests', 'Members', 'Blog', 'Heritage places', 'Gallery']) {
+  for (const label of ['Membership Requests', 'Members', 'Member Directory', 'Blog', 'Heritage places', 'Gallery']) {
     await expect(side(page).getByRole('button', { name: label, exact: true })).toBeVisible() // sections with filtered views
   }
 })
@@ -144,6 +144,8 @@ test('nested views: each child opens its filtered list, marks itself current, an
     ['Membership Requests', 'Incomplete profiles', /\/admin\/students\?tab=requests&complete=no$/],
     ['Members', 'Needs review', /\/admin\/students\?tab=members&view=review$/],
     ['Members', 'Verified', /\/admin\/students\?tab=members&view=verified$/],
+    ['Member Directory', 'Needs verification', /\/admin\/students\?tab=imported&status=awaiting$/],
+    ['Member Directory', 'Verified', /\/admin\/students\?tab=imported&status=verified$/],
     ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
     ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
     ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],

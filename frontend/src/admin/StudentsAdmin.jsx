@@ -353,7 +353,7 @@ function Imported() {
           <button type="button" className="btn btn-dark btn-sm" onClick={() => setForm({})}><Icon name="plus" size={15} /> {t('ad.imp.add')}</button></span></div>
       {quota.data && (quota.data.configured
         ? <p className="muted small">{t('ad.inv.quota').replace('{h}', n(quota.data.usedHour)).replace('{hl}', n(quota.data.perHour)).replace('{d}', n(quota.data.usedDay)).replace('{dl}', n(quota.data.perDay))} <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !(quota.data.counts?.saved > 0)} onClick={sendBatch}>{t('ad.inv.sendBatch')} ({n(quota.data.counts?.saved || 0)})</button></p>
-        : <p className="notice bad" role="status">{t('ad.inv.off')}</p>)}
+        : <p className="notice bad" role="status">{t(quota.data.keyStatus === 'invalid' ? 'ad.inv.keyInvalid' : 'ad.inv.off')}</p>)}
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
         views={[

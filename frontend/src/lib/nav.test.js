@@ -14,7 +14,7 @@ test('child links keep the parent route and add only their own filter', () => {
 })
 
 test('the current child is decided by the address, and exactly one child matches', () => {
-  for (const id of ['requests', 'members', 'blog', 'heritage', 'gallery', 'contact']) {
+  for (const id of ['requests', 'members', 'directory', 'blog', 'heritage', 'gallery', 'contact']) {
     const it = item(id)
     for (const c of it.children) {
       const to = childTo(it, c)
@@ -39,7 +39,10 @@ test('locations map to their section', () => {
 test('students has two sections over the same accounts', () => {
   assert.deepEqual(item('requests').children.map((c) => c.id), ['all', 'complete', 'incomplete'])
   assert.deepEqual(item('members').children.map((c) => c.id), ['all', 'review', 'verified'])
-  assert.equal(NAV.find((n) => n.id === 'directory'), undefined)
+  assert.deepEqual(item('directory').children.map((c) => c.id), ['all', 'awaiting', 'verified'])
+  assert.deepEqual(NAV.filter((n) => n.group === 'students').map((n) => n.id), ['requests', 'members', 'directory']) // all three live under Students
+  assert.equal(navFor('/admin/students', '?tab=imported&status=verified').id, 'directory')
+  assert.equal(childTo(item('directory'), item('directory').children[2]), '/admin/students?tab=imported&status=verified')
   assert.equal(navFor('/admin/students', '?tab=members&view=review').id, 'members')
   assert.equal(navFor('/admin/students', '?tab=requests&complete=no').id, 'requests')
   assert.equal(navFor('/admin/students', '').id, 'requests')
