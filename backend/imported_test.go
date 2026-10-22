@@ -278,3 +278,34 @@ func manualStoreSuite(t *testing.T, s AuthStore) {
 }
 
 func TestMemManualImportedStoreSuite(t *testing.T) { manualStoreSuite(t, newMemStore()) }
+
+func TestDashboardCountsContactAndImportedFromTheDatabase(t *testing.T) {
+	t.Setenv("CONTACT_RECIPIENT_EMAIL", "")
+	e := authApp(t)
+	admin := e.admin(t)
+	get := func() map[string]any {
+		rec := e.do("GET", "/api/v1/admin/dashboard", nil, admin)
+		if rec.Code != 200 {
+			t.Fatalf("dashboard: %d %s", rec.Code, rec.Body)
+		}
+		var d map[string]any
+		decodeBody(t, rec, &d)
+		return d
+	}
+	d := get()
+	if d["messages"].(map[string]any)["new"].(float64) != 0 {
+		t.Fatalf("no messages yet: %v", d["messages"])
+	}
+	e.do("POST", "/api/v1/contact", goodContact, nil)
+	e.do("POST", "/api/v1/admin/imported-students", map[string]any{"name": "Dash Person", "batch": 3, "department": e.app.Store.Depts[0]}, admin)
+	e.do("POST", "/api/v1/admin/imported-students/"+e.app.Store.Students[0].ID+"/verify", map[string]string{}, admin)
+	d = get()
+	imp := d["imported"].(map[string]any)
+	if d["messages"].(map[string]any)["new"].(float64) != 1 || imp["addedByAdmins"].(float64) != 1 || imp["verified"].(float64) != 1 ||
+		imp["total"].(float64) != float64(len(e.app.Store.Students)+1) || imp["awaiting"].(float64) != imp["total"].(float64)-1 {
+		t.Fatalf("dashboard numbers: %v %v", d["messages"], imp)
+	}
+	if _, ok := d["members"].(map[string]any)["incomplete"]; !ok {
+		t.Fatal("incomplete profiles count missing")
+	}
+}

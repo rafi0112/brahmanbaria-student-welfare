@@ -505,7 +505,7 @@ func TestDashboardReflectsRealData(t *testing.T) {
 		return int(cur.(float64))
 	}
 	d = get()
-	if num(d, "admins") != 1 || num(d, "blog", "published") != 0 || num(d, "members", "pending") != 0 || d["messages"].(map[string]any)["available"] != false {
+	if num(d, "admins") != 1 || num(d, "blog", "published") != 0 || num(d, "members", "pending") != 0 || d["messages"].(map[string]any)["available"] != true || num(d, "messages", "new") != 0 {
 		t.Fatalf("baseline: %+v", d)
 	}
 	post := createEntry(t, e, "blog", blogBody("Dash post", "dash-post"))

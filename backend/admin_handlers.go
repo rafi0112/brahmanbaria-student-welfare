@@ -81,7 +81,22 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, _ User) {
 	out["members"] = map[string]any{"pending": counts[StatusPending], "approved": counts[StatusApproved], "rejected": counts[StatusRejected],
 		"total": counts[StatusPending] + counts[StatusApproved] + counts[StatusRejected], "accounts": users, "deactivated": disabled}
 	out["admins"] = admins
-	out["importedStudents"] = len(a.Store.Students)
+	_, incomplete, err := s.ListMembersAdmin(ctx, MemberQuery{Complete: "no", Limit: 1})
+	if fail("incomplete", err) {
+		return
+	}
+	out["members"].(map[string]any)["incomplete"] = incomplete
+	manual, err := s.ListManualImported(ctx)
+	if fail("imported", err) {
+		return
+	}
+	reviews, err := s.ImportedReviews(ctx)
+	if fail("imported reviews", err) {
+		return
+	}
+	totalImported := len(a.Store.Students) + len(manual)
+	out["importedStudents"] = totalImported
+	out["imported"] = map[string]any{"total": totalImported, "verified": len(reviews), "awaiting": totalImported - len(reviews), "addedByAdmins": len(manual)}
 
 	committees, err := s.ListCommittees(ctx)
 	if fail("committees", err) {
@@ -106,8 +121,11 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, _ User) {
 	}
 	out["blog"], out["places"] = statusCounts(KindBlog), statusCounts(KindPlace)
 	out["gallery"] = map[string]any{"images": statusCounts(KindImage), "albums": statusCounts(KindAlbum)}
-	// contact-form messages are written to a log file, not to the database, so no honest count exists
-	out["messages"] = map[string]any{"available": false}
+	_, _, contactCounts, err := s.ListContacts(ctx, ContactQuery{Status: "new", Page: 1, Limit: 1})
+	if fail("contact", err) {
+		return
+	}
+	out["messages"] = map[string]any{"available": true, "new": contactCounts["new"], "total": contactCounts["new"] + contactCounts["read"] + contactCounts["replied"] + contactCounts["archived"]}
 
 	recent := []recentItem{}
 	for _, kind := range []string{KindBlog, KindPlace, KindImage, KindAlbum} {

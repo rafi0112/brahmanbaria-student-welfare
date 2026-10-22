@@ -30,7 +30,10 @@ export default function Dashboard() {
   const entityPath = (kind, id) => (kind === 'image' || kind === 'album' ? '/admin/gallery' : `${EDIT[kind]}/${id}/edit`)
 
   const attention = d && [
+    d.messages?.new > 0 && { to: '/admin/contact?status=new', text: `${n(d.messages.new)} ${t('ad.dash.attMessages')}`, tone: 'warn' },
     d.members.pending > 0 && { to: '/admin/students?status=pending', text: `${n(d.members.pending)} ${t('ad.dash.attPending')}`, tone: 'warn' },
+    d.members.incomplete > 0 && { to: '/admin/students?complete=no', text: `${n(d.members.incomplete)} ${t('ad.dash.attIncomplete')}` },
+    d.imported?.awaiting > 0 && { to: '/admin/students?tab=imported&status=awaiting', text: `${n(d.imported.awaiting)} ${t('ad.dash.attImported')}` },
     d.blog.draft > 0 && { to: '/admin/blog?status=draft', text: `${n(d.blog.draft)} ${t('ad.dash.attDrafts')}` },
     d.places.draft > 0 && { to: '/admin/heritage?status=draft', text: `${n(d.places.draft)} ${t('ad.dash.attPlaces')}` },
     d.committees.published === 0 && { to: '/admin?tab=committee', text: t('ad.dash.attCommittee') },
@@ -48,13 +51,14 @@ export default function Dashboard() {
           <div className="dash-stats" role="list">
             <Stat to="/admin/students" label={t('ad.dash.members')} value={n(d.members.total)} sub={`${n(d.members.approved)} ${t('ad.status.approved')}`} />
             <Stat to="/admin/students?status=pending" label={t('ad.dash.pending')} value={n(d.members.pending)} sub={t('ad.dash.needsReview')} warn={d.members.pending > 0} />
+            <Stat to="/admin/contact?status=new" label={t('ad.dash.messages')} value={n(d.messages?.new || 0)} sub={`${n(d.messages?.total || 0)} ${t('ad.dash.messagesKept')}`} warn={d.messages?.new > 0} />
             <Stat to="/admin/blog?status=published" label={t('ad.dash.postsPublished')} value={n(d.blog.published)} sub={`${n(d.blog.draft)} ${t('ad.status.draft')}`} />
             <Stat to="/admin/heritage" label={t('ad.dash.places')} value={n(d.places.published)} sub={`${n(d.places.draft)} ${t('ad.status.draft')} · ${n(d.places.archived)} ${t('ad.status.archived')}`} />
             <Stat to="/admin/gallery" label={t('ad.dash.images')} value={n(d.gallery.images.published)} sub={`${n(d.gallery.albums.published + d.gallery.albums.draft)} ${t('ad.dash.albums')}`} />
             <Stat to="/admin?tab=committee" label={t('ad.dash.committeeNow')} value={n(d.committees.currentMembers)} sub={`${n(d.committees.published)} ${t('ad.status.published')}`} />
           </div>
           <p className="dash-foot">
-            <Link to="/admin?tab=roles">{n(d.admins)} {t('ad.dash.admins')}</Link> · <Link to="/admin/students?tab=imported">{n(d.importedStudents)} {t('ad.dash.imported')}</Link> · {t('ad.dash.messages')}: {t('ad.dash.messagesOff')}
+            <Link to="/admin?tab=roles">{n(d.admins)} {t('ad.dash.admins')}</Link> · <Link to="/admin/students?tab=imported">{n(d.importedStudents)} {t('ad.dash.imported')} ({n(d.imported?.verified || 0)} {t('ad.imp.verified')})</Link> · <Link to="/admin/contact">{n(d.messages?.new || 0)} {t('ad.dash.messagesNew')}</Link>
           </p>
 
           <div className="dash-grid">
@@ -71,7 +75,10 @@ export default function Dashboard() {
                 )}
               <h3 className="dash-h">{t('ad.dash.quick')}</h3>
               <div className="dash-quick">
-                <Link className="btn btn-outline btn-sm" to="/admin/blog/new"><Icon name="pen" size={15} /> {t('ad.dash.addPost')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/students?status=pending"><Icon name="users" size={15} /> {t('ad.dash.reviewPending')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/students?tab=imported"><Icon name="directory" size={15} /> {t('ad.imp.add')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/contact"><Icon name="mail" size={15} /> {t('ad.dash.openInbox')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/blog/new"><Icon name="blog" size={15} /> {t('ad.dash.addPost')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/heritage/new"><Icon name="landmark" size={15} /> {t('ad.dash.addPlace')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/gallery"><Icon name="image" size={15} /> {t('ad.dash.openGallery')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin?tab=committee"><Icon name="star" size={15} /> {t('ad.dash.manageCommittee')}</Link>
