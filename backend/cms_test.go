@@ -195,8 +195,12 @@ func cmsStoreSuite(t *testing.T, s AuthStore) {
 
 	// --- members as admins see them
 	mk := func(email, name string, batch int, phone, blood string) User {
+		session := ""
+		if phone != "" { // a profile with a session has every required field; one without is incomplete
+			session = "2020-21"
+		}
 		u, err := s.CreateUser(ctx, NewUser{Email: email, PasswordHash: "h", Role: RoleMember, Verified: batch%2 == 0,
-			Profile: &Profile{Name: name, Batch: batch, Department: "Finance", Upazila: "kasba", Union: "Kuti"}})
+			Profile: &Profile{Name: name, Batch: batch, Department: "Finance", Upazila: "kasba", Union: "Kuti", Session: session}})
 		if err != nil {
 			t.Fatal(err)
 		}

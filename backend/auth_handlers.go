@@ -94,6 +94,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)
+	a.memberViewRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 
@@ -199,6 +200,9 @@ func (a *App) sendLink(ctx context.Context, u User, purpose string) {
 }
 
 type registerReq struct {
+	Session    string `json:"session"`
+	Gender     string `json:"gender"`     // optional: female | male | other; empty means unspecified
+	BloodGroup string `json:"bloodGroup"` // optional
 	Name       string `json:"name"`
 	Email      string `json:"email"`
 	Password   string `json:"password"`
@@ -211,6 +215,15 @@ type registerReq struct {
 // validateProfile checks the member details shared by registration and "complete my profile".
 func (a *App) validateProfile(q *registerReq) map[string]string {
 	errs := map[string]string{}
+	if !sessionRx.MatchString(strings.TrimSpace(q.Session)) {
+		errs["session"] = "Enter your session, for example 2020-21."
+	}
+	if q.Gender != "" && q.Gender != "female" && q.Gender != "male" && q.Gender != "other" {
+		errs["gender"] = "Choose female, male or other, or leave it blank."
+	}
+	if q.BloodGroup != "" && !bloodRx.MatchString(q.BloodGroup) {
+		errs["bloodGroup"] = "Choose a valid blood group."
+	}
 	if n := utf8.RuneCountInString(strings.TrimSpace(q.Name)); n < 2 || n > 80 {
 		errs["name"] = "Name must be 2-80 characters."
 	}
@@ -272,7 +285,8 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, err := a.Auth.Store.CreateUser(r.Context(), NewUser{Email: q.Email, PasswordHash: hash, Role: RoleMember,
-		Profile: &Profile{Name: q.Name, Batch: q.Batch, Department: q.Department, Upazila: q.Upazila, Union: q.Union}})
+		Profile: &Profile{Name: q.Name, Batch: q.Batch, Department: q.Department, Upazila: q.Upazila, Union: q.Union,
+			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup}})
 	switch err {
 	case nil:
 		a.sendLink(r.Context(), u, PurposeVerify)
@@ -490,7 +504,7 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
 		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
-		Upazila: q.Upazila, Union: q.Union,
+		Upazila: q.Upazila, Union: q.Union, Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup,
 	}); err != nil {
 		log.Printf("profile upsert: %v", err)
 		apiError(w, http.StatusInternalServerError, "could not create profile")

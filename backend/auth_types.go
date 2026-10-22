@@ -52,6 +52,10 @@ type Profile struct {
 	ShowEmail       string `json:"showEmail"`
 	ShowBlood       string `json:"showBlood"`
 	CreatedAt       string `json:"createdAt,omitempty"`
+	Session         string `json:"session"`
+	Gender          string `json:"gender"` // '' = unspecified; only ever set explicitly
+	// the latest membership decision; internal, never sent to the member
+	ReviewedAt, ReviewedBy, ReviewNote string `json:"-"`
 }
 
 // UserRow is what admins see in the role-management list.

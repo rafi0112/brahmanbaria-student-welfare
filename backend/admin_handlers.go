@@ -177,8 +177,8 @@ func memberQuery(r *http.Request) (MemberQuery, bool) {
 	pg, limit := paging(r, 100)
 	b, _ := strconv.Atoi(v.Get("batch"))
 	q := MemberQuery{Q: strings.TrimSpace(v.Get("q")), Status: v.Get("status"), Department: v.Get("department"), Batch: b,
-		Verified: v.Get("verified"), Complete: v.Get("complete"), Disabled: v.Get("disabled"), Sort: v.Get("sort"), Page: pg, Limit: limit}
-	ok := memberSorts[q.Sort] && utf8.RuneCountInString(q.Q) <= 100 && (q.Status == "" || q.Status == StatusPending || q.Status == StatusApproved || q.Status == StatusRejected)
+		Verified: v.Get("verified"), Complete: v.Get("complete"), Disabled: v.Get("disabled"), View: v.Get("view"), Sort: v.Get("sort"), Page: pg, Limit: limit}
+	ok := memberSorts[q.Sort] && (q.View == "" || q.View == "review" || q.View == "verified") && utf8.RuneCountInString(q.Q) <= 100 && (q.Status == "" || q.Status == StatusPending || q.Status == StatusApproved || q.Status == StatusRejected)
 	return q, ok
 }
 
@@ -216,6 +216,8 @@ func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
 		Phone           *string `json:"phone"`
 		BloodGroup      *string `json:"bloodGroup"`
 		ShowInDirectory *bool   `json:"showInDirectory"`
+		Session         *string `json:"session"`
+		Gender          *string `json:"gender"`
 		Role            *string `json:"role"` // never accepted: roles change only through the role endpoint
 	}
 	if !decode(w, r, &q) {
@@ -279,11 +281,20 @@ func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
 	if q.BloodGroup != nil && *q.BloodGroup != "" && !bloodRx.MatchString(*q.BloodGroup) {
 		errs["bloodGroup"] = "Choose a valid blood group."
 	}
+	if q.Session != nil {
+		*q.Session = strings.TrimSpace(*q.Session)
+		if *q.Session != "" && !sessionRx.MatchString(*q.Session) {
+			errs["session"] = "Use a session like 2020-21."
+		}
+	}
+	if q.Gender != nil && *q.Gender != "" && *q.Gender != "female" && *q.Gender != "male" && *q.Gender != "other" {
+		errs["gender"] = "Choose female, male or other, or leave it unspecified."
+	}
 	if fieldErrors(w, errs) {
 		return
 	}
 	row, err := a.Auth.Store.UpdateMemberAdmin(r.Context(), u.ID, cur.ID, MemberPatch{Name: q.Name, Batch: q.Batch, Department: q.Department,
-		Upazila: q.Upazila, Union: q.Union, Phone: q.Phone, BloodGroup: q.BloodGroup, ShowInDirectory: q.ShowInDirectory})
+		Upazila: q.Upazila, Union: q.Union, Phone: q.Phone, BloodGroup: q.BloodGroup, ShowInDirectory: q.ShowInDirectory, Session: q.Session, Gender: q.Gender})
 	if err != nil {
 		a.memberFail(w, err)
 		return
@@ -298,7 +309,23 @@ func (a *App) studentAction(w http.ResponseWriter, r *http.Request, u User) {
 	var err error
 	switch action {
 	case "approve", "reject", "reset":
-		err = a.Auth.Store.ReviewMember(r.Context(), u.ID, id, memberActions[action])
+		var body struct {
+			Reason string `json:"reason"`
+		}
+		if r.ContentLength > 0 {
+			if !decode(w, r, &body) {
+				return
+			}
+		}
+		reason := strings.TrimSpace(body.Reason)
+		if action != "reject" {
+			reason = ""
+		}
+		if utf8.RuneCountInString(reason) > 300 {
+			apiError(w, http.StatusUnprocessableEntity, "reason_too_long")
+			return
+		}
+		err = a.Auth.Store.ReviewMember(r.Context(), u.ID, id, memberActions[action], reason)
 	case "deactivate":
 		err = a.Auth.Store.SetAccountDisabled(r.Context(), u.ID, id, true)
 	case "activate":

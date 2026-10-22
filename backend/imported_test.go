@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 	"context"
 	"net/http"
@@ -68,7 +69,7 @@ func TestDirectoryStartsUnverifiedAndVerificationPersists(t *testing.T) {
 	}
 	// verifying a directory record touches no account, approval or email state
 	post, _ := e.mem.MemberAdmin(ctx, mid)
-	if _, after, _ := e.mem.ListUsers(ctx, "", "", 1, 0); after != usersBefore || pre != post {
+	if _, after, _ := e.mem.ListUsers(ctx, "", "", 1, 0); after != usersBefore || !reflect.DeepEqual(pre, post) {
 		t.Fatalf("directory verification must not change accounts: users %d->%d, %+v -> %+v", usersBefore, after, pre, post)
 	}
 	// and the reverse: approving a membership does not verify any directory record

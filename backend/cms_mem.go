@@ -364,7 +364,8 @@ func (m *memStore) memberRow(id string) (MemberAdminRow, bool) {
 	}
 	return MemberAdminRow{ID: id, Email: u.Email, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila, Union: p.Union,
 		Phone: p.Phone, BloodGroup: p.BloodGroup, Status: p.Status, ShowInDirectory: p.ShowInDirectory, Role: u.Role,
-		EmailVerified: u.EmailVerified, Disabled: u.Disabled, Complete: p.Phone != "" && p.BloodGroup != "", CreatedAt: p.CreatedAt}, true
+		EmailVerified: u.EmailVerified, Disabled: u.Disabled, CreatedAt: p.CreatedAt, Session: p.Session, Gender: p.Gender,
+		Missing: missingProfileFields(p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Session), ReviewedAt: p.ReviewedAt, ReviewedBy: m.actorLabel(p.ReviewedBy), ReviewNote: p.ReviewNote}.withComplete(), true
 }
 
 func (m *memStore) ListMembersAdmin(_ context.Context, q MemberQuery) ([]MemberAdminRow, int, error) {
@@ -392,6 +393,16 @@ func (m *memStore) ListMembersAdmin(_ context.Context, q MemberQuery) ([]MemberA
 			(q.Complete == "yes" && !r.Complete) || (q.Complete == "no" && r.Complete) ||
 			(q.Disabled == "yes" && !r.Disabled) || (q.Disabled == "no" && r.Disabled) {
 			continue
+		}
+		switch q.View {
+		case "verified":
+			if !(r.Status == StatusApproved && r.EmailVerified) {
+				continue
+			}
+		case "review":
+			if r.Status == StatusRejected || !(r.Status == StatusPending || !r.EmailVerified || !r.Complete) {
+				continue
+			}
 		}
 		rows = append(rows, r)
 	}
@@ -466,16 +477,52 @@ func (m *memStore) UpdateMemberAdmin(_ context.Context, actorID, userID string, 
 	if patch.ShowInDirectory != nil {
 		p.ShowInDirectory = *patch.ShowInDirectory
 	}
+	if patch.Session != nil {
+		p.Session = *patch.Session
+	}
+	if patch.Gender != nil {
+		p.Gender = *patch.Gender
+	}
 	m.auditLocked(actorID, "member.update", "user", userID, nil)
 	r, _ := m.memberRow(userID)
 	return r, nil
 }
 
-func (m *memStore) ReviewMember(ctx context.Context, actorID, userID, status string) error {
+func (m *memStore) ReviewMember(ctx context.Context, actorID, userID, status string, note ...string) error {
 	if err := m.ReviewProfile(ctx, userID, status); err != nil {
 		return err
 	}
-	return m.Audit(ctx, actorID, "member."+status, "user", userID, nil)
+	why := ""
+	if len(note) > 0 {
+		why = note[0]
+	}
+	m.mu.Lock()
+	p := m.profiles[userID]
+	p.ReviewedAt, p.ReviewedBy, p.ReviewNote = time.Now().UTC().Format(time.RFC3339), actorID, why
+	m.mu.Unlock()
+	detail := map[string]any{}
+	if why != "" {
+		detail["reason"] = why
+	}
+	return m.Audit(ctx, actorID, "member."+status, "user", userID, detail)
+}
+
+func (m *memStore) MemberHistory(_ context.Context, userID string) ([]Activity, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []Activity{}
+	for i := len(m.cms.audit) - 1; i >= 0; i-- {
+		a := m.cms.audit[i]
+		if a.entity == "user" && a.entityID == userID && strings.HasPrefix(a.action, "member.") {
+			out = append(out, Activity{At: stamp(a.at), Actor: m.actorLabel(a.actor), Action: a.action, Entity: a.entity, EntityID: a.entityID, Detail: a.detail})
+		}
+	}
+	return out, nil
+}
+
+func (r MemberAdminRow) withComplete() MemberAdminRow {
+	r.Complete = len(r.Missing) == 0
+	return r
 }
 
 func (m *memStore) SetAccountDisabled(_ context.Context, actorID, userID string, disabled bool) error {

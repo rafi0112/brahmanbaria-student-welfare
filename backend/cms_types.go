@@ -97,6 +97,7 @@ type RoleChangeRow struct {
 
 type MemberQuery struct {
 	Q, Status, Department, Verified, Complete, Disabled string
+	View                                               string // "" | review (needs an admin's attention) | verified (approved and email confirmed)
 	Batch                                              int
 	Page, Limit                                        int
 	Sort                                               string // newest (default), oldest, name, batch, status
@@ -123,6 +124,36 @@ type MemberAdminRow struct {
 	Disabled        bool   `json:"disabled"`
 	Complete        bool   `json:"complete"`
 	CreatedAt       string `json:"createdAt"`
+	Session         string   `json:"session"`
+	Gender          string   `json:"gender"`
+	Missing         []string `json:"missing"` // required profile fields that are still empty
+	ReviewedAt      string   `json:"reviewedAt,omitempty"`
+	ReviewedBy      string   `json:"reviewedBy,omitempty"`
+	ReviewNote      string   `json:"reviewNote,omitempty"`
+}
+
+// requiredProfileFields are what a profile needs to count as complete. Phone, blood group, gender and photo are optional.
+func missingProfileFields(name string, batch int, department, upazila, union, session string) []string {
+	out := []string{}
+	if strings.TrimSpace(name) == "" {
+		out = append(out, "name")
+	}
+	if batch < 1 {
+		out = append(out, "batch")
+	}
+	if department == "" {
+		out = append(out, "department")
+	}
+	if session == "" {
+		out = append(out, "session")
+	}
+	if upazila == "" {
+		out = append(out, "upazila")
+	}
+	if union == "" {
+		out = append(out, "union")
+	}
+	return out
 }
 
 type MemberPatch struct {
@@ -134,6 +165,8 @@ type MemberPatch struct {
 	Phone           *string
 	BloodGroup      *string
 	ShowInDirectory *bool
+	Session         *string
+	Gender          *string
 }
 
 // CMSStore is the persistence boundary for editorial content, members as seen by admins, and the audit trail.
@@ -158,7 +191,9 @@ type CMSStore interface {
 	ListMembersAdmin(ctx context.Context, q MemberQuery) ([]MemberAdminRow, int, error)
 	MemberAdmin(ctx context.Context, userID string) (MemberAdminRow, error)
 	UpdateMemberAdmin(ctx context.Context, actorID, userID string, p MemberPatch) (MemberAdminRow, error)
-	ReviewMember(ctx context.Context, actorID, userID, status string) error
+	// ReviewMember records a membership decision; an optional note (the reason for a rejection) is kept with it.
+	ReviewMember(ctx context.Context, actorID, userID, status string, note ...string) error
+	MemberHistory(ctx context.Context, userID string) ([]Activity, error)
 	SetAccountDisabled(ctx context.Context, actorID, userID string, disabled bool) error
 }
 

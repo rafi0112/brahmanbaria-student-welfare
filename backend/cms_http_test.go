@@ -330,7 +330,7 @@ func TestLegacyContentSeedRunsOnceAndStaysEditable(t *testing.T) {
 
 func approvedMember(t *testing.T, e *env2, tok, id, name string) {
 	t.Helper()
-	body := map[string]any{"name": name, "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}
+	body := map[string]any{"name": name, "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}
 	if rec := e.do("POST", "/api/v1/me/profile", body, nil, bearer(tok)...); rec.Code != 201 {
 		t.Fatalf("profile: %d %s", rec.Code, rec.Body)
 	}
@@ -342,7 +342,7 @@ func approvedMember(t *testing.T, e *env2, tok, id, name string) {
 func TestStudentsAdminListEditAndRoleProtection(t *testing.T) {
 	e := cmsApp(t)
 	approvedMember(t, e, "member-token", idMember, "Member One")
-	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Second Person", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti"}, nil, bearer("member2-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Second Person", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}, nil, bearer("member2-token")...)
 
 	var list struct {
 		Items []MemberAdminRow
@@ -361,7 +361,7 @@ func TestStudentsAdminListEditAndRoleProtection(t *testing.T) {
 	}
 	for name, body := range map[string]map[string]any{
 		"short name": {"name": "A"}, "batch": {"batch": 99}, "department": {"department": "Astrology"}, "phone": {"phone": "123"},
-		"blood": {"bloodGroup": "Z+"}, "union": {"union": "Nowhere"}, "upazila": {"upazila": "mars"},
+		"blood": {"bloodGroup": "Z+"}, "union": {"union": "Nowhere", "session": "2020-21"}, "upazila": {"upazila": "mars"},
 	} {
 		if rec := adminJSON(e, "PATCH", "/api/v1/admin/students/"+idMember, body); rec.Code != 422 {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body)
@@ -443,7 +443,7 @@ func TestStudentsBulkReportsPartialFailure(t *testing.T) {
 
 func TestStudentsExportProtectsContactDetails(t *testing.T) {
 	e := cmsApp(t)
-	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "=HYPERLINK(\"http://evil\")", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}, nil, bearer("member-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "=HYPERLINK(\"http://evil\")", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}, nil, bearer("member-token")...)
 	plain := adminJSON(e, "GET", "/api/v1/admin/export/students", nil)
 	if plain.Code != 200 || !strings.HasPrefix(plain.Header().Get("Content-Type"), "text/csv") {
 		t.Fatalf("export: %d %s", plain.Code, plain.Header().Get("Content-Type"))

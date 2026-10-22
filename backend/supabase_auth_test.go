@@ -82,7 +82,7 @@ func setRole(e *env2, actorToken, targetID, role string) *httptest.ResponseRecor
 	return e.do("POST", "/api/v1/admin/users/"+targetID+"/role", map[string]any{"role": role}, nil, bearer(actorToken)...)
 }
 
-var myProfile = map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}
+var myProfile = map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}
 
 func TestSupabaseBearerAuth(t *testing.T) {
 	e := supaApp(t)
@@ -95,7 +95,7 @@ func TestSupabaseBearerAuth(t *testing.T) {
 	if me.Code != 200 || !strings.Contains(me.Body.String(), `"role":"member"`) || !strings.Contains(me.Body.String(), `"profile":null`) {
 		t.Fatalf("member me: %d %s", me.Code, me.Body)
 	}
-	bad := e.do("POST", "/api/v1/me/profile", map[string]any{"name": "M", "batch": 99, "department": "Nope", "upazila": "x", "union": "y"}, nil, bearer("member-token")...)
+	bad := e.do("POST", "/api/v1/me/profile", map[string]any{"name": "M", "batch": 99, "department": "Nope", "upazila": "x", "union": "y", "session": "2020-21"}, nil, bearer("member-token")...)
 	if bad.Code != 422 {
 		t.Fatalf("invalid profile should be 422, got %d", bad.Code)
 	}
@@ -168,7 +168,7 @@ func TestLocalCredentialEndpointsOffWhenSupabaseIsOn(t *testing.T) {
 func TestClientCannotChooseRoleOrIdentity(t *testing.T) {
 	e := supaApp(t)
 	e.makeAdmin(t, "admin-token", emailAdmin)
-	body := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti",
+	body := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21",
 		"role": "admin", "userId": idAdmin, "email": emailAdmin}
 	rec := e.do("POST", "/api/v1/me/profile", body, nil, append(bearer("member-token"), "X-Role", "admin", "X-User-Id", idAdmin)...)
 	if rec.Code != 201 || strings.Contains(rec.Body.String(), `"role":"admin"`) || !strings.Contains(rec.Body.String(), `"id":"`+idMember+`"`) {
@@ -189,7 +189,7 @@ func TestClientCannotChooseRoleOrIdentity(t *testing.T) {
 func TestApprovedProfileIsLockedAndRejectedCanReapply(t *testing.T) {
 	e := supaApp(t)
 	e.makeAdmin(t, "admin-token", emailAdmin)
-	mine := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti"}
+	mine := map[string]any{"name": "Member One", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}
 	e.do("POST", "/api/v1/me/profile", mine, nil, bearer("member-token")...)
 	e.do("POST", "/api/v1/admin/members/"+idMember+"/reject", nil, nil, bearer("admin-token")...)
 	mine["department"] = "Marketing"
@@ -493,7 +493,7 @@ func TestStudentProfileContactVisibilityByViewer(t *testing.T) {
 	e := supaApp(t)
 	e.makeAdmin(t, "admin-token", emailAdmin)
 	e.do("POST", "/api/v1/me/profile", myProfile, nil, bearer("member-token")...)
-	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Viewer Two", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti"}, nil, bearer("member2-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Viewer Two", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}, nil, bearer("member2-token")...)
 	for _, id := range []string{idMember, idMember2} {
 		if rec := e.do("POST", "/api/v1/admin/members/"+id+"/approve", nil, nil, bearer("admin-token")...); rec.Code != 200 {
 			t.Fatalf("approve: %d", rec.Code)

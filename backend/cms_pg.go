@@ -419,17 +419,20 @@ func (s *pgStore) CountEntries(ctx context.Context) (map[string]map[string]int, 
 
 // ---------------------------------------------------------------- members as admins see them
 
+const completeSQL = `(p.name <> '' AND p.batch > 0 AND p.department <> '' AND p.upazila <> '' AND p.union_name <> '' AND p.session <> '')`
 const memberCols = `u.id::text, u.email, p.name, p.batch, p.department, p.upazila, p.union_name, p.phone, p.blood_group, p.status, p.show_in_directory, u.role,
-	u.email_verified_at IS NOT NULL, u.disabled_at IS NOT NULL, (p.phone <> '' AND p.blood_group <> ''), to_char(p.created_at AT TIME ZONE 'UTC', ` + tsFmt + `)`
-const memberFrom = ` FROM users u JOIN profiles p ON p.user_id = u.id`
+	u.email_verified_at IS NOT NULL, u.disabled_at IS NOT NULL, ` + completeSQL + `, to_char(p.created_at AT TIME ZONE 'UTC', ` + tsFmt + `), p.session, p.gender,
+	COALESCE(to_char(p.reviewed_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), COALESCE(NULLIF(rp.name, ''), ru.email, ''), p.review_note`
+const memberFrom = ` FROM users u JOIN profiles p ON p.user_id = u.id LEFT JOIN profiles rp ON rp.user_id = p.reviewed_by LEFT JOIN users ru ON ru.id = p.reviewed_by`
 
 func scanMember(r rowScanner) (MemberAdminRow, error) {
 	var m MemberAdminRow
 	err := r.Scan(&m.ID, &m.Email, &m.Name, &m.Batch, &m.Department, &m.Upazila, &m.Union, &m.Phone, &m.BloodGroup, &m.Status, &m.ShowInDirectory,
-		&m.Role, &m.EmailVerified, &m.Disabled, &m.Complete, &m.CreatedAt)
+		&m.Role, &m.EmailVerified, &m.Disabled, &m.Complete, &m.CreatedAt, &m.Session, &m.Gender, &m.ReviewedAt, &m.ReviewedBy, &m.ReviewNote)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, ErrNotFound
 	}
+	m.Missing = missingProfileFields(m.Name, m.Batch, m.Department, m.Upazila, m.Union, m.Session)
 	return m, err
 }
 
@@ -462,7 +465,13 @@ func (s *pgStore) ListMembersAdmin(ctx context.Context, q MemberQuery) ([]Member
 		}
 	}
 	yn(q.Verified, "u.email_verified_at IS NOT NULL")
-	yn(q.Complete, "(p.phone <> '' AND p.blood_group <> '')")
+	yn(q.Complete, completeSQL)
+	switch q.View {
+	case "verified":
+		b.raw("(p.status = 'approved' AND u.email_verified_at IS NOT NULL)")
+	case "review": // pending, or approved without a confirmed email, or required details missing; rejected members are not queued
+		b.raw("(p.status <> 'rejected' AND (p.status = 'pending' OR u.email_verified_at IS NULL OR NOT " + completeSQL + "))")
+	}
 	yn(q.Disabled, "u.disabled_at IS NOT NULL")
 	order := map[string]string{"": "p.created_at DESC", "newest": "p.created_at DESC", "oldest": "p.created_at", "name": "lower(p.name)", "batch": "p.batch DESC, lower(p.name)",
 		"status": "p.status, lower(p.name)"}[q.Sort]
@@ -508,8 +517,8 @@ func (s *pgStore) UpdateMemberAdmin(ctx context.Context, actorID, userID string,
 	defer tx.Rollback(ctx) //nolint:errcheck
 	tag, err := tx.Exec(ctx, `UPDATE profiles SET name = COALESCE($2, name), batch = COALESCE($3::int, batch), department = COALESCE($4, department),
 		upazila = COALESCE($5, upazila), union_name = COALESCE($6, union_name), phone = COALESCE($7, phone), blood_group = COALESCE($8, blood_group),
-		show_in_directory = COALESCE($9::boolean, show_in_directory) WHERE user_id = $1::uuid`,
-		userID, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.ShowInDirectory)
+		show_in_directory = COALESCE($9::boolean, show_in_directory), session = COALESCE($10, session), gender = COALESCE($11, gender) WHERE user_id = $1::uuid`,
+		userID, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.ShowInDirectory, p.Session, p.Gender)
 	if err != nil {
 		return MemberAdminRow{}, err
 	}
@@ -526,7 +535,7 @@ func (s *pgStore) UpdateMemberAdmin(ctx context.Context, actorID, userID string,
 	return m, tx.Commit(ctx)
 }
 
-func (s *pgStore) ReviewMember(ctx context.Context, actorID, userID, status string) error {
+func (s *pgStore) ReviewMember(ctx context.Context, actorID, userID, status string, note ...string) error {
 	if !okID(userID) {
 		return ErrNotFound
 	}
@@ -535,17 +544,50 @@ func (s *pgStore) ReviewMember(ctx context.Context, actorID, userID, status stri
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	tag, err := tx.Exec(ctx, `UPDATE profiles SET status = $2, reviewed_at = now() WHERE user_id = $1::uuid`, userID, status)
+	why := ""
+	if len(note) > 0 {
+		why = note[0]
+	}
+	tag, err := tx.Exec(ctx, `UPDATE profiles SET status = $2, reviewed_at = now(), reviewed_by = NULLIF($3, '')::uuid, review_note = $4 WHERE user_id = $1::uuid`, userID, status, actorID, why)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	if err := auditAdmin(ctx, tx, actorID, "member."+status, "user", userID, nil); err != nil {
+	detail := map[string]any{}
+	if why != "" {
+		detail["reason"] = why
+	}
+	if err := auditAdmin(ctx, tx, actorID, "member."+status, "user", userID, detail); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// MemberHistory lists the recorded decisions and edits for one member, newest first (from the admin audit trail).
+func (s *pgStore) MemberHistory(ctx context.Context, userID string) ([]Activity, error) {
+	if !okID(userID) {
+		return nil, ErrNotFound
+	}
+	rows, err := s.db.Query(ctx, `SELECT to_char(x.created_at AT TIME ZONE 'UTC', `+tsFmt+`), COALESCE(NULLIF(p.name, ''), u.email, ''), x.action, x.entity, x.entity_id, x.detail
+		FROM admin_audit x LEFT JOIN users u ON u.id = x.actor_id LEFT JOIN profiles p ON p.user_id = x.actor_id
+		WHERE x.entity = 'user' AND x.entity_id = $1 AND x.action LIKE 'member.%' ORDER BY x.created_at DESC, x.id DESC LIMIT 50`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Activity{}
+	for rows.Next() {
+		var a Activity
+		var detail []byte
+		if err := rows.Scan(&a.At, &a.Actor, &a.Action, &a.Entity, &a.EntityID, &detail); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal(detail, &a.Detail)
+		out = append(out, a)
+	}
+	return out, rows.Err()
 }
 
 func (s *pgStore) SetAccountDisabled(ctx context.Context, actorID, userID string, disabled bool) error {

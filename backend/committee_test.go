@@ -185,6 +185,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig7, _ := migrationFS.ReadFile("migrations/007_contact_inbox.sql")
 	mig8, _ := migrationFS.ReadFile("migrations/008_imported_reviews.sql")
 	mig9, _ := migrationFS.ReadFile("migrations/009_imported_members.sql")
+	mig10, _ := migrationFS.ReadFile("migrations/010_member_fields.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -206,7 +207,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9))} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10)} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}
@@ -232,6 +233,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	contactStoreSuite(t, pg)
 	importedStoreSuite(t, pg)
 	manualStoreSuite(t, pg)
+	memberViewsSuite(t, pg)
 }
 
 // ---------------------------------------------------------------- HTTP layer

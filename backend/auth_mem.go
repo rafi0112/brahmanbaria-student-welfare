@@ -215,6 +215,12 @@ func (m *memStore) UpsertProfile(_ context.Context, id string, p Profile) error 
 	defer m.mu.Unlock()
 	if cur, ok := m.profiles[id]; ok {
 		cur.Name, cur.Batch, cur.Department, cur.Upazila, cur.Union = p.Name, p.Batch, p.Department, p.Upazila, p.Union
+		if p.Session != "" {
+			cur.Session = p.Session
+		}
+		if p.Gender != "" {
+			cur.Gender = p.Gender
+		}
 		if cur.Status == StatusRejected {
 			cur.Status = StatusPending
 		}

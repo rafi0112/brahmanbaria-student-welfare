@@ -126,8 +126,8 @@ func (s *pgStore) CreateUser(ctx context.Context, n NewUser) (User, error) {
 	}
 	u.EmailVerified = verified != nil
 	if p := n.Profile; p != nil {
-		if _, err := tx.Exec(ctx, `INSERT INTO profiles (user_id, name, batch, department, upazila, union_name)
-			VALUES ($1, $2, $3, $4, $5, $6)`, u.ID, p.Name, p.Batch, p.Department, p.Upazila, p.Union); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO profiles (user_id, name, batch, department, upazila, union_name, session, gender, phone, blood_group)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, u.ID, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Session, p.Gender, p.Phone, p.BloodGroup); err != nil {
 			return User{}, err
 		}
 	}
@@ -224,11 +224,11 @@ func (s *pgStore) DeleteUserSessions(ctx context.Context, userID string) error {
 }
 
 const profCols = `user_id::text, name, batch, department, upazila, union_name, phone, blood_group, status,
-	show_in_directory, show_phone, show_email, show_blood, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`
+	show_in_directory, show_phone, show_email, show_blood, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), session, gender`
 
 func scanProfile(row pgx.Row, p *Profile) error {
 	return row.Scan(&p.UserID, &p.Name, &p.Batch, &p.Department, &p.Upazila, &p.Union, &p.Phone, &p.BloodGroup, &p.Status,
-		&p.ShowInDirectory, &p.ShowPhone, &p.ShowEmail, &p.ShowBlood, &p.CreatedAt)
+		&p.ShowInDirectory, &p.ShowPhone, &p.ShowEmail, &p.ShowBlood, &p.CreatedAt, &p.Session, &p.Gender)
 }
 
 func (s *pgStore) ProfileByUser(ctx context.Context, id string) (*Profile, error) {
@@ -256,13 +256,14 @@ func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) 
 func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error {
 	_, err := s.db.Exec(ctx, `INSERT INTO profiles
 		(user_id, name, batch, department, upazila, union_name, phone, blood_group, status,
-		 show_in_directory, show_phone, show_email, show_blood)
+		 show_in_directory, show_phone, show_email, show_blood, session, gender)
 		VALUES ($1::uuid, $2, $3, $4, $5, $6, COALESCE($7, ''), COALESCE($8, ''),
-			'pending', true, 'hidden', 'members', 'members')
+			'pending', true, 'hidden', 'members', 'members', $9, $10)
 		ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch,
 			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name,
+			session = COALESCE(NULLIF(EXCLUDED.session, ''), profiles.session), gender = COALESCE(NULLIF(EXCLUDED.gender, ''), profiles.gender),
 			status = CASE WHEN profiles.status = 'rejected' THEN 'pending' ELSE profiles.status END`,
-		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup)
+		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.Session, p.Gender)
 	return err
 }
 
