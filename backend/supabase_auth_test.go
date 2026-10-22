@@ -483,3 +483,61 @@ func TestBootstrapCommand(t *testing.T) {
 		t.Fatalf("repeating must be safe: %v", err)
 	}
 }
+
+// ---------------------------------------------------------------- who sees a member's contact details
+
+func TestStudentProfileContactVisibilityByViewer(t *testing.T) {
+	e := supaApp(t)
+	e.makeAdmin(t, "admin-token", emailAdmin)
+	e.do("POST", "/api/v1/me/profile", myProfile, nil, bearer("member-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Viewer Two", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti"}, nil, bearer("member2-token")...)
+	for _, id := range []string{idMember, idMember2} {
+		if rec := e.do("POST", "/api/v1/admin/members/"+id+"/approve", nil, nil, bearer("admin-token")...); rec.Code != 200 {
+			t.Fatalf("approve: %d", rec.Code)
+		}
+	}
+	// phone: public, email: members only, blood group: hidden
+	patch := map[string]any{"phone": "01712345678", "bloodGroup": "O+", "showPhone": "public", "showEmail": "members", "showBlood": "hidden"}
+	if rec := e.do("PATCH", "/api/v1/me/profile", patch, nil, bearer("member-token")...); rec.Code != 200 {
+		t.Fatalf("patch: %d %s", rec.Code, rec.Body)
+	}
+	get := func(tok string) (string, studentContact) {
+		var hdr []string
+		if tok != "" {
+			hdr = bearer(tok)
+		}
+		rec := e.do("GET", "/api/v1/students/m-"+idMember, nil, nil, hdr...)
+		if rec.Code != 200 {
+			t.Fatalf("student as %q: %d %s", tok, rec.Code, rec.Body)
+		}
+		var v struct {
+			View    string
+			Contact studentContact
+		}
+		decodeBody(t, rec, &v)
+		return v.View, v.Contact
+	}
+	if view, c := get(""); view != "public" || c.Phone != "01712345678" || c.Email != "" || c.BloodGroup != "" || c.Status != "" {
+		t.Fatalf("anonymous viewers see public fields only: %s %+v", view, c)
+	}
+	if view, c := get("member2-token"); view != "member" || c.Phone == "" || c.Email != "member@example.com" || c.BloodGroup != "" || c.Union != "" {
+		t.Fatalf("members see public and members-only fields: %s %+v", view, c)
+	}
+	if view, c := get("unconfirmed-token"); view != "public" || c.Email != "" {
+		t.Fatalf("an unverified account counts as public: %s %+v", view, c)
+	}
+	if view, c := get("admin-token"); view != "admin" || c.Phone == "" || c.Email != "member@example.com" || c.BloodGroup != "O+" || c.Union != "Kuti" || c.Status != "approved" {
+		t.Fatalf("admins see everything: %s %+v", view, c)
+	}
+	// a member who opts out of the directory disappears for everyone except admins
+	hide := false
+	if rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"showInDirectory": hide}, nil, bearer("member-token")...); rec.Code != 200 {
+		t.Fatalf("hide: %d", rec.Code)
+	}
+	if rec := e.do("GET", "/api/v1/students/m-"+idMember, nil, nil); rec.Code != 404 {
+		t.Fatalf("hidden member must be 404 to the public, got %d", rec.Code)
+	}
+	if view, _ := get("admin-token"); view != "admin" {
+		t.Fatalf("admins can still open a hidden member: %s", view)
+	}
+}

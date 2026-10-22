@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from 'react'
 import images from '../data/images.json'
 import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { useBase } from '../lib/base.js'
 import { Badge, Credit, Crumbs, Data, Empty, PageHero, Photo } from '../components/ui.jsx'
 import { PostCard } from '../components/cards.jsx'
 import { Plane } from '../components/Sketch.jsx'
 
 /* ---------------- Blog ---------------- */
 export function Blog() {
+  const base = useBase()
   const { t, pick } = useApp()
   const [sp, setSp] = useSearchParams()
   const cat = sp.get('category') || ''
@@ -29,7 +31,7 @@ export function Blog() {
               <PostCard p={d.items[0]} big />
               <div className="blog-side">
                 {d.items.slice(1).map((p) => (
-                  <Link key={p.slug} to={`/blog/${p.slug}`} className="post-row">
+                  <Link key={p.slug} to={`${base}/blog/${p.slug}`} className="post-row">
                     <Photo id={p.image} shape="shape-a" sizes="160px" />
                     <div><h3>{pick(p.titleBn, p.titleEn)}</h3><small className="muted">{p.date}</small></div>
                   </Link>
@@ -44,6 +46,7 @@ export function Blog() {
 }
 
 export function BlogPost() {
+  const base = useBase()
   const { slug } = useParams()
   const { t, pick, n } = useApp()
   const res = useApi(`/blog/${slug}`)
@@ -53,14 +56,14 @@ export function BlogPost() {
       <Data q={res}>
         {(p) => (
           <article className="article">
-            <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: '/blog', label: t('nav.blog') }, { label: pick(p.titleBn, p.titleEn) }]} />
+            <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/blog`, label: t('nav.blog') }, { label: pick(p.titleBn, p.titleEn) }]} />
             <div className="row"><Badge tone="gold">{t(`cat.${p.category}`)}</Badge>{p.sample && <Badge tone="muted">{t('blog.sample')}</Badge>}</div>
             <h1>{pick(p.titleBn, p.titleEn)}</h1>
             <p className="muted">{p.author} · {p.date} · {n(p.readMin)} {t('blog.min')}</p>
             <Photo id={p.image} shape="shape-a" sketch eager sizes="(min-width: 900px) 720px, 95vw" />
             <Credit id={p.image} />
             <div className="prose">{pick(p.bodyBn, p.bodyEn).map((para, i) => <p key={i}>{para}</p>)}</div>
-            <Link className="link-arrow" to="/blog">← {t('blog.back')}</Link>
+            <Link className="link-arrow" to={`${base}/blog`}>← {t('blog.back')}</Link>
             <h2>{t('blog.latest')}</h2>
             <div className="cards-2">{(more.data?.items || []).filter((x) => x.slug !== p.slug).slice(0, 2).map((x) => <PostCard key={x.slug} p={x} />)}</div>
           </article>

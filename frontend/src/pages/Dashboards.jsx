@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { BaseProvider } from '../lib/base.js'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
@@ -177,14 +178,53 @@ function DashboardBody({ user }) {
   )
 }
 
-export function Admin() {
-  return <Gate role="admin">{() => <AdminBody />}</Gate>
+// The admin panel is a frame (sidebar + top bar) around its sections and the pages it links to, so the sidebar
+// stays on screen whichever section or page is open.
+export function AdminShell() {
+  return <Gate role="admin">{() => <AdminFrame />}</Gate>
 }
 
-function AdminBody() {
-  const { t, n } = useApp()
+function AdminFrame() {
+  const { t } = useApp()
   const { user: me, logout } = useAuth()
   const go = useNavigate()
+  const loc = useLocation()
+  const [params] = useSearchParams()
+  const onHome = loc.pathname === '/admin'
+  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'members'
+  const sections = [['members', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
+  const site = [['/admin/students', '☺', 'admin.nav.students'], ['/admin/heritage', '◬', 'admin.nav.places'], ['/admin/blog', '✎', 'admin.nav.blog'], ['/admin/gallery', '▣', 'admin.nav.gallery']]
+  const here = (p) => loc.pathname === p || loc.pathname.startsWith(`${p}/`)
+  return (
+    <div className="admin">
+      <aside className="admin-side">
+        <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
+        <nav aria-label="Admin">
+          {sections.map(([k, ic, label]) => {
+            const on = onHome && tab === k
+            return <Link key={k} to={k === 'members' ? '/admin' : `/admin?tab=${k}`} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
+          })}
+          <small className="side-label">{t('admin.nav.site')}</small>
+          {site.map(([to, ic, label]) => <Link key={to} to={to} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
+          <Link to="/"><span aria-hidden="true">⌂</span>{t('admin.nav.exit')}</Link>
+        </nav>
+      </aside>
+      <div className="admin-main">
+        <div className="admin-top">
+          <h1>{t('admin.title')}</h1>
+          <div className="admin-who">
+            <span className="muted small">{me?.email}</span>
+            <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); go('/') }}>{t('auth.logout')}</button>
+          </div>
+        </div>
+        <BaseProvider value="/admin"><Outlet /></BaseProvider>
+      </div>
+    </div>
+  )
+}
+
+export function AdminHome() {
+  const { t, n } = useApp()
   // the section lives in the URL (?tab=roles), so the sidebar links, reloads and the back button all work
   const [params, setParams] = useSearchParams()
   const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'members'
@@ -194,8 +234,6 @@ function AdminBody() {
   const list = useApi(`/admin/members?status=${status}`)
   const stats = useApi('/stats')
   const [err, setErr] = useState(null)
-  const sections = [['members', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
-  const site = [['/students', '☺', 'admin.nav.students'], ['/heritage', '◬', 'admin.nav.places'], ['/blog', '✎', 'admin.nav.blog'], ['/gallery', '▣', 'admin.nav.gallery'], ['/', '⌂', 'nav.home']]
 
   const act = async (id, verb) => {
     setErr(null)
@@ -207,25 +245,7 @@ function AdminBody() {
   const counts = overview.data?.members || {}
 
   return (
-    <div className="admin">
-      <aside className="admin-side">
-        <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
-        <nav aria-label="Admin">
-          {sections.map(([k, ic, label]) => (
-            <Link key={k} to={k === 'members' ? '/admin' : `/admin?tab=${k}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
-          ))}
-          <small className="side-label">{t('admin.nav.site')}</small>
-          {site.map(([to, ic, label]) => <Link key={to} to={to}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
-        </nav>
-      </aside>
-      <div className="admin-main">
-        <div className="admin-top">
-          <h1>{t('admin.title')}</h1>
-          <div className="admin-who">
-            <span className="muted small">{me?.email}</span>
-            <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); go("/") }}>{t('auth.logout')}</button>
-          </div>
-        </div>
+    <>
         <h2>{t('admin.overview')}</h2>
         <dl className="admin-stats">
           {['pending', 'approved', 'rejected'].map((s) => <div key={s}><dt>{t(`admin.${s}`)}</dt><dd className="num">{n(counts[s] ?? 0)}</dd></div>)}
@@ -276,8 +296,7 @@ function AdminBody() {
             </>
           )}
         </Data>}
-      </div>
-    </div>
+    </>
   )
 }
 

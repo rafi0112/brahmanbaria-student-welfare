@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { useBase } from '../lib/base.js'
 import { Badge, Credit, Crumbs, Data, Empty, PageHero, Photo } from '../components/ui.jsx'
 import { PlaceCard } from '../components/cards.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
@@ -10,6 +11,7 @@ import Icon from '../components/Icon.jsx'
 const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river']
 
 export default function Heritage() {
+  const base = useBase()
   const { t, n, pick } = useApp()
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
@@ -53,7 +55,7 @@ export default function Heritage() {
           </label>
           {(f.q || f.category || f.upazila) && <button className="btn btn-ghost btn-sm" onClick={() => setSp({}, { replace: true })}>{t('common.clear')}</button>}
           <h2>{t('heritage.byMap')}</h2>
-          <UpazilaMap upazilas={upazilas} places={all.data?.items || []} selected={f.upazila} onSelect={(slug) => set({ upazila: f.upazila === slug ? '' : slug })} onPin={(p) => nav(`/heritage/${p.slug}`)} />
+          <UpazilaMap upazilas={upazilas} places={all.data?.items || []} selected={f.upazila} onSelect={(slug) => set({ upazila: f.upazila === slug ? '' : slug })} onPin={(p) => nav(`${base}/heritage/${p.slug}`)} />
         </aside>
         <div>
           <Data q={res}>
@@ -71,6 +73,7 @@ export default function Heritage() {
 }
 
 export function HeritageDetail() {
+  const base = useBase()
   const { slug } = useParams()
   const { t, pick } = useApp()
   const res = useApi(`/heritage/${slug}`)
@@ -95,7 +98,7 @@ export function HeritageDetail() {
               </PageHero>
             </div>
             <section className="section wrap">
-              <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: '/heritage', label: t('nav.heritage') }, { label: pick(p.nameBn, p.nameEn) }]} />
+              <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/heritage`, label: t('nav.heritage') }, { label: pick(p.nameBn, p.nameEn) }]} />
               <div className="detail-grid">
                 <article>
                   <p className="lede">{p.summary}</p>

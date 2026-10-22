@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom'
+import { useBase } from '../lib/base.js'
 import { useApp } from '../lib/app.jsx'
 import { Badge, Photo, Avatar } from './ui.jsx'
 import Icon from './Icon.jsx'
 
 export function PlaceCard({ p, upazilas = [] }) {
   const { t, pick } = useApp()
+  const base = useBase()
   const up = upazilas.find((u) => u.slug === p.upazila)
   return (
-    <Link to={`/heritage/${p.slug}`} className="place-card">
+    <Link to={`${base}/heritage/${p.slug}`} className="place-card">
       <Photo id={p.images[0]} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" />
       <div className="place-card-body">
         <span className="tag-outline">{t(`cat.${p.category}`)}</span>
@@ -26,8 +28,9 @@ export function PlaceCard({ p, upazilas = [] }) {
 
 export function PostCard({ p, big = false }) {
   const { t, pick, n } = useApp()
+  const base = useBase()
   return (
-    <Link to={`/blog/${p.slug}`} className={`post-card ${big ? 'big' : ''}`}>
+    <Link to={`${base}/blog/${p.slug}`} className={`post-card ${big ? 'big' : ''}`}>
       <div className="post-img">
         <Photo id={p.image} shape="shape-r" sizes={big ? '(min-width: 900px) 50vw, 90vw' : '(min-width: 900px) 30vw, 90vw'} />
         <span className="img-tag">{t(`cat.${p.category}`)}</span>
@@ -43,9 +46,10 @@ export function PostCard({ p, big = false }) {
 
 export function StudentCard({ s, upazilas = [] }) {
   const { t, n, pick } = useApp()
+  const base = useBase()
   const up = upazilas.find((u) => u.slug === s.upazila)
   return (
-    <Link to={`/students/${s.id}`} className="student-card">
+    <Link to={`${base}/students/${s.id}`} className="student-card">
       <Avatar name={s.name} size={58} />
       <div className="student-info">
         <h3>{s.name}</h3>

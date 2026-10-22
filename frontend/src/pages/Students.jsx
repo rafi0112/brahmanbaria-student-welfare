@@ -2,6 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { useBase } from '../lib/base.js'
 import { Avatar, Badge, Crumbs, Data, Empty, Pagination, PageHero } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import { StudentCard } from '../components/cards.jsx'
@@ -71,6 +72,7 @@ export default function Students() {
 }
 
 export function StudentDetail() {
+  const base = useBase()
   const { id } = useParams()
   const { t, n, pick } = useApp()
   const res = useApi(`/students/${id}`)
@@ -82,7 +84,7 @@ export function StudentDetail() {
           const up = (ups.data?.items || []).find((u) => u.slug === s.upazila)
           return (
             <>
-              <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: '/students', label: t('nav.students') }, { label: s.name }]} />
+              <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/students`, label: t('nav.students') }, { label: s.name }]} />
               <article className="profile">
                 <Avatar name={s.name} size={110} />
                 <div>
@@ -93,9 +95,16 @@ export function StudentDetail() {
                     <div><dt>{t('students.batch')}</dt><dd>{s.batch ? n(s.batch) : '—'}</dd></div>
                     <div><dt>{t('students.session')}</dt><dd>{s.session || '—'}</dd></div>
                     <div><dt>{t('students.from')}</dt><dd>{up ? <Link to={`/directory/${up.slug}`}>{pick(up.nameBn, up.nameEn)}</Link> : '—'}</dd></div>
+                    {s.contact?.union && <div><dt>{t('students.union')}</dt><dd>{s.contact.union}</dd></div>}
+                    {s.contact?.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${s.contact.email}`}>{s.contact.email}</a></dd></div>}
+                    {s.contact?.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${s.contact.phone}`}>{s.contact.phone}</a></dd></div>}
+                    {s.contact?.bloodGroup && <div><dt>{t('students.blood')}</dt><dd>{s.contact.bloodGroup}</dd></div>}
+                    {s.contact?.status && <div><dt>{t('students.accountStatus')}</dt><dd><Badge tone={s.contact.status === 'approved' ? 'leaf' : 'gold'}>{t(`admin.${s.contact.status}`)}</Badge></dd></div>}
                   </dl>
-                  <p className="privacy-note">🔒 {t('students.hidden')}</p>
-                  <Link className="link-arrow" to="/students">← {t('students.back')}</Link>
+                  {s.view === 'admin'
+                    ? <p className="privacy-note">🔓 {t(s.id.startsWith('m-') ? 'students.adminSees' : 'students.adminImported')}</p>
+                    : <p className="privacy-note">🔒 {t(s.view === 'member' ? 'students.hiddenMember' : 'students.hidden')}</p>}
+                  <Link className="link-arrow" to={`${base}/students`}>← {t('students.back')}</Link>
                 </div>
                 <img className="profile-art" src="/art/students.webp" alt="" loading="lazy" />
               </article>

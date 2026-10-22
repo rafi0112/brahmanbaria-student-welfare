@@ -1,6 +1,15 @@
 // UI strings. Keep keys flat; both languages must define every key.
 export const strings = {
   bn: {
+    'students.union': 'ইউনিয়ন',
+    'students.email': 'ইমেইল',
+    'students.phone': 'ফোন',
+    'students.blood': 'রক্তের গ্রুপ',
+    'students.accountStatus': 'সদস্যপদের অবস্থা',
+    'students.adminSees': 'অ্যাডমিন হিসেবে আপনি এই সদস্যের সংরক্ষিত সব তথ্য দেখছেন।',
+    'students.adminImported': 'এটি আমদানি করা তালিকার রেকর্ড; এর সাথে কোনো যোগাযোগের তথ্য সংরক্ষিত নেই।',
+    'students.hiddenMember': 'এই সদস্য যে তথ্য যাচাইকৃত সদস্যদের জন্য রাখতে দিয়েছেন তা এখানে দেখা যাচ্ছে।',
+    'admin.nav.exit': 'পাবলিক সাইটে ফিরুন',
     'admin.nav.site': 'পাবলিক সাইট',
     'auth.showPassword': 'পাসওয়ার্ড দেখুন', 'auth.hidePassword': 'পাসওয়ার্ড লুকান',
     'admin.tab.committee': 'কার্যনির্বাহী কমিটি',
@@ -211,6 +220,15 @@ export const strings = {
     'common.viewAll': 'সব দেখুন', 'common.viewDetails': 'বিস্তারিত', 'common.search': 'খুঁজুন', 'common.clear': 'ফিল্টার মুছুন', 'common.sample': 'নমুনা',
   },
   en: {
+    'students.union': 'Union',
+    'students.email': 'Email',
+    'students.phone': 'Phone',
+    'students.blood': 'Blood group',
+    'students.accountStatus': 'Membership status',
+    'students.adminSees': 'As an admin you can see every detail stored for this member.',
+    'students.adminImported': 'This is an imported directory record; no contact details are stored for it.',
+    'students.hiddenMember': 'You can see what this member chose to share with verified members.',
+    'admin.nav.exit': 'Back to public site',
     'admin.nav.site': 'Public site',
     'auth.showPassword': 'Show password', 'auth.hidePassword': 'Hide password',
     'admin.tab.committee': 'Executive Committee',
