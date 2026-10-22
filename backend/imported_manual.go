@@ -24,6 +24,9 @@ type ManualImported struct {
 	Department string `json:"department"`
 	Session    string `json:"session"`
 	Upazila    string `json:"upazila"`
+	Union      string `json:"union"`
+	Gender     string `json:"gender"`
+	BloodGroup string `json:"bloodGroup"`
 	Phone      string `json:"phone"`
 	Note       string `json:"note"`
 	AddedBy    string `json:"addedBy,omitempty"`
@@ -32,6 +35,7 @@ type ManualImported struct {
 
 type ManualImportedInput struct {
 	Name, Department, Session, Upazila, Phone, Note string
+	Union, Gender, BloodGroup                       string
 	Batch                                          *int
 }
 
@@ -66,7 +70,7 @@ func (m *memStore) CreateManualImported(_ context.Context, _ string, in ManualIm
 	defer m.mu.Unlock()
 	m.seq++
 	r := &ManualImported{ID: fmt.Sprintf("%s%08d", manualPrefix, m.seq), Name: in.Name, Batch: in.Batch, Department: in.Department, Session: in.Session,
-		Upazila: in.Upazila, Phone: in.Phone, Note: in.Note, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
+		Upazila: in.Upazila, Union: in.Union, Gender: in.Gender, BloodGroup: in.BloodGroup, Phone: in.Phone, Note: in.Note, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
 	m.manual = append(m.manual, r)
 	return *r, nil
 }
@@ -77,6 +81,7 @@ func (m *memStore) UpdateManualImported(_ context.Context, id string, in ManualI
 	for _, r := range m.manual {
 		if r.ID == id {
 			r.Name, r.Batch, r.Department, r.Session, r.Upazila, r.Phone, r.Note = in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Phone, in.Note
+			r.Union, r.Gender, r.BloodGroup = in.Union, in.Gender, in.BloodGroup
 			return *r, nil
 		}
 	}
@@ -120,7 +125,7 @@ func (m *memStore) SetImportedEdit(_ context.Context, _, importedID string, in M
 // ---- PostgreSQL store ----
 
 func (s *pgStore) ImportedEdits(ctx context.Context) (map[string]ManualImportedInput, error) {
-	rows, err := s.db.Query(ctx, `SELECT imported_id, name, batch, department, session, upazila FROM imported_edits`)
+	rows, err := s.db.Query(ctx, `SELECT imported_id, name, batch, department, session, upazila, union_name, gender, blood_group, phone FROM imported_edits`)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +134,7 @@ func (s *pgStore) ImportedEdits(ctx context.Context) (map[string]ManualImportedI
 	for rows.Next() {
 		var id string
 		var in ManualImportedInput
-		if err := rows.Scan(&id, &in.Name, &in.Batch, &in.Department, &in.Session, &in.Upazila); err != nil {
+		if err := rows.Scan(&id, &in.Name, &in.Batch, &in.Department, &in.Session, &in.Upazila, &in.Union, &in.Gender, &in.BloodGroup, &in.Phone); err != nil {
 			return nil, err
 		}
 		out[id] = in
@@ -138,17 +143,18 @@ func (s *pgStore) ImportedEdits(ctx context.Context) (map[string]ManualImportedI
 }
 
 func (s *pgStore) SetImportedEdit(ctx context.Context, actorID, importedID string, in ManualImportedInput) error {
-	_, err := s.db.Exec(ctx, `INSERT INTO imported_edits (imported_id, name, batch, department, session, upazila, updated_by) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::uuid)
+	_, err := s.db.Exec(ctx, `INSERT INTO imported_edits (imported_id, name, batch, department, session, upazila, union_name, gender, blood_group, phone, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid)
 		ON CONFLICT (imported_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch, department = EXCLUDED.department, session = EXCLUDED.session,
-			upazila = EXCLUDED.upazila, updated_by = EXCLUDED.updated_by, updated_at = now()`, importedID, in.Name, in.Batch, in.Department, in.Session, in.Upazila, actorID)
+			upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name, gender = EXCLUDED.gender, blood_group = EXCLUDED.blood_group, phone = EXCLUDED.phone,
+			updated_by = EXCLUDED.updated_by, updated_at = now()`, importedID, in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Union, in.Gender, in.BloodGroup, in.Phone, actorID)
 	return err
 }
 
-const manualCols = `m.id::text, m.name, m.batch, m.department, m.session, m.upazila, m.phone, m.note, to_char(m.created_at AT TIME ZONE 'UTC', ` + tsFmt + `)`
+const manualCols = `m.id::text, m.name, m.batch, m.department, m.session, m.upazila, m.union_name, m.gender, m.blood_group, m.phone, m.note, to_char(m.created_at AT TIME ZONE 'UTC', ` + tsFmt + `)`
 
 func scanManual(r rowScanner) (ManualImported, error) {
 	var x ManualImported
-	err := r.Scan(&x.ID, &x.Name, &x.Batch, &x.Department, &x.Session, &x.Upazila, &x.Phone, &x.Note, &x.CreatedAt)
+	err := r.Scan(&x.ID, &x.Name, &x.Batch, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.Note, &x.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return x, ErrNotFound
 	}
@@ -181,8 +187,8 @@ func (s *pgStore) ListManualImported(ctx context.Context) ([]ManualImported, err
 }
 
 func (s *pgStore) CreateManualImported(ctx context.Context, actorID string, in ManualImportedInput) (ManualImported, error) {
-	return scanManual(s.db.QueryRow(ctx, `INSERT INTO imported_members AS m (name, batch, department, session, upazila, phone, note, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, '')::uuid)
-		RETURNING `+manualCols, in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Phone, in.Note, actorID))
+	return scanManual(s.db.QueryRow(ctx, `INSERT INTO imported_members AS m (name, batch, department, session, upazila, union_name, gender, blood_group, phone, note, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid)
+		RETURNING `+manualCols, in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Union, in.Gender, in.BloodGroup, in.Phone, in.Note, actorID))
 }
 
 func (s *pgStore) UpdateManualImported(ctx context.Context, id string, in ManualImportedInput) (ManualImported, error) {
@@ -190,8 +196,8 @@ func (s *pgStore) UpdateManualImported(ctx context.Context, id string, in Manual
 	if !ok {
 		return ManualImported{}, ErrNotFound
 	}
-	return scanManual(s.db.QueryRow(ctx, `UPDATE imported_members AS m SET name = $2, batch = $3, department = $4, session = $5, upazila = $6, phone = $7, note = $8, updated_at = now()
-		WHERE m.id = $1::uuid RETURNING `+manualCols, raw, in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Phone, in.Note))
+	return scanManual(s.db.QueryRow(ctx, `UPDATE imported_members AS m SET name = $2, batch = $3, department = $4, session = $5, upazila = $6, union_name = $7, gender = $8, blood_group = $9, phone = $10, note = $11, updated_at = now()
+		WHERE m.id = $1::uuid RETURNING `+manualCols, raw, in.Name, in.Batch, in.Department, in.Session, in.Upazila, in.Union, in.Gender, in.BloodGroup, in.Phone, in.Note))
 }
 
 func (s *pgStore) DeleteManualImported(ctx context.Context, id string) error {
@@ -235,6 +241,9 @@ type manualBody struct {
 	Department string `json:"department"`
 	Session    string `json:"session"`
 	Upazila    string `json:"upazila"`
+	Union      string `json:"union"`
+	Gender     string `json:"gender"`
+	BloodGroup string `json:"bloodGroup"`
 	Phone      string `json:"phone"`
 	Note       string `json:"note"`
 }
@@ -243,7 +252,8 @@ type manualBody struct {
 func (a *App) validateManual(b manualBody) (ManualImportedInput, map[string]string) {
 	errs := map[string]string{}
 	in := ManualImportedInput{Name: strings.TrimSpace(b.Name), Department: strings.TrimSpace(b.Department), Session: strings.TrimSpace(b.Session),
-		Upazila: strings.TrimSpace(b.Upazila), Phone: strings.TrimSpace(b.Phone), Note: strings.TrimSpace(b.Note)}
+		Upazila: strings.TrimSpace(b.Upazila), Phone: strings.TrimSpace(b.Phone), Note: strings.TrimSpace(b.Note),
+		Union: strings.TrimSpace(b.Union), Gender: b.Gender, BloodGroup: strings.TrimSpace(b.BloodGroup)}
 	if n := utf8.RuneCountInString(in.Name); n < 2 || n > 80 {
 		errs["name"] = "Name must be 2-80 characters."
 	}
@@ -275,6 +285,25 @@ func (a *App) validateManual(b manualBody) (ManualImportedInput, map[string]stri
 		if !found {
 			errs["upazila"] = "Choose an upazila from the list."
 		}
+	}
+	if in.Union != "" {
+		okUnion := false
+		for _, u := range a.Store.Upazilas {
+			if u.Slug == in.Upazila {
+				for _, x := range u.Unions {
+					okUnion = okUnion || x == in.Union
+				}
+			}
+		}
+		if !okUnion {
+			errs["union"] = "Choose a union that belongs to the upazila."
+		}
+	}
+	if in.Gender != "" && in.Gender != "female" && in.Gender != "male" && in.Gender != "other" {
+		errs["gender"] = "Choose female, male or other."
+	}
+	if in.BloodGroup != "" && !bloodRx.MatchString(in.BloodGroup) {
+		errs["bloodGroup"] = "Choose a blood group from the list."
 	}
 	if in.Phone != "" && !phoneRx.MatchString(in.Phone) {
 		errs["phone"] = "Use an 11-digit number starting with 01."
@@ -389,6 +418,23 @@ func (a *App) fileImported(id string) (Student, bool) {
 		}
 	}
 	return Student{}, false
+}
+
+// importedExtra returns the person details a directory record holds beyond the Student fields.
+func (a *App) importedExtra(ctx context.Context, id string) ManualImportedInput {
+	if e, err := a.Auth.Store.ImportedEdits(ctx); err == nil {
+		if x, ok := e[id]; ok {
+			return x
+		}
+	}
+	if rows, err := a.Auth.Store.ListManualImported(ctx); err == nil {
+		for _, m := range rows {
+			if m.ID == id {
+				return ManualImportedInput{Union: m.Union, Gender: m.Gender, BloodGroup: m.BloodGroup, Phone: m.Phone}
+			}
+		}
+	}
+	return ManualImportedInput{}
 }
 
 // importedFind looks a record up among the bundled files and the hand-added ones.

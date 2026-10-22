@@ -47,7 +47,7 @@ export default function Activate() {
     const d = await api('/me/invitation')
     if (d.invited) {
       setInvite(d)
-      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', upazila: d.profile.upazila || '', union: '', gender: '', bloodGroup: '' })
+      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', upazila: d.profile.upazila || '', union: d.profile.union || '', gender: d.profile.gender || '', bloodGroup: d.profile.bloodGroup || '' })
       setStep('profile')
     } else setStep(d.hasProfile ? 'has' : 'nothing')
   }

@@ -62,3 +62,7 @@ Approved members cannot edit name, batch, department, session or location direct
 
 - *Edit* works on every record. Bundled (file) records stay read-only files; the admin's completed name, batch, department, session and upazila are stored beside them (`imported_edits`, migration 014) and replace the file values everywhere.
 - **Verify needs an email.** The button is disabled until an address is saved on the record, and the API refuses with `email_required`. Verifying also marks that address as confirmed by the admin (`directory_invites.email_verified_at`); both the person and the email then show the verified icon. Changing the address clears the email mark. Note this is the admin's confirmation, not a mailbox check: the person's own Supabase email confirmation still happens when they activate.
+
+## Same person fields everywhere
+
+A directory record (hand-added or a completed bundled one) holds name, batch, department, session, upazila, union, gender, blood group, phone and the invitation email, the same set as a member profile (migration 015). The activation page is prefilled with all of them. Only administrators can add or change them (`tests: TestEveryAdminRouteIsRoleGuarded` reads every `/api/v1/admin` and `/api/v1/me` route table and fails if any route lacks its guard). A registered member's sign-in email is the Supabase account itself, so it is changed through the invitation move described above, not edited in place.

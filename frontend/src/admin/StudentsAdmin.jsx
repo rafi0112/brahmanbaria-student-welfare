@@ -437,7 +437,7 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
   const { t, n } = useApp()
   const errText = useErrText()
   const ups = useApi('/upazilas')
-  const start = { name: row?.name || '', batch: row?.batch ? String(row.batch) : '', department: row?.department || '', session: row?.session || '', upazila: row?.upazila || '', phone: row?.phone || '', note: row?.note || '' }
+  const start = { name: row?.name || '', batch: row?.batch ? String(row.batch) : '', department: row?.department || '', session: row?.session || '', upazila: row?.upazila || '', union: row?.union || '', gender: row?.gender || '', bloodGroup: row?.bloodGroup || '', phone: row?.phone || '', email: row?.invite?.email || '', note: row?.note || '' }
   const [v, setV] = useState(start)
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState('')
@@ -449,7 +449,13 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
     if (busy) return
     setBusy(true); setErrs({}); setMsg('')
     try {
-      await api(row ? `/admin/imported-students/${row.id}` : '/admin/imported-students', { method: row ? 'PATCH' : 'POST', body: JSON.stringify({ ...v, batch: Number(v.batch) || 0 }) })
+      const { email, ...rest } = v
+      const saved = await api(row ? `/admin/imported-students/${row.id}` : '/admin/imported-students', { method: row ? 'PATCH' : 'POST', body: JSON.stringify({ ...rest, batch: Number(rest.batch) || 0 }) })
+      const next = email.trim().toLowerCase()
+      if (next && next !== (row?.invite?.email || '')) { // the address is stored with the invitation, so it has its own endpoint
+        try { await api(`/admin/imported-students/${row?.id || saved.id}/email`, { method: 'PATCH', body: JSON.stringify({ email: next }) }) }
+        catch (e2) { setErrs({ email: e2.fields?.email || errText(e2) }); setMsg(t('ad.imp.detailsSavedEmailNot')); return }
+      }
       onSaved()
     } catch (err) {
       if (err.fields) setErrs(err.fields)
@@ -468,8 +474,15 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
             <select id={id} value={v.department} onChange={text('department')} aria-invalid={bad}><option value="">{t('auth.select')}</option>{depts.map((d) => <option key={d} value={d}>{d}</option>)}</select>)}</Field>
           <Field label={t('students.session')} error={errs.session} hint="2026-27">{(id, bad) => <input id={id} value={v.session} onChange={text('session')} maxLength={7} aria-invalid={bad} />}</Field>
           <Field label={t('auth.upazila')} error={errs.upazila}>{(id, bad) => (
-            <select id={id} value={v.upazila} onChange={text('upazila')} aria-invalid={bad}><option value="">—</option>{(ups.data?.items || []).map((u) => <option key={u.slug} value={u.slug}>{u.nameEn}</option>)}</select>)}</Field>
-          {row?.source !== 'file' && <Field label={t('ad.stu.phone')} error={errs.phone} hint="01XXXXXXXXX">{(id, bad) => <input id={id} value={v.phone} onChange={text('phone')} inputMode="tel" maxLength={11} aria-invalid={bad} />}</Field>}
+            <select id={id} value={v.upazila} onChange={(e) => setV({ ...v, upazila: e.target.value, union: '' })} aria-invalid={bad}><option value="">—</option>{(ups.data?.items || []).map((u) => <option key={u.slug} value={u.slug}>{u.nameEn}</option>)}</select>)}</Field>
+          <Field label={t('auth.union')} error={errs.union}>{(id, bad) => (
+            <select id={id} value={v.union} disabled={!v.upazila} onChange={text('union')} aria-invalid={bad}><option value="">—</option>{((ups.data?.items || []).find((u) => u.slug === v.upazila)?.unions || []).map((x) => <option key={x} value={x}>{x}</option>)}</select>)}</Field>
+          <Field label={t('ad.mem.gender')} error={errs.gender}>{(id, bad) => (
+            <select id={id} value={v.gender} onChange={text('gender')} aria-invalid={bad}><option value="">{t('ad.mem.genderNone')}</option><option value="female">{t('ad.mem.female')}</option><option value="male">{t('ad.mem.male')}</option><option value="other">{t('ad.mem.other')}</option></select>)}</Field>
+          <Field label={t('ad.stu.blood')} error={errs.bloodGroup}>{(id, bad) => (
+            <select id={id} value={v.bloodGroup} onChange={text('bloodGroup')} aria-invalid={bad}><option value="">—</option>{['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => <option key={b}>{b}</option>)}</select>)}</Field>
+          <Field label={t('auth.email')} error={errs.email} hint={t('ad.imp.emailHint')}>{(id, bad) => <input id={id} type="email" value={v.email} onChange={text('email')} maxLength={120} aria-invalid={bad} />}</Field>
+          <Field label={t('ad.stu.phone')} error={errs.phone} hint="01XXXXXXXXX">{(id, bad) => <input id={id} value={v.phone} onChange={text('phone')} inputMode="tel" maxLength={11} aria-invalid={bad} />}</Field>
         </div>
         {row?.source !== 'file' && <Field label={t('ad.imp.noteLabel')} error={errs.note} max={300} count={v.note.length}>{(id, bad) => <textarea id={id} rows={3} value={v.note} onChange={text('note')} maxLength={300} aria-invalid={bad} />}</Field>}
         {msg && <p className="notice bad" role="alert">{msg}</p>}

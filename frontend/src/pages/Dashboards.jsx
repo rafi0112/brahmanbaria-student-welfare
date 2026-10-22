@@ -150,6 +150,7 @@ function ChangeRequest({ p }) {
           {sel('department', 'auth.dept', (depts.data?.items || []).map((d) => [d, d]))}
           {sel('upazila', 'auth.upazila', upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]))}
           {sel('union', 'auth.union', unions.map((x) => [x, x]), !v.upazila)}
+          {sel('gender', 'auth.gender', [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]])}
           <div className="row-actions">
             <button className="btn btn-dark" disabled={busy}>{busy ? t('state.loading') : t('dash.change.submit')}</button>
             <button type="button" className="btn btn-ghost" onClick={() => setV(null)}>{t('dash.change.cancel')}</button>

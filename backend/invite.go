@@ -515,11 +515,13 @@ func (a *App) myInvitation(w http.ResponseWriter, r *http.Request, u User) {
 		writeJSON(w, 200, none)
 		return
 	}
+	ex := a.importedExtra(r.Context(), inv.ImportedID)
 	batch := 0
 	if rec.Batch != nil {
 		batch = *rec.Batch
 	}
-	writeJSON(w, 200, map[string]any{"invited": true, "profile": map[string]any{"name": rec.Name, "batch": batch, "department": rec.Department, "session": rec.Session, "upazila": rec.Upazila}})
+	writeJSON(w, 200, map[string]any{"invited": true, "profile": map[string]any{"name": rec.Name, "batch": batch, "department": rec.Department, "session": rec.Session, "upazila": rec.Upazila,
+		"union": ex.Union, "gender": ex.Gender, "bloodGroup": ex.BloodGroup, "phone": ex.Phone}})
 }
 
 // completeInviteFor marks the invitation done once the person's profile exists. It never creates a second profile or request:

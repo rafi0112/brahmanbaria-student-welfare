@@ -113,6 +113,9 @@ type importedView struct {
 	Student
 	Source     string `json:"source"` // file (the existing directory) | manual (added by an admin)
 	Phone      string `json:"phone,omitempty"`
+	Union      string `json:"union"`
+	Gender     string `json:"gender"`
+	BloodGroup string `json:"bloodGroup"`
 	Note       string `json:"note,omitempty"`
 	AddedAt    string `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
 	Verified   bool   `json:"verified"`
@@ -202,16 +205,21 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	type rec struct {
 		Student
 		src, phone, note, added string
+		union, gender, blood    string
 	}
 	all := make([]rec, 0, len(manual)+len(a.Store.Students))
 	for _, m := range manual { // hand-added records first, newest first
-		all = append(all, rec{Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "manual", m.Phone, m.Note, m.CreatedAt})
+		all = append(all, rec{Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "manual", m.Phone, m.Note, m.CreatedAt, m.Union, m.Gender, m.BloodGroup})
 	}
 	for _, s := range a.Store.Students {
 		if x, has := edits[s.ID]; has { // the admin completed this record
 			s.Name, s.Batch, s.Department, s.Session, s.Upazila = x.Name, x.Batch, x.Department, x.Session, x.Upazila
 		}
-		all = append(all, rec{Student: s, src: "file"})
+		r := rec{Student: s, src: "file"}
+		if x, has := edits[s.ID]; has {
+			r.phone, r.union, r.gender, r.blood = x.Phone, x.Union, x.Gender, x.BloodGroup
+		}
+		all = append(all, r)
 	}
 	out := []importedView{}
 	counts := map[string]int{"verified": 0, "awaiting": 0}
@@ -236,7 +244,7 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		if (status == "verified" && !verified) || (status == "awaiting" && verified) {
 			continue
 		}
-		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Note: r0.note, AddedAt: r0.added, Verified: verified}
+		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Union: r0.union, Gender: r0.gender, BloodGroup: r0.blood, Note: r0.note, AddedAt: r0.added, Verified: verified}
 		if reviewed {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
 		} else if verified {

@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -229,16 +233,94 @@ func directoryEmailStoreSuite(t *testing.T, s AuthStore) {
 		t.Fatal("a different address must not inherit the mark")
 	}
 	batch := 12
-	if err := s.SetImportedEdit(ctx, "", "de-file-1", ManualImportedInput{Name: "Completed Person", Batch: &batch, Department: "Finance", Session: "2019-20", Upazila: "kasba"}); err != nil {
+	if err := s.SetImportedEdit(ctx, "", "de-file-1", ManualImportedInput{Name: "Completed Person", Batch: &batch, Department: "Finance", Session: "2019-20", Upazila: "kasba", Union: "Kuti", Gender: "male", BloodGroup: "A+", Phone: "01712345678"}); err != nil {
 		t.Fatal(err)
 	}
 	batch = 13
 	if err := s.SetImportedEdit(ctx, "", "de-file-1", ManualImportedInput{Name: "Completed Again", Batch: &batch, Department: "Finance", Session: "2019-20", Upazila: "kasba"}); err != nil {
 		t.Fatal(err)
 	}
-	if e, _ := s.ImportedEdits(ctx); e["de-file-1"].Name != "Completed Again" || *e["de-file-1"].Batch != 13 {
+	if e, _ := s.ImportedEdits(ctx); e["de-file-1"].Name != "Completed Again" || *e["de-file-1"].Batch != 13 || e["de-file-1"].Union != "" {
 		t.Fatalf("edits: %+v", e["de-file-1"])
 	}
 }
 
 func TestDirectoryEmailStoreMemory(t *testing.T) { directoryEmailStoreSuite(t, newMemStore()) }
+
+func TestDirectoryRecordsCarryTheSamePersonFields(t *testing.T) {
+	e := authApp(t)
+	admin := e.admin(t)
+	up := e.app.Store.Upazilas[0]
+	body := map[string]any{"name": "Fields Person", "batch": 7, "department": e.app.Store.Depts[0], "session": "2019-20", "upazila": up.Slug,
+		"union": up.Unions[0], "gender": "female", "bloodGroup": "O+", "phone": "01712345678"}
+	rec := e.do("POST", "/api/v1/admin/imported-students", body, admin)
+	if rec.Code != 201 && rec.Code != 200 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	var made ManualImported
+	decodeBody(t, rec, &made)
+	if made.Union != up.Unions[0] || made.Gender != "female" || made.BloodGroup != "O+" {
+		t.Fatalf("stored: %+v", made)
+	}
+	for field, bad := range map[string]string{"gender": "robot", "bloodGroup": "Z+", "union": "No Such Union"} {
+		b := map[string]any{}
+		for k, v := range body {
+			b[k] = v
+		}
+		b[field] = bad
+		if rc := e.do("PATCH", "/api/v1/admin/imported-students/"+made.ID, b, admin); rc.Code != 422 {
+			t.Fatalf("%s=%q must be refused: %d", field, bad, rc.Code)
+		}
+	}
+	// a bundled record can be completed with the same fields, including a phone number
+	fid := e.app.Store.Students[1].ID
+	body["name"] = "Bundled Completed"
+	if rc := e.do("PATCH", "/api/v1/admin/imported-students/"+fid, body, admin); rc.Code != 200 {
+		t.Fatalf("complete bundled: %d %s", rc.Code, rc.Body)
+	}
+	lst := importedList(t, e, admin, "?q=Bundled+Completed")["items"].([]any)
+	if len(lst) != 1 {
+		t.Fatalf("list: %v", lst)
+	}
+	it := lst[0].(map[string]any)
+	if it["gender"] != "female" || it["bloodGroup"] != "O+" || it["union"] != up.Unions[0] || it["phone"] != "01712345678" {
+		t.Fatalf("view: %v", it)
+	}
+	// the activation page is prefilled with every detail of the record
+	if rc := setEmail(e, admin, fid, "prefill.person@example.org"); rc.Code != 200 {
+		t.Fatalf("email: %d", rc.Code)
+	}
+}
+
+// Every route under /api/v1/admin, found by reading the route tables, must refuse anonymous callers (401) and signed-in members
+// (403); every /api/v1/me route must refuse anonymous callers. A new admin route added without the guard fails this test.
+func TestEveryAdminRouteIsRoleGuarded(t *testing.T) {
+	e := supaApp(t)
+	e.makeAdmin(t, "admin-token", emailAdmin)
+	e.touch("member-token")
+	files, _ := filepath.Glob("*.go")
+	rx := regexp.MustCompile(`HandleFunc\("([A-Z]+) (/api/v1/(?:admin|me)[^"]*)"`)
+	pathVar := regexp.MustCompile(`\{[a-z]+\}`)
+	seen := 0
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		src, _ := os.ReadFile(f)
+		for _, m := range rx.FindAllStringSubmatch(string(src), -1) {
+			method, path := m[1], pathVar.ReplaceAllString(m[2], "x")
+			seen++
+			if rec := jreq(e, method, path, "", map[string]any{}); rec.Code != 401 {
+				t.Errorf("%s %s without a token: %d", method, path, rec.Code)
+			}
+			if strings.Contains(path, "/api/v1/admin") {
+				if rec := jreq(e, method, path, "member-token", map[string]any{}); rec.Code != 403 {
+					t.Errorf("%s %s as a member: %d", method, path, rec.Code)
+				}
+			}
+		}
+	}
+	if seen < 60 {
+		t.Fatalf("expected to find the route tables, found only %d routes", seen)
+	}
+}
