@@ -33,12 +33,21 @@ func newBrevoMailer(key, fromEmail, fromName string) *brevoMailer {
 }
 
 func (b *brevoMailer) Send(ctx context.Context, to, subject, text string) error {
-	body, _ := json.Marshal(map[string]any{
+	return b.SendWithReplyTo(ctx, to, "", subject, text)
+}
+
+// SendWithReplyTo sends from the configured sender address; replyTo (when set) is where answers will go.
+func (b *brevoMailer) SendWithReplyTo(ctx context.Context, to, replyTo, subject, text string) error {
+	payload := map[string]any{
 		"sender":      map[string]string{"email": b.fromEmail, "name": b.fromName},
 		"to":          []map[string]string{{"email": to}},
 		"subject":     subject,
 		"textContent": text,
-	})
+	}
+	if replyTo != "" {
+		payload["replyTo"] = map[string]string{"email": replyTo}
+	}
+	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.brevo.com/v3/smtp/email", bytes.NewReader(body))
 	if err != nil {
 		return err

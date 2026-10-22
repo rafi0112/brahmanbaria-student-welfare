@@ -6,6 +6,13 @@
 export const NAV = [
   { id: 'dash', to: '/admin', icon: 'dashboard', label: 'admin.nav.dash', group: 'overview' },
   { id: 'activity', to: '/admin/activity', icon: 'activity', label: 'ad.nav.activity', group: 'overview' },
+  { id: 'contact', to: '/admin/contact', icon: 'mail', label: 'ad.nav.contact', group: 'overview', watch: ['status'], children: [
+    { id: 'inbox', label: 'ad.ct.inbox', query: {} },
+    { id: 'new', label: 'ad.ct.new', query: { status: 'new' } },
+    { id: 'replied', label: 'ad.ct.replied', query: { status: 'replied' } },
+    { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
+    { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
+  ] },
   { id: 'students', to: '/admin/students', icon: 'users', label: 'admin.nav.students', group: 'people', watch: ['status', 'complete'], children: [
     { id: 'all', label: 'ad.stu.view.all', query: {} },
     { id: 'pending', label: 'ad.status.pending', query: { status: 'pending' } },
@@ -27,7 +34,13 @@ export const NAV = [
     { id: 'published', label: 'ad.status.published', query: { status: 'published' } },
     { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
   ] },
-  { id: 'heritage', to: '/admin/heritage', icon: 'landmark', label: 'admin.nav.places', group: 'content' },
+  { id: 'heritage', to: '/admin/heritage', icon: 'landmark', label: 'admin.nav.places', group: 'content', watch: ['status'], children: [
+    { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
+    { id: 'active', label: 'ad.status.activeShort', query: {} },
+    { id: 'draft', label: 'ad.status.draft', query: { status: 'draft' } },
+    { id: 'published', label: 'ad.status.published', query: { status: 'published' } },
+    { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
+  ] },
   { id: 'gallery', to: '/admin/gallery', icon: 'gallery', label: 'admin.nav.gallery', group: 'content', watch: ['status'], children: [
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
     { id: 'active', label: 'ad.status.activeShort', query: {} },

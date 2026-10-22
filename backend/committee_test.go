@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"net"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -180,6 +182,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig4, _ := migrationFS.ReadFile("migrations/004_admin_roles.sql")
 	mig5, _ := migrationFS.ReadFile("migrations/005_executive_committee.sql")
 	mig6, _ := migrationFS.ReadFile("migrations/006_cms_members_audit.sql")
+	mig7, _ := migrationFS.ReadFile("migrations/007_contact_inbox.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -201,18 +204,18 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6))} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7))} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}
 		}
 		_ = mig4 // the last-admin trigger is exercised by the auth suite, not needed here
 		var n int
-		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'sessions', 'committees', 'executives', 'committee_audit', 'role_changes', 'cms_entries', 'admin_audit')`).Scan(&n); err != nil {
+		if err := c.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace = pg_my_temp_schema() AND relname IN ('users', 'profiles', 'sessions', 'committees', 'executives', 'committee_audit', 'role_changes', 'cms_entries', 'admin_audit', 'contact_messages', 'contact_replies')`).Scan(&n); err != nil {
 			return err
 		}
-		if n != 9 {
-			t.Fatalf("expected 9 temp tables on this connection, found %d; refusing to continue", n)
+		if n != 11 {
+			t.Fatalf("expected 11 temp tables on this connection, found %d; refusing to continue", n)
 		}
 		return nil
 	}
@@ -224,6 +227,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	pg := &pgStore{db: pool}
 	committeeStoreSuite(t, pg)
 	cmsStoreSuite(t, pg)
+	contactStoreSuite(t, pg)
 }
 
 // ---------------------------------------------------------------- HTTP layer
@@ -636,7 +640,8 @@ func TestDriveLinkPhoto(t *testing.T) {
 		"html page":                      {"https://drive.google.com/file/d/HTMLHTMLHTMLHTMLHTMLH1/view", 422, "drive_not_public"},
 		"missing file":                   {"https://drive.google.com/file/d/MISSINGMISSINGMISSING1/view", 422, "drive_not_public"},
 		"corrupt image":                  {"https://drive.google.com/file/d/BROKENBROKENBROKENBR1/view", 422, "photo_invalid"},
-		"not a drive link":               {"https://example.com/photo.png", 422, "drive_link"},
+		"plain http link":                {"http://example.com/photo.png", 422, "image_link"},
+		"internal address":               {"https://127.0.0.1/photo.png", 422, "image_link"},
 		"folder link":                    {"https://drive.google.com/drive/folders/" + id, 422, "drive_link"},
 	} {
 		before := len(img.puts)
@@ -647,5 +652,41 @@ func TestDriveLinkPhoto(t *testing.T) {
 		if len(img.puts) != before {
 			t.Errorf("%s: stored something", name)
 		}
+	}
+}
+
+func TestAnyImageLinkIsFetchedSafely(t *testing.T) {
+	png := pngBytes(200, 200)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ok.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write(png)
+		case "/redir":
+			http.Redirect(w, r, "/ok.png", http.StatusFound)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	ctx := context.Background()
+	// a normal public image link works (private hosts are only reachable here because the test opts in)
+	for _, path := range []string{"/ok.png", "/redir"} {
+		if data, err := fetchImageURL(ctx, srv.URL+path, true); err != nil || len(data) == 0 {
+			t.Fatalf("%s: %v", path, err)
+		}
+	}
+	if _, err := fetchImageURL(ctx, srv.URL+"/missing", true); !errors.Is(err, ErrImageUnreachable) {
+		t.Errorf("404 should be unreachable, got %v", err)
+	}
+	// production behaviour: internal addresses, plain http, credentials and odd ports are all refused
+	for _, bad := range []string{srv.URL + "/ok.png", "http://example.com/a.png", "https://user:pw@example.com/a.png", "https://127.0.0.1/a.png",
+		"https://[::1]/a.png", "https://169.254.169.254/latest/meta-data/", "https://10.0.0.5/a.png", "https://192.168.1.1/a.png", "ftp://example.com/a.png", "", "not a url"} {
+		if _, err := fetchImageURL(ctx, bad, false); err == nil {
+			t.Errorf("should be refused: %q", bad)
+		}
+	}
+	if !blockedIP(net.ParseIP("100.64.1.1")) || blockedIP(net.ParseIP("8.8.8.8")) {
+		t.Error("blockedIP classification wrong")
 	}
 }

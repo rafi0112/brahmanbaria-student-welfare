@@ -56,7 +56,7 @@ async function bearer() {
 export async function uploadMedia({ file, driveUrl, endpoint = '/admin/media', onProgress, signal }) {
   const form = new FormData()
   if (file) form.append('file', file)
-  if (driveUrl) form.append('driveUrl', driveUrl)
+  if (driveUrl) form.append('imageUrl', driveUrl)
   const headers = await bearer()
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()

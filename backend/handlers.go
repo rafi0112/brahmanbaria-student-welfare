@@ -432,6 +432,10 @@ func (a *App) contact(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 422, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}
+	if a.Auth != nil && a.Auth.Store != nil {
+		a.submitContact(w, r, c)
+		return
+	}
 	rec, _ := json.Marshal(map[string]string{"at": time.Now().UTC().Format(time.RFC3339), "name": strings.TrimSpace(c.Name),
 		"email": strings.TrimSpace(c.Email), "subject": strings.TrimSpace(c.Subject), "message": strings.TrimSpace(c.Message)})
 	a.mu.Lock()

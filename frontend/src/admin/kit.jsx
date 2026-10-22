@@ -242,7 +242,16 @@ export function Modal({ title, children, onClose, wide, busy, drawer, guard }) {
   const labelId = useId()
   const box = useRef(null)
   const [leaving, setLeaving] = useState(false)
-  const close = useCallback(() => { if (busy || guard?.()) return; setLeaving(true); setTimeout(onClose, 140) }, [busy, onClose, guard])
+  // The latest props live in a ref so the effect below runs once. Re-running it on every parent render would restore
+  // focus to the opener after each keystroke, which is what made text fields accept a single character.
+  const live = useRef({})
+  live.current = { onClose, busy, guard }
+  const close = useCallback(() => {
+    const { busy: working, guard: hold } = live.current
+    if (working || hold?.()) return
+    setLeaving(true)
+    setTimeout(() => live.current.onClose?.(), 140)
+  }, [])
   useEffect(() => {
     const prev = document.activeElement
     const onKey = (e) => {
@@ -340,7 +349,7 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
           </div>
           <label className="field compact"><span>{t('ad.driveLink')}</span>
             <span className="row">
-              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/file/d/…" inputMode="url" disabled={busy} />
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://example.com/photo.jpg" inputMode="url" disabled={busy} />
               <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !link.trim()} onClick={() => send({ driveUrl: link.trim() }, '').then(() => setLink(''))}>{t('ad.useLink')}</button>
             </span>
           </label>

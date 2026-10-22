@@ -81,7 +81,7 @@ function PhotoPicker({ value, onChange }) {
   const useLink = () => {
     if (!link.trim()) return
     const form = new FormData()
-    form.append('driveUrl', link.trim())
+    form.append('imageUrl', link.trim())
     send(form, '').then(() => setLink(''))
   }
   const shown = local || value?.url
@@ -101,7 +101,7 @@ function PhotoPicker({ value, onChange }) {
           </div>
           <label className="field compact"><span>{t('cm.driveLink')}</span>
             <span className="row">
-              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/file/d/…" inputMode="url" />
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://example.com/photo.jpg" inputMode="url" />
               <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !link.trim()} onClick={useLink}>{t('cm.useLink')}</button>
             </span>
           </label>

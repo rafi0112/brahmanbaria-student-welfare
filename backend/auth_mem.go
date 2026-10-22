@@ -33,6 +33,7 @@ type memStore struct {
 	roleLog  []RoleChange
 	cm       committeeMem
 	cms      cmsMem
+	contacts []*memContact
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).

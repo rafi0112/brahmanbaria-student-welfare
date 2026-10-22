@@ -457,3 +457,13 @@
 .adm .ad-menu .mi-check { margin-left: auto; color: var(--a-text); }
 .adm .ad-menu span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .adm .ad-menu button[aria-checked='true'] { background: var(--a-hover-row); }
+
+/* contact inbox */
+.adm .dt tr.is-unread td strong { font-weight: 700; }
+.adm .dt tr.is-unread td:first-child { box-shadow: inset 3px 0 0 var(--a-accent); }
+.adm .st-ct-new { background: var(--a-accent-soft); color: var(--a-accent); }
+.adm .st-ct-read, .adm .st-ct-archived { background: var(--a-hover); color: var(--a-text-2); }
+.adm .st-ct-replied { background: var(--a-ok-bg); color: var(--a-ok); }
+.ct-body { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; background: var(--a-surface-2); border-radius: var(--a-r); margin: 8px 0; }
+.ct-thread { margin-top: 8px; } .ct-reply { margin-top: 8px; } .ct-reply.is-failed .ct-body { box-shadow: inset 3px 0 0 var(--a-bad); }
+.ct-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; } .adm .ct-delete { margin-left: auto; color: var(--a-bad); }

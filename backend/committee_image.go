@@ -10,10 +10,12 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -32,6 +34,9 @@ var (
 	ErrDriveLink        = errors.New("that is not a Google Drive image link")
 	ErrDriveNotPublic   = errors.New("the Drive image cannot be displayed; share it as 'Anyone with the link'")
 	ErrDriveUnreachable = errors.New("Google Drive could not be reached")
+	ErrImageLink        = errors.New("that is not a usable image link")
+	ErrImageNotImage    = errors.New("the link does not lead to an image")
+	ErrImageUnreachable = errors.New("the image could not be downloaded")
 	ErrStorageOff       = errors.New("photo storage is not configured")
 )
 
@@ -181,4 +186,80 @@ func fetchDriveImage(ctx context.Context, base, id string, allowHost func(string
 func driveHostAllowed(host string) bool {
 	host = strings.ToLower(host)
 	return host == "google.com" || strings.HasSuffix(host, ".google.com") || strings.HasSuffix(host, ".googleusercontent.com")
+}
+
+// blockedIP reports addresses a server must never be tricked into contacting: loopback, private, link-local
+// (including cloud metadata), unspecified, multicast and carrier-grade NAT ranges.
+func blockedIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() {
+		return true
+	}
+	if v4 := ip.To4(); v4 != nil && v4[0] == 100 && v4[1]&0xc0 == 64 {
+		return true
+	}
+	return false
+}
+
+// fetchImageURL downloads any public image link so it can be validated and stored in our own bucket. Because the
+// server makes the request, it is restricted: https only, no credentials in the link, standard port, at most four
+// redirects, and the connection itself refuses internal addresses (checked at dial time, so DNS tricks cannot help).
+// allowPrivate exists only so tests can use a local server.
+func fetchImageURL(ctx context.Context, raw string, allowPrivate bool) ([]byte, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" || u.User != nil || len(raw) > 2000 {
+		return nil, ErrImageLink
+	}
+	okScheme := func(x *url.URL) bool { return x.Scheme == "https" || (allowPrivate && x.Scheme == "http") }
+	if !okScheme(u) {
+		return nil, ErrImageLink
+	}
+	dialer := &net.Dialer{Timeout: 6 * time.Second, Control: func(_, address string, _ syscall.RawConn) error {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return ErrImageLink
+		}
+		ip := net.ParseIP(host)
+		if allowPrivate {
+			return nil
+		}
+		if ip == nil || blockedIP(ip) || port != "443" {
+			return ErrImageLink
+		}
+		return nil
+	}}
+	client := &http.Client{
+		Timeout:   12 * time.Second,
+		Transport: &http.Transport{Proxy: nil, DialContext: dialer.DialContext, TLSHandshakeTimeout: 6 * time.Second, DisableKeepAlives: true},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) > 4 || !okScheme(req.URL) || req.URL.User != nil {
+				return ErrImageLink
+			}
+			return nil
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, ErrImageLink
+	}
+	req.Header.Set("Accept", "image/jpeg,image/png")
+	req.Header.Set("User-Agent", "JelaKollanImageFetch/1")
+	res, err := client.Do(req)
+	if err != nil {
+		if errors.Is(err, ErrImageLink) {
+			return nil, ErrImageLink
+		}
+		return nil, ErrImageUnreachable
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, ErrImageUnreachable
+	}
+	data, err := io.ReadAll(io.LimitReader(res.Body, maxPhotoBytes+1))
+	if err != nil {
+		return nil, ErrImageUnreachable
+	}
+	if len(data) > maxPhotoBytes {
+		return nil, ErrPhotoTooBig
+	}
+	return data, nil // the bytes are decoded and re-encoded by cleanImage, so only a real JPEG or PNG is ever stored
 }

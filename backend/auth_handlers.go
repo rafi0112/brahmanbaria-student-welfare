@@ -33,15 +33,17 @@ type Auth struct {
 	MediaBase      string
 	DriveBase      string
 	DriveAllowHost func(string) bool
+	// AllowPrivateImageHosts lets tests fetch from a local server; production never sets it.
+	AllowPrivateImageHosts bool
 
-	loginIP, loginEmail, registerIP, mailIP, uploadUser *Limiter
+	loginIP, loginEmail, registerIP, mailIP, uploadUser, replyUser *Limiter
 }
 
 func newAuth(store AuthStore, mailer Mailer, frontendURL string, secure bool, same http.SameSite) *Auth {
 	return &Auth{
 		Store: store, Mailer: mailer, FrontendURL: strings.TrimRight(frontendURL, "/"), CookieSecure: secure, SameSite: same,
 		loginIP: newLimiter(30, 10*time.Minute), loginEmail: newLimiter(10, 15*time.Minute),
-		registerIP: newLimiter(8, time.Hour), mailIP: newLimiter(8, time.Hour), uploadUser: newLimiter(60, time.Hour),
+		registerIP: newLimiter(8, time.Hour), mailIP: newLimiter(8, time.Hour), uploadUser: newLimiter(60, time.Hour), replyUser: newLimiter(60, time.Hour),
 	}
 }
 
@@ -89,6 +91,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/admin/members/{id}/reject", h(a.requireAdmin(a.review(StatusRejected))))
 	a.committeeRoutes(m, h)
 	a.cmsRoutes(m, h)
+	a.contactRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 

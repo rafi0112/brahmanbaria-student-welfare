@@ -42,6 +42,17 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "purge-contact" { // for cron: removes contact messages older than 30 days
+		if authStore == nil {
+			log.Fatal("purge-contact: DATABASE_URL is not set")
+		}
+		n, err := authStore.PurgeExpiredContacts(context.Background())
+		if err != nil {
+			log.Fatalf("purge-contact: %v", err)
+		}
+		log.Printf("purge-contact: removed %d expired messages", n)
+		return
+	}
 	if pg, ok := authStore.(*pgStore); ok {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		dbStore, contentErr := pg.Content(ctx, store)
@@ -66,6 +77,7 @@ func main() {
 		seedCancel()
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
+		go purgeContactLoop(context.Background(), authStore)
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
 		if st := newSupabaseStorage(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", "")); st != nil {
 			app.Auth.Images, app.Auth.PhotoBase, app.Auth.MediaBase = st, st.PublicBase(photoBucket), st.PublicBase(mediaBucket)

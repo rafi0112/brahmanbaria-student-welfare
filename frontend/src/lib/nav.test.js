@@ -15,7 +15,7 @@ test('child links keep the parent route and add only their own filter', () => {
 })
 
 test('the current child is decided by the address, and exactly one child matches', () => {
-  for (const id of ['students', 'roles', 'blog', 'gallery']) {
+  for (const id of ['students', 'roles', 'blog', 'heritage', 'gallery']) {
     const it = item(id)
     for (const c of it.children) {
       const to = childTo(it, c)

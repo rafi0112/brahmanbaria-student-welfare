@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -248,27 +250,16 @@ func (a *App) uploadImage(w http.ResponseWriter, r *http.Request, u User, bucket
 	}
 
 	var data []byte
-	if link := strings.TrimSpace(r.FormValue("driveUrl")); link != "" {
-		id, err := driveFileID(link)
-		if err != nil {
-			apiError(w, http.StatusUnprocessableEntity, "drive_link")
+	var err error
+	if link := strings.TrimSpace(r.FormValue("imageUrl")); link == "" && strings.TrimSpace(r.FormValue("driveUrl")) != "" {
+		// older clients send the link as driveUrl; it is handled exactly like imageUrl
+		data, err = a.fetchLinked(r.Context(), strings.TrimSpace(r.FormValue("driveUrl")))
+		if !a.linkFailed(w, err) {
 			return
 		}
-		allow := driveHostAllowed
-		if a.Auth.DriveAllowHost != nil {
-			allow = a.Auth.DriveAllowHost
-		}
-		base := a.Auth.DriveBase
-		if base == "" {
-			base = "https://drive.google.com"
-		}
-		data, err = fetchDriveImage(r.Context(), base, id, allow)
-		if err != nil {
-			if errors.Is(err, ErrDriveUnreachable) {
-				apiError(w, http.StatusBadGateway, "drive_unreachable")
-			} else {
-				apiError(w, http.StatusUnprocessableEntity, "drive_not_public")
-			}
+	} else if link != "" {
+		data, err = a.fetchLinked(r.Context(), link)
+		if !a.linkFailed(w, err) {
 			return
 		}
 	} else {
@@ -308,4 +299,46 @@ func (a *App) uploadImage(w http.ResponseWriter, r *http.Request, u User, bucket
 		return
 	}
 	writeJSON(w, 201, map[string]string{"path": name, "url": base + name})
+}
+
+// fetchLinked downloads an image from a link: Google Drive share links keep their dedicated handling, every other
+// public https link goes through the restricted fetcher.
+func (a *App) fetchLinked(ctx context.Context, link string) ([]byte, error) {
+	if u, perr := url.Parse(link); perr == nil && strings.EqualFold(u.Hostname(), "drive.google.com") {
+		id, err := driveFileID(link)
+		if err != nil {
+			return nil, err
+		}
+		allow := driveHostAllowed
+		if a.Auth.DriveAllowHost != nil {
+			allow = a.Auth.DriveAllowHost
+		}
+		base := a.Auth.DriveBase
+		if base == "" {
+			base = "https://drive.google.com"
+		}
+		return fetchDriveImage(ctx, base, id, allow)
+	}
+	return fetchImageURL(ctx, link, a.Auth.AllowPrivateImageHosts)
+}
+
+// linkFailed writes the matching error response and reports whether the download succeeded.
+func (a *App) linkFailed(w http.ResponseWriter, err error) bool {
+	switch {
+	case err == nil:
+		return true
+	case errors.Is(err, ErrDriveLink):
+		apiError(w, http.StatusUnprocessableEntity, "drive_link")
+	case errors.Is(err, ErrDriveNotPublic):
+		apiError(w, http.StatusUnprocessableEntity, "drive_not_public")
+	case errors.Is(err, ErrDriveUnreachable):
+		apiError(w, http.StatusBadGateway, "drive_unreachable")
+	case errors.Is(err, ErrImageLink):
+		apiError(w, http.StatusUnprocessableEntity, "image_link")
+	case errors.Is(err, ErrPhotoTooBig):
+		apiError(w, http.StatusRequestEntityTooLarge, "photo_too_big")
+	default:
+		apiError(w, http.StatusBadGateway, "image_unreachable")
+	}
+	return false
 }

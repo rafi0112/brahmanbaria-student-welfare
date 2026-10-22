@@ -6,7 +6,15 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en'); localStorage.setItem('jk-theme', 'light') } catch { /* ignore */ } })
 })
 
+// Signing in goes through the real form once; later tests reuse that session cookie (the API rate-limits sign-ins per address).
+let session = null
 async function login(page) {
+  if (session) {
+    await page.context().addCookies(session)
+    await page.goto('/admin')
+    await expect(page.locator('#adm-main')).toBeVisible()
+    return
+  }
   await page.goto('/login')
   await page.locator('input[type=email]').fill(E2E.email)
   await page.locator('input[type=password]').fill(E2E.password)
@@ -16,6 +24,7 @@ async function login(page) {
   ])
   expect(res.status(), 'sign-in against the isolated API').toBe(200)
   await page.waitForLoadState('networkidle')
+  session = await page.context().cookies()
   await page.goto('/admin')
   await expect(page.locator('#adm-main')).toBeVisible()
 }
@@ -27,10 +36,10 @@ const kid = (page, parent, name) => side(page).locator('.adm-parent').filter({ h
 test('admin shell: one sidebar, no public navigation', async ({ page }) => {
   await login(page)
   await expect(page.locator('header.site-header, .site-header')).toHaveCount(0)
-  for (const label of ['Dashboard', 'Activity', 'Executive Committee', 'Heritage places']) {
+  for (const label of ['Dashboard', 'Activity', 'Executive Committee']) {
     await expect(side(page).getByRole('link', { name: label })).toBeVisible()
   }
-  for (const label of ['Students', 'Admin management', 'Blog', 'Gallery']) {
+  for (const label of ['Students', 'Admin management', 'Blog', 'Heritage places', 'Gallery']) {
     await expect(side(page).getByRole('button', { name: label, exact: true })).toBeVisible() // sections with filtered views
   }
 })
@@ -42,7 +51,8 @@ test('sidebar groups collapse with animation and keep the current page highlight
   await expect(content).toHaveAttribute('aria-expanded', 'true')
   await content.click()
   await expect(content).toHaveAttribute('aria-expanded', 'false')
-  await expect(side(page).getByRole('link', { name: 'Heritage places' })).toBeHidden()
+  await expect(side(page).getByRole('link', { name: 'Executive Committee' })).toBeVisible()
+  await expect(side(page).getByRole('button', { name: 'Blog', exact: true })).toBeHidden()
   await page.goto('/admin/blog?status=draft') // the group holding the current page opens itself
   await expect(content).toHaveAttribute('aria-expanded', 'true')
   await expect(kid(page, 'Blog', 'Draft')).toHaveAttribute('aria-current', 'page')
@@ -108,8 +118,8 @@ test('mobile: the sidebar is a drawer that closes after navigating', async ({ pa
   await login(page)
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.locator('.adm')).toHaveAttribute('data-open', 'true')
-  await side(page).getByRole('link', { name: 'Heritage places' }).click()
-  await expect(page).toHaveURL(/\/admin\/heritage/)
+  await side(page).getByRole('link', { name: 'Activity' }).click()
+  await expect(page).toHaveURL(/\/admin\/activity/)
   await expect(page.locator('.adm')).toHaveAttribute('data-open', 'false')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
@@ -132,6 +142,7 @@ test('nested views: each child opens its filtered list, marks itself current, an
     ['Admin management', 'Member', /\/admin\?tab=roles&role=member$/],
     ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
     ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
+    ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],
     ['Gallery', 'Hidden', /\/admin\/gallery\?status=draft$/],
     ['Gallery', 'Published', /\/admin\/gallery\?status=published$/],
   ]
@@ -178,4 +189,75 @@ test('my profile: opens from the account button, shows read-only role, closes wi
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
   await expect(me).toBeFocused()
+})
+
+// Regression: text fields used to accept a single character because their dialog restored focus on every keystroke.
+async function typeInEveryField(page, scope, label) {
+  const fields = scope.locator('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=submit]):not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled])')
+  const count = await fields.count()
+  expect(count, `${label}: expected some fields`).toBeGreaterThan(0)
+  for (let i = 0; i < count; i++) {
+    const f = fields.nth(i)
+    if (!(await f.isVisible())) continue
+    const type = (await f.getAttribute('type')) || 'text'
+    if (['date', 'datetime-local', 'time', 'month', 'week', 'range', 'color', 'number'].includes(type)) continue
+    await f.click()
+    await f.fill('')
+    await f.pressSequentially('abcdefghij', { delay: 15 })
+    const v = await f.inputValue()
+    expect(v, `${label}: field #${i} (${(await f.getAttribute('name')) || (await f.getAttribute('aria-label')) || type}) lost keystrokes`).toBe('abcdefghij')
+  }
+}
+
+test('every text field in the admin editors accepts full typing', async ({ page }) => {
+  await login(page)
+  await page.goto('/admin/blog/new')
+  await typeInEveryField(page, page.locator('#adm-main'), 'blog editor')
+  await page.goto('/admin/heritage/new')
+  await typeInEveryField(page, page.locator('#adm-main'), 'heritage editor')
+  for (const url of ['/admin/blog', '/admin/heritage', '/admin/gallery', '/admin/students', '/admin?tab=roles', '/admin/activity']) {
+    await page.goto(url)
+    await expect(page.locator('#adm-main')).toBeVisible()
+    await typeInEveryField(page, page.locator('.adm-main .ad-toolbar, .adm-main'), `${url} toolbar`)
+  }
+  // committee: new committee form and the add-member dialogs
+  await page.goto('/admin?tab=committee')
+  await expect(page.locator('#adm-main')).toBeVisible()
+  const newBtn = page.getByRole('button', { name: /new committee|create/i }).first()
+  if (await newBtn.count()) { await newBtn.click(); await typeInEveryField(page, page.locator('.adm-main'), 'committee form') }
+  // gallery: new album and image dialogs
+  await page.goto('/admin/gallery')
+  for (const name of [/new album/i]) {
+    const b = page.getByRole('button', { name }).first()
+    if (await b.count()) { await b.click(); await typeInEveryField(page, page.getByRole('dialog'), `gallery ${name}`); await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).toBeHidden() }
+  }
+})
+
+test('contact inbox: a public message arrives, can be opened, answered and archived', async ({ page }) => {
+  await page.goto('/')
+  const res = await page.evaluate(async () => {
+    const r = await fetch('/api/v1/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'E2E Visitor', email: 'visitor@example.test', subject: 'Hello from the e2e suite', message: 'Please tell me about the next meetup.' }) })
+    return r.status
+  })
+  expect(res).toBe(201)
+  await login(page)
+  await side(page).getByRole('button', { name: 'Messages', exact: true }).click()
+  await kid(page, 'Messages', 'Inbox').click()
+  await expect(page).toHaveURL(/\/admin\/contact$/)
+  await expect(page.getByText('Hello from the e2e suite').first()).toBeVisible()
+  await expect(page.getByText(/emails are printed to its log/).first()).toBeVisible() // honest about the development mailer
+  await page.getByRole('button', { name: 'Open', exact: true }).first().click()
+  const dlg = page.getByRole('dialog', { name: 'Message' })
+  await expect(dlg).toContainText('visitor@example.test')
+  await dlg.getByRole('button', { name: 'Reply', exact: true }).click()
+  await expect(dlg).toContainText('visitor@example.test') // the recipient is shown and fixed
+  await dlg.getByRole('textbox').pressSequentially('Thanks, see you on Friday.', { delay: 10 })
+  await expect(dlg.getByRole('textbox')).toHaveValue('Thanks, see you on Friday.')
+  await dlg.getByRole('button', { name: 'Send reply' }).click()
+  await expect(dlg).toContainText('Thanks, see you on Friday.')
+  await expect(dlg).toContainText('Replied')
+  await dlg.getByRole('button', { name: 'Archive' }).click()
+  await expect(dlg).toBeHidden()
+  await kid(page, 'Messages', 'Archived').click()
+  await expect(page.getByText('Hello from the e2e suite').first()).toBeVisible()
 })
