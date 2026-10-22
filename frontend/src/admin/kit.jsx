@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { uploadMedia } from '../lib/api.js'
@@ -236,12 +236,13 @@ export function Field({ label, required, hint, error, count, max, children, id }
 
 /* ---------------------------------------------------------------- dialogs */
 
-export function Modal({ title, children, onClose, wide, busy, drawer }) {
+// `guard` runs before every close attempt (X, Escape, backdrop); returning true keeps the dialog open (unsaved changes).
+export function Modal({ title, children, onClose, wide, busy, drawer, guard }) {
   const { t } = useApp()
   const labelId = useId()
   const box = useRef(null)
   const [leaving, setLeaving] = useState(false)
-  const close = useCallback(() => { if (busy) return; setLeaving(true); setTimeout(onClose, 140) }, [busy, onClose])
+  const close = useCallback(() => { if (busy || guard?.()) return; setLeaving(true); setTimeout(onClose, 140) }, [busy, onClose, guard])
   useEffect(() => {
     const prev = document.activeElement
     const onKey = (e) => {
@@ -382,19 +383,28 @@ export function EmptyState({ title, text, action }) {
 // It is positioned with fixed coordinates so a table's overflow never clips it.
 export function RowMenu({ label, items, className = '', icon }) {
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const [pos, setPos] = useState({ top: -999, left: 0 })
   const btn = useRef(null)
   const list = useRef(null)
   const live = items.filter(Boolean)
+  // place the menu under its button, flip above when there is no room, and keep it inside the viewport
+  useLayoutEffect(() => {
+    if (!open || !btn.current || !list.current) return
+    const r = btn.current.getBoundingClientRect()
+    const h = list.current.offsetHeight
+    const w = list.current.offsetWidth
+    const below = r.bottom + 6
+    const top = below + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : below
+    const left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8)
+    setPos({ top, left })
+  }, [open])
   useEffect(() => {
     if (!open) return undefined
-    const r = btn.current.getBoundingClientRect()
-    setPos({ top: Math.min(r.bottom + 4, innerHeight - 24), right: Math.max(8, innerWidth - r.right) })
-    list.current?.querySelector('[role=menuitem]:not([disabled])')?.focus()
+    list.current?.querySelector('[role^=menuitem]:not([disabled])')?.focus()
     const close = () => setOpen(false)
     const onKey = (e) => {
       if (e.key === 'Escape') { setOpen(false); btn.current?.focus() }
-      const els = [...(list.current?.querySelectorAll('[role=menuitem]:not([disabled])') || [])]
+      const els = [...(list.current?.querySelectorAll('[role^=menuitem]:not([disabled])') || [])]
       const i = els.indexOf(document.activeElement)
       if (e.key === 'ArrowDown') { e.preventDefault(); els[(i + 1) % els.length]?.focus() }
       if (e.key === 'ArrowUp') { e.preventDefault(); els[(i - 1 + els.length) % els.length]?.focus() }
@@ -413,12 +423,17 @@ export function RowMenu({ label, items, className = '', icon }) {
         <Icon name="more" size={16} />
       </button>
       {open && createPortal(
-        <ul ref={list} role="menu" className="ad-menu" aria-label={label} style={{ top: pos.top, right: pos.right }}>
+        <ul ref={list} role="menu" className="ad-menu" aria-label={label} style={{ top: pos.top, left: pos.left }}>
           {live.map((it) => (
-            <li key={it.label} role="none">
+            <li key={it.label} role="none" className={it.sep ? 'has-sep' : ''}>
               {it.href
-                ? <a role="menuitem" className={it.danger ? 'danger' : ''} href={it.href} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>{it.label}</a>
-                : <button role="menuitem" type="button" className={it.danger ? 'danger' : ''} disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}>{it.label}</button>}
+                ? <a role="menuitem" className={it.danger ? 'danger' : ''} href={it.href} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>{it.icon && <Icon name={it.icon} size={14} />}<span>{it.label}</span></a>
+                : (
+                  <button role={it.checked != null ? 'menuitemradio' : 'menuitem'} aria-checked={it.checked ?? undefined} type="button" className={it.danger ? 'danger' : ''} disabled={it.disabled} title={it.disabled ? it.why : undefined}
+                    onClick={() => { setOpen(false); it.onClick() }}>
+                    {it.icon && <Icon name={it.icon} size={14} />}<span>{it.label}</span>{it.hint && <small>{it.hint}</small>}{it.checked && <Icon name="check" size={14} className="mi-check" />}
+                  </button>
+                )}
             </li>
           ))}
         </ul>,

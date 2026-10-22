@@ -372,3 +372,27 @@ func TestAuthDisabledReturns503(t *testing.T) {
 		t.Fatalf("want 503 got %d", rec.Code)
 	}
 }
+
+// "My profile" can only change contact and visibility: role, name, batch, department and status are not accepted.
+func TestProfilePatchCannotChangeProtectedFields(t *testing.T) {
+	e := authApp(t)
+	mc := e.member(t, "protect@example.com")
+	before := e.do("GET", "/api/v1/auth/me", nil, mc)
+	rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"role": "admin", "name": "Hijacked", "batch": 1, "department": "Law", "status": "approved", "phone": "01712345678"}, mc)
+	if rec.Code == 200 {
+		after := rec.Body.String()
+		if strings.Contains(after, `"role":"admin"`) || strings.Contains(after, "Hijacked") || strings.Contains(after, `"status":"approved"`) {
+			t.Fatalf("protected field changed through profile: %s", after)
+		}
+	} else if rec.Code != 400 && rec.Code != 422 {
+		t.Fatalf("unexpected status %d", rec.Code)
+	}
+	now := e.do("GET", "/api/v1/auth/me", nil, mc)
+	if !strings.Contains(now.Body.String(), `"role":"member"`) || strings.Contains(now.Body.String(), "Hijacked") {
+		t.Fatalf("account changed: before %s after %s", before.Body, now.Body)
+	}
+	// the endpoint is bound to the signed-in identity: there is no id to aim at another member
+	if rec := e.do("PATCH", "/api/v1/me/profile/"+"someone-else", map[string]any{"phone": "01712345678"}, mc); rec.Code != 404 && rec.Code != 405 {
+		t.Fatalf("no per-user profile route should exist, got %d", rec.Code)
+	}
+}

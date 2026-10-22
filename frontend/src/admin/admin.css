@@ -424,3 +424,36 @@
 .adm .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--a-r-sm); font: 500 .75rem var(--font-body); background: var(--a-hover); color: var(--a-text-2); }
 .adm .badge-gold, .adm .badge-leaf { background: var(--a-ok-bg); color: var(--a-ok); }
 .adm .verify { font-size: .78rem; } .adm .verify.yes { color: var(--a-ok); } .adm .verify.no { color: var(--a-warn); }
+
+/* ---------- fourth pass, part two: nested views, profile, menus ---------- */
+.adm .mono-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--a-primary); color: var(--a-on-primary); font-family: var(--font-body); font-weight: 600; letter-spacing: .02em; user-select: none; }
+.adm-me { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 4px; border: 0; background: transparent; border-radius: var(--a-r); color: inherit; cursor: pointer; text-align: left; font: inherit; transition: background var(--a-dur); }
+.adm-me:hover { background: var(--a-hover); }
+.adm[data-collapsed='true'] .adm-me { flex: none; padding: 2px; }
+
+.adm-parent { display: grid; gap: 1px; }
+.adm-parent-btn { text-align: left; }
+.adm-parent-btn.cur { color: var(--a-text); }
+.adm-pcaret { margin-left: auto; flex: none; color: var(--a-text-3); transition: transform var(--a-dur-2) var(--a-ease); }
+.adm-parent[data-open='true'] .adm-pcaret { transform: rotate(180deg); }
+.adm-children { display: grid; gap: 1px; margin: 1px 0 3px 19px; padding-left: 12px; border-left: 1px solid var(--a-line); }
+.adm-child { display: flex; align-items: center; height: 28px; padding: 0 8px; border-radius: var(--a-r-sm); color: var(--a-text-2); text-decoration: none; font: 500 .8125rem var(--font-body); transition: background var(--a-dur), color var(--a-dur); }
+.adm-child:hover { background: var(--a-hover); color: var(--a-text); }
+.adm-child.on { background: var(--a-hover); color: var(--a-text); font-weight: 600; }
+
+.me-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; } .me-head div { display: grid; min-width: 0; } .me-head strong { font-size: 1.0625rem; } .me-head span { overflow: hidden; text-overflow: ellipsis; }
+.me-facts { margin: 0 0 14px; display: grid; gap: 0; } .me-facts > div { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--a-line); } .me-facts dt { color: var(--a-text-2); } .me-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.me-h { margin: 18px 0 4px; font: 600 .8125rem var(--font-body); color: var(--a-text-2); }
+.me-form { display: grid; gap: 12px; margin-top: 8px; } .me-form .row { display: flex; gap: 8px; margin-top: 4px; }
+.adm .check { display: flex; align-items: center; gap: 8px; }
+
+/* one menu surface for every action menu */
+.adm .ad-menu { padding: 4px; min-width: 200px; max-width: min(320px, calc(100vw - 16px)); border: 0; border-radius: 10px; box-shadow: var(--a-pop); animation: adm-pop 120ms var(--a-ease) both; }
+.adm .ad-menu li.has-sep { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--a-line); }
+.adm .ad-menu button, .adm .ad-menu a { display: flex; align-items: center; gap: 8px; padding: 7px 9px; font-weight: 500; line-height: 1.3; }
+.adm .ad-menu .ad-icon { color: var(--a-text-3); }
+.adm .ad-menu .danger .ad-icon { color: inherit; }
+.adm .ad-menu small { margin-left: auto; color: var(--a-text-3); font-size: .72rem; }
+.adm .ad-menu .mi-check { margin-left: auto; color: var(--a-text); }
+.adm .ad-menu span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.adm .ad-menu button[aria-checked='true'] { background: var(--a-hover-row); }

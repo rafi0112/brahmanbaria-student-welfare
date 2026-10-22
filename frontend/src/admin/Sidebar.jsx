@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
-import { Avatar } from '../components/ui.jsx'
 import { Logo } from '../components/Sketch.jsx'
 import { folders } from '../lib/favorites.js'
 import { useFavorites } from './favorites.jsx'
 import Icon, { NavIcon } from './icons.jsx'
 import { Confirm, RowMenu } from './kit.jsx'
-import { GROUPS, NAV, navFor } from './nav.js'
+import ProfileModal, { MonoAvatar } from './ProfileModal.jsx'
+import { GROUPS, NAV, activeChild, childTo, navFor } from './nav.js'
 
 const here = (loc) => `${loc.pathname}${loc.search}`
 // A favorite is "current" when its path and query match the address exactly (a plain path matches only the unfiltered page).
@@ -54,6 +54,38 @@ function NavItem({ item, current, collapsed }) {
   )
 }
 
+// A section whose children are filtered list views. The parent only opens and closes; a child is a real link.
+function Parent({ item, current, collapsed }) {
+  const { t } = useApp()
+  const fav = useFavorites()
+  const loc = useLocation()
+  const key = `nav:${item.id}`
+  const here = current === item.id
+  const child = here ? activeChild(item, loc.search) : null
+  const open = !collapsed && fav.state.groups[key] === true
+  // arriving on a page of this section (link, refresh, back/forward) reveals its children
+  useEffect(() => { if (here && fav.state.groups[key] !== true) fav.setGroup(key, true) }, [here, loc.pathname, loc.search]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (collapsed) {
+    return <Link to={item.to} className={`adm-link ${here ? 'on' : ''}`} aria-current={here ? 'page' : undefined} title={t(item.label)} aria-label={t(item.label)}><NavIcon name={item.icon} /></Link>
+  }
+  return (
+    <div className="adm-parent" data-open={open}>
+      <button type="button" className={`adm-link adm-parent-btn ${here && !child ? 'cur' : ''}`} aria-expanded={open} onClick={() => fav.setGroup(key, !open)}>
+        <NavIcon name={item.icon} /><span className="adm-fade">{t(item.label)}</span><Icon name="chevronDown" size={13} className="adm-pcaret" />
+      </button>
+      <Fold open={open}>
+        <div className="adm-children">
+          {item.children.map((c) => (
+            <Link key={c.id} to={childTo(item, c)} className={`adm-child ${child?.id === c.id ? 'on' : ''}`} aria-current={child?.id === c.id ? 'page' : undefined}>
+              <span>{t(c.label)}</span>
+            </Link>
+          ))}
+        </div>
+      </Fold>
+    </div>
+  )
+}
+
 function Group({ group, current, collapsed }) {
   const { t } = useApp()
   const fav = useFavorites()
@@ -66,7 +98,7 @@ function Group({ group, current, collapsed }) {
       <button type="button" className="adm-gh" aria-expanded={open} onClick={() => fav.setGroup(group.id, !open)} tabIndex={collapsed ? -1 : 0}>
         <Icon name="chevron" size={12} className="adm-caret" /><span className="adm-fade">{t(group.label)}</span>
       </button>
-      <Fold open={open}>{items.map((i) => <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />)}</Fold>
+      <Fold open={open}>{items.map((i) => (i.children ? <Parent key={i.id} item={i} current={current} collapsed={collapsed} /> : <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />))}</Fold>
     </div>
   )
 }
@@ -209,11 +241,12 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
   const { user: me, profile, logout } = useAuth()
   const go = useNavigate()
   const loc = useLocation()
+  const [profileOpen, setProfile] = useState(false)
   const current = navFor(loc.pathname, loc.search)?.id
   const name = profile?.name || me?.email?.split('@')[0] || ''
-  const top = NAV.filter((n) => n.group === 'top')
 
   return (
+    <>
     <aside className="adm-side" id="adm-side" aria-label={t('admin.title')}>
       <div className="adm-side-head">
         <Link to="/admin" className="adm-brand" title={t('brand')}><Logo size={26} /><span className="adm-fade"><b>{t('brand')}</b><small>{t('admin.title')}</small></span></Link>
@@ -226,7 +259,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
       </button>
 
       <nav className="adm-nav" aria-label={t('admin.title')} onClick={(e) => { if (e.target.closest('a')) onNavigate?.() }}>
-        <div className="adm-top">{top.map((i) => <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />)}</div>
         {GROUPS.map((g) => <Group key={g.id} group={g} current={current} collapsed={collapsed} />)}
         <Favorites current={current} collapsed={collapsed} onExpand={onToggleCollapse} />
       </nav>
@@ -238,11 +270,15 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
           <button type="button" className="adm-iconbtn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}><Icon name={isDark() ? 'sun' : 'moon'} size={16} /></button>
         </div>
         <div className="adm-account">
-          <Avatar name={name || '?'} size={28} />
-          <span className="adm-fade adm-id"><strong>{name}</strong><small>{me?.email}</small></span>
+          <button type="button" className="adm-me" onClick={() => setProfile(true)} aria-haspopup="dialog" title={t('ad.me.open')} aria-label={`${t('ad.me.open')}: ${name}`}>
+            <MonoAvatar name={name || '?'} size={28} />
+            <span className="adm-fade adm-id"><strong>{name}</strong><small>{me?.email}</small></span>
+          </button>
           <button type="button" className="adm-iconbtn" onClick={async () => { await logout(); go('/') }} aria-label={t('auth.logout')} title={t('auth.logout')}><Icon name="logout" size={16} /></button>
         </div>
       </div>
     </aside>
+    {profileOpen && <ProfileModal onClose={() => setProfile(false)} />}
+    </>
   )
 }
