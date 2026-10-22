@@ -136,8 +136,8 @@ test('blog: a new draft is saved and listed', async ({ page }) => {
 test('nested views: each child opens its filtered list, marks itself current, and survives refresh and back/forward', async ({ page }) => {
   await login(page)
   const cases = [
-    ['Students', 'Pending', /\/admin\/students\?status=pending$/],
-    ['Students', 'Incomplete profiles', /\/admin\/students\?complete=no$/],
+    ['Students', 'Imported directory', /\/admin\/students\?tab=imported$/],
+    ['Students', 'Registered members', /\/admin\/students$/],
     ['Blog', 'Draft', /\/admin\/blog\?status=draft$/],
     ['Blog', 'Archived', /\/admin\/blog\?status=archived$/],
     ['Heritage places', 'Published', /\/admin\/heritage\?status=published$/],
@@ -165,7 +165,7 @@ test('navigating to a view only filters: no write requests are sent', async ({ p
   await login(page)
   const writes = []
   page.on('request', (r) => { if (!['GET', 'HEAD'].includes(r.method()) && r.url().includes('/api/')) writes.push(`${r.method()} ${r.url()}`) })
-  for (const [parent, child] of [['Students', 'Pending'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
+  for (const [parent, child] of [['Students', 'Imported directory'], ['Blog', 'Published'], ['Gallery', 'Archived']]) {
     const btn = side(page).getByRole('button', { name: parent, exact: true })
     if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click()
     await kid(page, parent, child).click()
@@ -262,9 +262,11 @@ test('contact inbox: a public message arrives, can be opened, answered and archi
 
 test('imported directory: verify a record, see the mark, and it persists; linking is optional', async ({ page }) => {
   await login(page)
-  await side(page).getByRole('button', { name: 'Imported directory', exact: true }).click()
-  await kid(page, 'Imported directory', 'Awaiting review').click()
-  await expect(page).toHaveURL(/tab=imported&status=awaiting$/)
+  await side(page).getByRole('button', { name: 'Students', exact: true }).click()
+  await kid(page, 'Students', 'Imported directory').click()
+  await expect(page).toHaveURL(/tab=imported$/)
+  await page.getByRole('button', { name: /^Awaiting review/ }).click()
+  await expect(page).toHaveURL(/status=awaiting/)
   const first = page.locator('.dt tbody tr').first()
   const name = (await first.locator('strong').first().innerText()).trim()
   await first.getByRole('button', { name: 'Verify', exact: true }).click()
@@ -273,7 +275,7 @@ test('imported directory: verify a record, see the mark, and it persists; linkin
   await dlg.getByRole('button', { name: 'Verify record' }).click()
   await expect(dlg).toBeHidden()
   // it left "awaiting" and is in "verified", with the mark that explains itself
-  await kid(page, 'Imported directory', 'Verified').click()
+  await page.getByRole('button', { name: /^Verified/ }).click()
   const row = page.locator('.dt tbody tr', { hasText: name }).first()
   await expect(row.locator('.vmark')).toHaveAttribute('title', /directory record, not an account/)
   await page.reload()
