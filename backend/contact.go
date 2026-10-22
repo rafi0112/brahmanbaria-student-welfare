@@ -89,7 +89,17 @@ func oneLine(s string, max int) string {
 	return s
 }
 
-func (a *App) contactRecipient() string { return strings.TrimSpace(os.Getenv("CONTACT_RECIPIENT_EMAIL")) }
+// contactRecipient is CONTACT_RECIPIENT_EMAIL, or the SMTP account itself when none is set, so a message lands in the mailbox the
+// website sends from.
+func (a *App) contactRecipient() string {
+	if r := strings.TrimSpace(os.Getenv("CONTACT_RECIPIENT_EMAIL")); r != "" {
+		return r
+	}
+	if os.Getenv("SMTP_HOST") != "" {
+		return strings.TrimSpace(os.Getenv("SMTP_USER"))
+	}
+	return ""
+}
 
 // notifyContact tells the configured mailbox about a new message and records whether that worked.
 func (a *App) notifyContact(ctx context.Context, m ContactMessage) string {

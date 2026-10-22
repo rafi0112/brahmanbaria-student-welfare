@@ -154,12 +154,20 @@ func openAuthStore() (AuthStore, func()) {
 }
 
 func openMailer() Mailer {
+	if host := os.Getenv("SMTP_HOST"); host != "" { // an SMTP account (e.g. the Gmail app password) takes precedence
+		user, pass := os.Getenv("SMTP_USER"), os.Getenv("SMTP_PASSWORD")
+		if user == "" || pass == "" {
+			log.Fatal("SMTP_USER and SMTP_PASSWORD are required with SMTP_HOST")
+		}
+		log.Printf("outgoing email: SMTP %s:%s", host, env("SMTP_PORT", "587"))
+		return newSMTPMailer(host, os.Getenv("SMTP_PORT"), user, pass, os.Getenv("MAIL_FROM"), env("MAIL_FROM_NAME", "BSWA"))
+	}
 	key := os.Getenv("BREVO_API_KEY")
 	if key == "" {
 		if env("APP_ENV", "development") == "production" {
-			log.Fatal("BREVO_API_KEY is required when APP_ENV=production")
+			log.Fatal("SMTP_HOST (or BREVO_API_KEY) is required when APP_ENV=production")
 		}
-		log.Printf("no BREVO_API_KEY: emails are printed to this log (development only)")
+		log.Printf("no SMTP_HOST or BREVO_API_KEY: emails are printed to this log (development only)")
 		return logMailer{}
 	}
 	from := os.Getenv("MAIL_FROM")
