@@ -565,3 +565,40 @@ func TestRoleHistoryEndpoint(t *testing.T) {
 		t.Fatalf("full history: %+v", v.Items)
 	}
 }
+
+func TestListSortsAndFiltersAreValidated(t *testing.T) {
+	e := cmsApp(t)
+	for _, path := range []string{
+		"/api/v1/admin/students?sort=password_hash", "/api/v1/admin/students?sort=name%3Bdrop%20table%20users",
+		"/api/v1/admin/users?sort=password_hash", "/api/v1/admin/users?verified=maybe", "/api/v1/admin/users?account=gone", "/api/v1/admin/users?role=root",
+	} {
+		if rec := adminJSON(e, "GET", path, nil); rec.Code != 400 {
+			t.Errorf("%s: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+	for _, path := range []string{"/api/v1/admin/students?sort=name", "/api/v1/admin/users?sort=email&verified=yes&account=active"} {
+		if rec := adminJSON(e, "GET", path, nil); rec.Code != 200 {
+			t.Errorf("%s: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}
+
+func TestEditorsCannotOverwriteEachOthersChanges(t *testing.T) {
+	e := cmsApp(t)
+	post := createEntry(t, e, "blog", blogBody("Shared draft", "shared-draft"))
+	body := blogBody("Shared draft v2", "shared-draft")
+	body["expectedUpdatedAt"] = post.UpdatedAt
+	if rec := adminJSON(e, "PATCH", "/api/v1/admin/content/blog/"+post.ID, body); rec.Code != 200 {
+		t.Fatalf("first save: %d %s", rec.Code, rec.Body)
+	}
+	body = blogBody("Shared draft v3 from a stale tab", "shared-draft")
+	body["expectedUpdatedAt"] = "2000-01-01T00:00:00Z"
+	if rec := adminJSON(e, "PATCH", "/api/v1/admin/content/blog/"+post.ID, body); rec.Code != 409 || !strings.Contains(rec.Body.String(), "stale") {
+		t.Fatalf("stale save: %d %s", rec.Code, rec.Body)
+	}
+	var cur Entry
+	decodeBody(t, adminJSON(e, "GET", "/api/v1/admin/content/blog/"+post.ID, nil), &cur)
+	if cur.Title != "Shared draft v2" {
+		t.Fatalf("the stale save must not have changed the record: %q", cur.Title)
+	}
+}

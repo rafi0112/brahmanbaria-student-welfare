@@ -13,11 +13,11 @@ export function BlogList() {
   const { t, n, pick } = useApp()
   return (
     <ContentList kind="blog" title={t('ad.blog.title')} desc={t('ad.blog.desc')} addLabel={t('ad.blog.add')} addPath="/admin/blog/new"
-      emptyHint={t('ad.blog.emptyHint')} editPath={(r) => `/admin/blog/${r.id}/edit`} publicPath={(r) => `/blog/${r.slug}`}
+      emptyHint={t('ad.blog.emptyHint')} searchPlaceholder={t('ad.blog.search')} editPath={(r) => `/admin/blog/${r.id}/edit`} publicPath={(r) => `/blog/${r.slug}`}
       extra={[
         { key: 'category', label: t('ad.blog.category'), all: t('ad.blog.anyCategory'), options: CATS.map((c) => [c, t(`cat.${c}`)]) },
-        { key: 'author', label: t('ad.blog.author'), text: true },
-        { key: 'featured', label: t('ad.blog.featured'), all: t('ad.blog.anyFeatured'), options: [['yes', t('ad.blog.featuredOnly')], ['no', t('ad.blog.notFeatured')]] },
+        { key: 'author', label: t('ad.blog.author'), text: true, advanced: true },
+        { key: 'featured', label: t('ad.blog.featured'), all: t('ad.blog.anyFeatured'), options: [['yes', t('ad.blog.featuredOnly')], ['no', t('ad.blog.notFeatured')]], advanced: true },
       ]}
       columns={[
         {
@@ -28,8 +28,11 @@ export function BlogList() {
             </span>
           ),
         },
-        { label: t('ad.blog.author'), render: (r) => r.data.author || r.authorName || '—' },
-        { label: t('ad.blog.category'), render: (r) => <>{r.data.category ? t(`cat.${r.data.category}`) : '—'}{r.data.tags?.length ? <><br /><small className="muted">{r.data.tags.join(', ')}</small></> : null}</> },
+        {
+          label: t('ad.blog.col.about'), render: (r) => (
+            <>{r.data.author || r.authorName || '—'}<br /><small className="muted">{r.data.category ? t(`cat.${r.data.category}`) : '—'}{r.data.tags?.length ? ` · ${r.data.tags.join(', ')}` : ''}</small></>
+          ),
+        },
         { label: t('ad.blog.col.meta'), render: (r) => <>{r.featured ? '★ ' + t('ad.blog.featured') : '—'}<br /><small className="muted">{n(r.data.readMin || 1)} {t('blog.min')} · {r.publishedAt ? r.publishedAt.slice(0, 10) : t('ad.notPublished')}</small></> },
       ]} />
   )

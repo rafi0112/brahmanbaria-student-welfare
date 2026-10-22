@@ -270,6 +270,9 @@ func (m *memStore) UpdateEntry(_ context.Context, actorID, id string, in EntryIn
 	if !ok {
 		return Entry{}, ErrNotFound
 	}
+	if in.ExpectedUpdatedAt != "" && in.ExpectedUpdatedAt != e.UpdatedAt {
+		return Entry{}, ErrStale
+	}
 	if m.slugTaken(e.Kind, in.Slug, id) {
 		return Entry{}, ErrSlugTaken
 	}
@@ -392,7 +395,25 @@ func (m *memStore) ListMembersAdmin(_ context.Context, q MemberQuery) ([]MemberA
 		}
 		rows = append(rows, r)
 	}
-	sort.SliceStable(rows, func(i, j int) bool { return rows[i].CreatedAt+rows[i].ID > rows[j].CreatedAt+rows[j].ID })
+	sort.SliceStable(rows, func(i, j int) bool {
+		switch q.Sort {
+		case "oldest":
+			return rows[i].CreatedAt+rows[i].ID < rows[j].CreatedAt+rows[j].ID
+		case "name":
+			return strings.ToLower(rows[i].Name) < strings.ToLower(rows[j].Name)
+		case "batch":
+			if rows[i].Batch != rows[j].Batch {
+				return rows[i].Batch > rows[j].Batch
+			}
+			return strings.ToLower(rows[i].Name) < strings.ToLower(rows[j].Name)
+		case "status":
+			if rows[i].Status != rows[j].Status {
+				return rows[i].Status < rows[j].Status
+			}
+			return strings.ToLower(rows[i].Name) < strings.ToLower(rows[j].Name)
+		}
+		return rows[i].CreatedAt+rows[i].ID > rows[j].CreatedAt+rows[j].ID
+	})
 	total := len(rows)
 	lo := (q.Page - 1) * q.Limit
 	if lo > total {

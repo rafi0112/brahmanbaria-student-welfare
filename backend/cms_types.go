@@ -13,6 +13,7 @@ var (
 	ErrParentInvalid = errors.New("the album does not exist")
 	ErrAdminProtected = errors.New("demote the admin before deactivating the account")
 	ErrSelfDisable   = errors.New("you cannot deactivate your own account")
+	ErrStale         = errors.New("someone else changed this record after you opened it")
 )
 
 const (
@@ -53,6 +54,9 @@ type EntryInput struct {
 	SortOrder *int
 	ParentID  string
 	Data      json.RawMessage
+	// ExpectedUpdatedAt, when set on an update, must equal the record's current updatedAt, otherwise the save is refused
+	// (another admin saved in between) and nothing is overwritten.
+	ExpectedUpdatedAt string
 }
 
 // EntryQuery. Status "" lists everything except archived, "all" lists everything, anything else is exact.
@@ -95,7 +99,11 @@ type MemberQuery struct {
 	Q, Status, Department, Verified, Complete, Disabled string
 	Batch                                              int
 	Page, Limit                                        int
+	Sort                                               string // newest (default), oldest, name, batch, status
 }
+
+var memberSorts = map[string]bool{"": true, "newest": true, "oldest": true, "name": true, "batch": true, "status": true}
+var userSorts = map[string]bool{"": true, "newest": true, "oldest": true, "name": true, "email": true, "role": true}
 
 // MemberAdminRow is the admin's view of a registered member (never returned on public routes).
 type MemberAdminRow struct {

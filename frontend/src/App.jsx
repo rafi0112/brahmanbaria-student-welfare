@@ -11,6 +11,7 @@ import StudentsAdmin from './admin/StudentsAdmin.jsx'
 import { BlogEditor, BlogList } from './admin/BlogAdmin.jsx'
 import { HeritageEditor, HeritageList } from './admin/HeritageAdmin.jsx'
 import GalleryAdmin from './admin/GalleryAdmin.jsx'
+import ActivityPage from './admin/ActivityPage.jsx'
 import { Alumni, Committee, Events, FAQPage, Membership } from './pages/Community.jsx'
 
 export default function App() {
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="blog/new" element={<BlogEditor />} />
           <Route path="blog/:id/edit" element={<BlogEditor />} />
           <Route path="gallery" element={<GalleryAdmin />} />
+          <Route path="activity" element={<ActivityPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

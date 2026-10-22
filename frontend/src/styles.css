@@ -423,7 +423,7 @@ html[lang='bn'] .script-note { font-family: 'Noto Serif Bengali', serif; font-st
 .admin-nav a:focus-visible, .admin-burger:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .admin-id { display: grid; line-height: 1.2; min-width: 0; } .admin-id small { overflow-wrap: anywhere; }
 .admin-who .avatar { flex-shrink: 0; }
-@media (max-width: 760px) {
+@media (max-width: 1000px) {
   .admin-side { position: static; min-height: 0; max-height: none; padding: 12px 14px; gap: 8px; border-radius: 0 0 22px 22px; }
   .admin-burger { display: inline-flex; gap: 6px; }
   .admin-nav { display: none !important; } .admin-side.open .admin-nav { display: grid !important; grid-auto-flow: row !important; overflow: visible !important; padding-top: 6px; }
@@ -499,4 +499,89 @@ a.ad-metric:hover, a.ad-metric:focus-visible { border-color: var(--forest-2); bo
   .rtable td[data-label='']::before { display: none; }
   .rtable td .ad-person { text-align: left; }
   .rtable .actions { justify-content: flex-end !important; flex-direction: row !important; flex-wrap: wrap; }
+}
+
+/* ---------- admin panel v2: one design language for every admin page ---------- */
+.admin { --ad-r: 14px; --ad-r-sm: 10px; --ad-line: color-mix(in srgb, var(--line) 85%, var(--ink)); --ad-shadow: 0 1px 2px rgba(20, 40, 30, .06), 0 4px 14px rgba(20, 40, 30, .05); --ad-focus: 0 0 0 3px color-mix(in srgb, var(--gold) 45%, transparent); }
+.admin-main { max-width: 1280px; width: 100%; }
+.admin-main h2 { font-size: 1.5rem; letter-spacing: -.01em; }
+.admin-main :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+.ad-icon { flex-shrink: 0; }
+
+/* sidebar */
+.admin-side { border-radius: 0 var(--ad-r) var(--ad-r) 0; padding: 18px 12px; gap: 18px; }
+.admin-side nav a { gap: 12px; padding: 0 12px; border-radius: var(--ad-r-sm); position: relative; opacity: .82; transition: background .15s, opacity .15s; }
+.admin-side nav a:hover { background: rgba(255, 255, 255, .08); opacity: 1; }
+.admin-side nav a.on { background: rgba(255, 255, 255, .16); opacity: 1; font-weight: 600; }
+.admin-side nav a.on::before { content: ''; position: absolute; left: -12px; top: 10px; bottom: 10px; width: 4px; border-radius: 0 4px 4px 0; background: var(--gold); }
+.side-label { margin-top: 12px; }
+
+/* top bar */
+.admin-top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(8px); padding: 10px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--ad-line); }
+.admin-title { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; } .admin-title h1 { font-size: 1.35rem; margin: 0; }
+.ad-cmdk { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; border: 1px solid var(--ad-line); background: var(--card); color: var(--muted); border-radius: var(--ad-r-sm); font: 500 .88rem var(--font-body); cursor: pointer; }
+.ad-cmdk:hover { border-color: var(--forest-2); color: var(--ink); } .ad-cmdk kbd { font: 600 .7rem var(--font-body); border: 1px solid var(--ad-line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+@media (max-width: 760px) { .ad-cmdk span, .ad-cmdk kbd { display: none; } .admin-top { position: static; } .admin-side nav a.on::before { display: none; } }
+
+/* cards, tables, badges */
+.ad-metric, .ad-attention li, .ad-list li, .ad-side-card, .ad-section, .ad-queue, .ad-album-card, .ad-card, .ad-bulk, .exec-row, .cm-list button { border-radius: var(--ad-r); border-color: var(--ad-line); }
+.ad-metric { box-shadow: var(--ad-shadow); } .ad-metric strong { font-size: 1.9rem; }
+.admin-main .table { border-radius: var(--ad-r); border-color: var(--ad-line); box-shadow: var(--ad-shadow); }
+.admin-main .table thead th { position: sticky; top: 56px; background: color-mix(in srgb, var(--card) 94%, var(--forest)); z-index: 3; border-bottom: 1px solid var(--ad-line); font-weight: 600; }
+.admin-main .table tbody tr { transition: background .12s; } .admin-main .table tbody tr:hover { background: color-mix(in srgb, var(--gold) 7%, var(--card)); }
+.admin-main .table td { padding: 12px 16px; }
+.admin-main .badge { border-radius: 999px; font-weight: 600; font-size: .78rem; }
+.ad-modal { border-radius: 18px; box-shadow: 0 24px 60px rgba(8, 20, 14, .35); }
+.ad-grid-cards { gap: 16px; } .ad-card { box-shadow: var(--ad-shadow); }
+
+/* the shared list toolbar */
+.ad-toolbar2 { display: grid; gap: 10px; margin: 6px 0 12px; }
+.ad-tb-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ad-searchbox { position: relative; flex: 1 1 280px; min-width: 0; } .ad-searchbox .ad-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.ad-searchbox input[type='search'] { width: 100%; min-height: 44px; padding-left: 38px; border-radius: var(--ad-r-sm); }
+.ad-views { display: inline-flex; flex-wrap: wrap; gap: 4px; background: color-mix(in srgb, var(--line) 55%, var(--card)); padding: 4px; border-radius: 12px; }
+.ad-view { border: 0; background: transparent; color: var(--ink); padding: 8px 14px; border-radius: 9px; font: 600 .86rem var(--font-body); cursor: pointer; min-height: 36px; }
+.ad-view:hover { background: color-mix(in srgb, var(--card) 70%, transparent); } .ad-view.on { background: var(--card); box-shadow: 0 1px 3px rgba(20, 40, 30, .18); }
+.ad-tb-extra { display: inline-flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.ad-tb-fields { gap: 8px; } .ad-tb-field select, .ad-tb-field input { min-height: 38px; border-radius: var(--ad-r-sm); max-width: 100%; }
+.ad-pop { position: relative; } .ad-pop-right { margin-left: auto; }
+.ad-panel { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: min(420px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--ad-line); border-radius: var(--ad-r); box-shadow: 0 18px 44px rgba(8, 20, 14, .22); padding: 14px; display: grid; gap: 12px; }
+.ad-panel-right { left: auto; right: 0; width: min(340px, calc(100vw - 32px)); }
+.ad-panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } @media (max-width: 520px) { .ad-panel-grid { grid-template-columns: 1fr; } .ad-panel { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-height: 70vh; overflow: auto; } }
+.ad-panel-field { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; } .ad-panel-field input, .ad-panel-field select { min-height: 40px; width: 100%; }
+.ad-count-badge { margin-left: 6px; background: var(--forest); color: var(--on-forest); border-radius: 999px; font-size: .72rem; padding: 1px 7px; font-weight: 700; }
+.ad-saved { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; } .ad-saved li { display: flex; align-items: center; gap: 6px; }
+.ad-saved-apply { flex: 1; text-align: left; border: 0; background: transparent; color: var(--ink); padding: 8px 10px; border-radius: 8px; cursor: pointer; font: 600 .88rem var(--font-body); } .ad-saved-apply:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.ad-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ad-chip { display: inline-flex; align-items: center; gap: 6px; background: color-mix(in srgb, var(--gold) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--gold) 38%, var(--ad-line)); border-radius: 999px; padding: 3px 4px 3px 12px; font-size: .84rem; max-width: 100%; }
+.ad-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ad-chip button { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; } .ad-chip button:hover { background: rgba(0, 0, 0, .1); }
+.ad-showing { margin: 0; }
+
+/* quick search */
+.ad-cmd-back { align-items: start; padding-top: 12vh; }
+.ad-cmd { width: min(640px, 100%); background: var(--card); border: 1px solid var(--ad-line); border-radius: 16px; box-shadow: 0 30px 80px rgba(8, 20, 14, .4); overflow: hidden; }
+.ad-cmd-input { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--ad-line); } .ad-cmd-input input { flex: 1; border: 0 !important; background: transparent; min-height: 54px; font-size: 1.02rem; outline: none; box-shadow: none !important; }
+.ad-cmd-list { list-style: none; margin: 0; padding: 6px; max-height: 50vh; overflow: auto; }
+.ad-cmd-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; } .ad-cmd-list li.on { background: color-mix(in srgb, var(--gold) 16%, var(--card)); }
+.ad-cmd-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ad-cmd-none { cursor: default !important; }
+.ad-cmd-foot { margin: 0; padding: 8px 14px; border-top: 1px solid var(--ad-line); }
+
+/* misc */
+.ad-role-change { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+.ad-timeline li { grid-template-columns: 1fr auto; align-items: baseline; } @media (max-width: 640px) { .ad-timeline li { grid-template-columns: 1fr; } }
+.cm-filter { display: grid; gap: 8px; margin: 8px 0; } .cm-filter input, .cm-filter select { min-height: 40px; width: 100%; }
+.ad-role-history { margin-top: 16px; }
+
+/* tables: no mid-word breaking, a row action menu, and a compact icon-only sidebar on laptops */
+.ad-person > span { overflow-wrap: break-word; word-break: normal; }
+.admin-main .rtable td:nth-child(2) { min-width: 220px; }
+.ad-menu { position: fixed; z-index: 60; list-style: none; margin: 0; padding: 6px; min-width: 190px; background: var(--card); border: 1px solid var(--ad-line); border-radius: 12px; box-shadow: 0 18px 44px rgba(8, 20, 14, .25); display: grid; gap: 2px; }
+.ad-menu button, .ad-menu a { display: block; width: 100%; text-align: left; padding: 10px 12px; min-height: 40px; border: 0; background: transparent; color: var(--ink); border-radius: 8px; font: 600 .88rem var(--font-body); cursor: pointer; text-decoration: none; }
+.ad-menu button:hover:not(:disabled), .ad-menu a:hover, .ad-menu button:focus-visible, .ad-menu a:focus-visible { background: color-mix(in srgb, var(--gold) 16%, transparent); outline: none; }
+.ad-menu .danger { color: var(--bad); } .ad-menu button:disabled { opacity: .5; cursor: not-allowed; }
+.ad-more { min-width: 40px; padding: 0 10px; font-size: 1.1rem; line-height: 1; }
+@media (min-width: 1001px) and (max-width: 1279px) {
+  .admin { grid-template-columns: 76px 1fr; }
+  .admin-side { padding: 14px 8px; } .admin-side .brand span, .nav-label, .side-label { display: none; }
+  .admin-side nav a { justify-content: center; padding: 0; } .admin-side nav a.on::before { left: -8px; }
 }

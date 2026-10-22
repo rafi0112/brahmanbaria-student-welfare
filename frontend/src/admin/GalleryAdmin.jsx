@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, qs, uploadMedia, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, slugFrom, useErrText, useFilters, useNotice } from './kit.jsx'
+import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, SkeletonRows, StatusBadge, slugFrom, useErrText, useFilters, useNotice } from './kit.jsx'
+import ListToolbar from './toolbar.jsx'
 
 const thumb = (d) => d.imageUrl || (d.image ? `/images/${d.image}-640.webp` : '')
 const base = (name) => name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim().slice(0, 120)
@@ -142,13 +143,13 @@ export default function GalleryAdmin() {
         </div>
       )}
 
-      <div className="ad-filters">
-        <SearchBox value={f.q} onChange={(q) => set({ q })} />
-        <Select value={f.status} onChange={(status) => set({ status })} label={t('ad.status')} all={t('ad.status.active')}
-          options={[['draft', t('ad.gal.hidden')], ['published', t('ad.status.published')], ['archived', t('ad.status.archived')], ['all', t('ad.status.all')]]} />
-        <Select value={f.sort === 'order' ? '' : f.sort} onChange={(v) => set({ sort: v || 'order' })} label={t('ad.sort')} all={t('ad.sort.order')}
-          options={[['updated', t('ad.sort.updated')], ['title', t('ad.sort.title')], ['published', t('ad.sort.published')]]} />
-      </div>
+      <ListToolbar section="gallery" values={f} set={set} defaults={{ sort: 'order', limit: '24' }} total={list.data?.total} loading={list.loading}
+        search={{ placeholder: t('ad.gal.search') }}
+        views={[
+          { id: 'active', label: t('ad.status.activeShort'), patch: { status: '' } }, { id: 'hidden', label: t('ad.gal.hidden'), patch: { status: 'draft' } },
+          { id: 'published', label: t('ad.status.published'), patch: { status: 'published' } }, { id: 'archived', label: t('ad.status.archived'), patch: { status: 'archived' } },
+        ]}
+        sorts={[['order', t('ad.sort.order')], ['updated', t('ad.sort.updated')], ['title', t('ad.sort.title')], ['published', t('ad.sort.published')]]} />
 
       {picked.length > 0 && (
         <div className="ad-bulk" role="region" aria-label={t('ad.bulk')}>

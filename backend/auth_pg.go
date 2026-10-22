@@ -347,6 +347,54 @@ func (s *pgStore) ListUsers(ctx context.Context, q, role string, limit, offset i
 	return out, total, rows.Err()
 }
 
+func (s *pgStore) SearchUsers(ctx context.Context, q UserQuery) ([]UserRow, int, error) {
+	b := &condBuilder{}
+	if q.Q != "" {
+		b.add("(position(lower(?) in lower(u.email)) > 0 OR position(lower(?) in lower(COALESCE(p.name, ''))) > 0)", q.Q)
+	}
+	if q.Role != "" {
+		b.add("u.role = ?", q.Role)
+	}
+	switch q.Verified {
+	case "yes":
+		b.raw("u.email_verified_at IS NOT NULL")
+	case "no":
+		b.raw("u.email_verified_at IS NULL")
+	}
+	switch q.Account {
+	case "active":
+		b.raw("u.disabled_at IS NULL")
+	case "deactivated":
+		b.raw("u.disabled_at IS NOT NULL")
+	}
+	order := map[string]string{"": "u.created_at DESC", "newest": "u.created_at DESC", "oldest": "u.created_at", "name": "lower(COALESCE(NULLIF(p.name, ''), u.email))",
+		"email": "lower(u.email)", "role": "u.role, lower(u.email)"}[q.Sort]
+	if order == "" {
+		order = "u.created_at DESC"
+	}
+	const from = ` FROM users u LEFT JOIN profiles p ON p.user_id = u.id`
+	var total int
+	if err := s.db.QueryRow(ctx, `SELECT count(*)`+from+b.where(), b.args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	args := append(append([]any{}, b.args...), q.Limit, q.Offset)
+	rows, err := s.db.Query(ctx, `SELECT u.id::text, u.email, COALESCE(p.name, ''), u.role, u.email_verified_at IS NOT NULL, COALESCE(p.status, ''),
+		to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), u.disabled_at IS NOT NULL`+from+b.where()+` ORDER BY `+order+`, u.id LIMIT $`+fmt.Sprint(len(args)-1)+` OFFSET $`+fmt.Sprint(len(args)), args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	out := []UserRow{}
+	for rows.Next() {
+		var r UserRow
+		if err := rows.Scan(&r.ID, &r.Email, &r.Name, &r.Role, &r.EmailVerified, &r.MemberStatus, &r.CreatedAt, &r.Disabled); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, r)
+	}
+	return out, total, rows.Err()
+}
+
 func (s *pgStore) SetRole(ctx context.Context, actorID, targetID, role string) (User, error) {
 	if role != RoleMember && role != RoleAdmin {
 		return User{}, ErrInvalidRole

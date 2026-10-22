@@ -113,6 +113,18 @@ func cmsStoreSuite(t *testing.T, s AuthStore) {
 		t.Fatalf("restore: %+v %v", r, err)
 	}
 
+	// --- a save based on an out-of-date copy is refused and overwrites nothing
+	cur, _ := s.GetEntry(ctx, KindBlog, b.ID, false)
+	if _, err := s.UpdateEntry(ctx, admin.ID, b.ID, EntryInput{Kind: KindBlog, Slug: "second-post", Title: "Stale write", ExpectedUpdatedAt: "2000-01-01T00:00:00Z", Data: data(nil)}); err != ErrStale {
+		t.Fatalf("stale save: %v", err)
+	}
+	if g, _ := s.GetEntry(ctx, KindBlog, b.ID, false); g.Title != cur.Title {
+		t.Fatalf("a refused save must not change anything: %q", g.Title)
+	}
+	if _, err := s.UpdateEntry(ctx, admin.ID, b.ID, EntryInput{Kind: KindBlog, Slug: "second-post", Title: cur.Title, Featured: true, ExpectedUpdatedAt: cur.UpdatedAt, Data: cur.Data}); err != nil {
+		t.Fatalf("save with the current stamp: %v", err)
+	}
+
 	// --- reorder
 	c, _ := s.CreateEntry(ctx, admin.ID, EntryInput{Kind: KindBlog, Slug: "third-post", Title: "Third", Data: data(nil)})
 	if err := s.ReorderEntries(ctx, admin.ID, KindBlog, []string{c.ID, a.ID, b.ID}); err != nil {
@@ -269,6 +281,33 @@ func cmsStoreSuite(t *testing.T, s AuthStore) {
 		t.Fatal("account should be active again")
 	}
 	_ = m2
+
+	// --- user search: filters and a fixed set of sorts
+	if rows, total, err := s.SearchUsers(ctx, UserQuery{Q: "cms-m", Role: RoleMember, Limit: 10}); err != nil || total != 2 {
+		t.Fatalf("search by text and role: %+v %d %v", rows, total, err)
+	}
+	if _, total, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-m", Role: RoleAdmin, Limit: 10}); total != 0 {
+		t.Fatalf("no admin matches yet: %d", total)
+	}
+	if _, total, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-m", Verified: "no", Limit: 10}); total != 1 {
+		t.Fatalf("unverified filter: %d", total)
+	}
+	if _, total, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-m", Account: "deactivated", Limit: 10}); total != 0 {
+		t.Fatalf("deactivated filter: %d", total)
+	}
+	if rows, _, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-", Sort: "email", Limit: 10}); len(rows) < 2 || rows[0].Email > rows[1].Email {
+		t.Fatalf("email sort: %+v", rows)
+	}
+	if rows, total, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-", Sort: "name", Limit: 1, Offset: 1}); total < 2 || len(rows) != 1 {
+		t.Fatalf("paging: %+v %d", rows, total)
+	}
+	// member list sorts
+	if rows, _, _ := s.ListMembersAdmin(ctx, MemberQuery{Q: "cms-m", Sort: "batch", Limit: 10}); len(rows) != 2 || rows[0].Batch < rows[1].Batch {
+		t.Fatalf("batch sort: %+v", rows)
+	}
+	if rows, _, _ := s.ListMembersAdmin(ctx, MemberQuery{Q: "cms-m", Sort: "name", Limit: 10}); len(rows) != 2 || rows[0].Name > rows[1].Name {
+		t.Fatalf("name sort: %+v", rows)
+	}
 
 	// --- role history
 	if _, err := s.SetRole(ctx, admin.ID, m1.ID, RoleAdmin); err != nil {

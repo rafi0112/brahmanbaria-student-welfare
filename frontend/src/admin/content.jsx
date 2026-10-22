@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import ListToolbar from './toolbar.jsx'
 
 const NEXT = {
   draft: [['publish', 'ad.act2.publish'], ['archive', 'ad.act2.archive']],
@@ -18,7 +19,7 @@ export function actionConfirm(t, action, title) {
 /* ---------------------------------------------------------------- list (blog posts, places, images) */
 
 // `columns` renders the kind-specific cells; everything else (filters, paging, bulk, status flow) is shared.
-export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint }) {
+export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint, searchPlaceholder }) {
   const { t, lang, n } = useApp()
   const when = useWhen(lang)
   const errText = useErrText()
@@ -56,19 +57,18 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
   return (
     <section aria-labelledby={`${kind}-h`}>
       <PageHeader title={<span id={`${kind}-h`}>{title}</span>} desc={desc} action={addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
-      <div className="ad-filters">
-        <SearchBox value={f.q} onChange={(q) => set({ q })} />
-        <Select value={f.status} onChange={(status) => set({ status })} label={t('ad.status')} all={t('ad.status.active')}
-          options={[['draft', t('ad.status.draft')], ['published', t('ad.status.published')], ['archived', t('ad.status.archived')], ['all', t('ad.status.all')]]} />
-        {extra.map((x) => (x.text
-          ? <SearchBox key={x.key} value={f[x.key]} onChange={(v) => set({ [x.key]: v })} placeholder={x.label} />
-          : <Select key={x.key} value={f[x.key]} onChange={(v) => set({ [x.key]: v })} label={x.label} all={x.all} options={x.options} />))}
-        <label className="ad-date"><span className="muted small">{t('ad.from')}</span><input type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} aria-label={t('ad.from')} /></label>
-        <label className="ad-date"><span className="muted small">{t('ad.to')}</span><input type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} aria-label={t('ad.to')} /></label>
-        <Select value={f.sort === 'updated' ? '' : f.sort} onChange={(v) => set({ sort: v || 'updated' })} label={t('ad.sort')} all={t('ad.sort.updated')}
-          options={[['published', t('ad.sort.published')], ['title', t('ad.sort.title')], ['order', t('ad.sort.order')]]} />
-        {filtered && <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button>}
-      </div>
+      <ListToolbar section={kind} values={f} set={set} defaults={{ sort: 'updated', limit: '20' }} total={list.data?.total} loading={list.loading}
+        search={{ placeholder: searchPlaceholder || t('ad.search') }}
+        views={[
+          { id: 'active', label: t('ad.status.activeShort'), patch: { status: '' } }, { id: 'draft', label: t('ad.status.draft'), patch: { status: 'draft' } },
+          { id: 'published', label: t('ad.status.published'), patch: { status: 'published' } }, { id: 'archived', label: t('ad.status.archived'), patch: { status: 'archived' } },
+          { id: 'all', label: t('ad.status.allShort'), patch: { status: 'all' } },
+        ]}
+        fields={[
+          ...extra.map((x) => ({ key: x.key, label: x.label, all: x.all, options: x.options, type: x.text ? 'text' : 'select', advanced: !!x.advanced })),
+          { key: 'from', label: t('ad.from'), type: 'date', advanced: true }, { key: 'to', label: t('ad.to'), type: 'date', advanced: true },
+        ]}
+        sorts={[['updated', t('ad.sort.updated')], ['published', t('ad.sort.published')], ['title', t('ad.sort.title')], ['order', t('ad.sort.order')]]} />
       <Notice notice={notice} onClose={clear} />
       {picked.length > 0 && (
         <div className="ad-bulk" role="region" aria-label={t('ad.bulk')}>
@@ -89,7 +89,7 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
               <tr>
                 <th scope="col"><input type="checkbox" checked={allOnPage} onChange={() => setPicked(allOnPage ? [] : rows.map((r) => r.id))} aria-label={t('ad.selectAll')} /></th>
                 {columns.map((c) => <th key={c.label} scope="col">{c.label}</th>)}
-                <th scope="col">{t('ad.status')}</th><th scope="col">{t('ad.updated')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
+                <th scope="col">{t('ad.status')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -97,14 +97,13 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
                 <tr key={r.id}>
                   <td data-label=""><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.title}`} /></td>
                   {columns.map((c) => <td key={c.label} data-label={c.label}>{c.render(r)}</td>)}
-                  <td data-label={t('ad.status')}><StatusBadge status={r.status} /></td>
-                  <td data-label={t('ad.updated')}><small>{when(r.updatedAt)}</small></td>
+                  <td data-label={t('ad.status')}><StatusBadge status={r.status} /><br /><small className="muted">{when(r.updatedAt)}</small></td>
                   <td className="actions" data-label="">
                     <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>
-                    {NEXT[r.status].map(([a, label]) => (
-                      <button key={a} type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => ask(a, [r.id], r.title)}>{t(label)}</button>
-                    ))}
-                    {r.status === 'published' && publicPath && <a className="btn btn-ghost btn-sm" href={publicPath(r)} target="_blank" rel="noreferrer">{t('ad.openPublic')}</a>}
+                    <RowMenu label={`${t('ad.actions')}: ${r.title}`} items={[
+                      ...NEXT[r.status].map(([a, label]) => ({ label: t(label), onClick: () => ask(a, [r.id], r.title), disabled: busy, danger: a === 'archive' })),
+                      r.status === 'published' && publicPath ? { label: t('ad.openPublic'), href: publicPath(r) } : null,
+                    ]} />
                   </td>
                 </tr>
               ))}
@@ -128,15 +127,17 @@ export function useEntryEditor(kind, id, listPath) {
   const nav = useNavigate()
   const existing = useApi(id ? `/admin/content/${kind}/${id}` : null)
   const [entry, setEntry] = useState(null)
+  const entryRef = useRef(null)
   const [fields, setFields] = useState({})
   const [busy, setBusy] = useState(false)
   const { notice, ok, bad, clear } = useNotice()
+  useEffect(() => { entryRef.current = entry }, [entry])
   useEffect(() => { if (existing.data) setEntry(existing.data) }, [existing.data])
 
   const save = useCallback(async (body, afterCreatePath) => {
     setBusy(true); setFields({}); clear()
     try {
-      const saved = id ? await api(`/admin/content/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      const saved = id ? await api(`/admin/content/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify({ ...body, expectedUpdatedAt: entryRef.current?.updatedAt || '' }) })
         : await api(`/admin/content/${kind}`, { method: 'POST', body: JSON.stringify(body) })
       setEntry(saved)
       ok(t('ad.saved'))

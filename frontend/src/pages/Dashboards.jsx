@@ -7,6 +7,9 @@ import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
 import CommitteeManager from './CommitteeAdmin.jsx'
 import AdminDashboard from '../admin/Dashboard.jsx'
+import RolesAdmin from '../admin/RolesAdmin.jsx'
+import CommandPalette from '../admin/CommandPalette.jsx'
+import Icon from '../admin/icons.jsx'
 import { Logo } from '../components/Sketch.jsx'
 
 const LEVELS = ['public', 'members', 'hidden']
@@ -195,8 +198,14 @@ function AdminFrame() {
   useEffect(() => setOpen(false), [loc.pathname, loc.search])
   const onHome = loc.pathname === '/admin'
   const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'dash'
-  const sections = [['dash', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
-  const pages = [['/admin/students', '☺', 'admin.nav.students'], ['/admin/heritage', '◬', 'admin.nav.places'], ['/admin/blog', '✎', 'admin.nav.blog'], ['/admin/gallery', '▣', 'admin.nav.gallery']]
+  const sections = [['dash', 'dashboard', 'admin.nav.dash'], ['roles', 'shield', 'admin.tab.roles'], ['committee', 'star', 'admin.tab.committee']]
+  const pages = [['/admin/students', 'users', 'admin.nav.students'], ['/admin/heritage', 'landmark', 'admin.nav.places'], ['/admin/blog', 'pen', 'admin.nav.blog'], ['/admin/gallery', 'image', 'admin.nav.gallery'], ['/admin/activity', 'clock', 'ad.nav.activity']]
+  const [palette, setPalette] = useState(false)
+  useEffect(() => {
+    const onKey = (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette((p) => !p) } }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [])
   const here = (p) => loc.pathname === p || loc.pathname.startsWith(`${p}/`)
   const name = profile?.name || me?.email?.split('@')[0] || ''
   return (
@@ -211,16 +220,17 @@ function AdminFrame() {
         <nav id="admin-nav" aria-label="Admin" className="admin-nav">
           {sections.map(([k, ic, label]) => {
             const on = onHome && tab === k
-            return <Link key={k} to={k === 'dash' ? '/admin' : `/admin?tab=${k}`} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
+            return <Link key={k} to={k === 'dash' ? '/admin' : `/admin?tab=${k}`} title={t(label)} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><Icon name={ic} /><span className="nav-label">{t(label)}</span></Link>
           })}
-          {pages.map(([to, ic, label]) => <Link key={to} to={to} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
+          {pages.map(([to, ic, label]) => <Link key={to} to={to} title={t(label)} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><Icon name={ic} /><span className="nav-label">{t(label)}</span></Link>)}
           <small className="side-label">{t('admin.nav.site')}</small>
-          <a href="/" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">↗</span>{t('admin.nav.exit')}</a>
+          <a href="/" target="_blank" rel="noopener noreferrer"><Icon name="external" /><span className="nav-label">{t('admin.nav.exit')}</span></a>
         </nav>
       </aside>
       <div className="admin-main">
         <div className="admin-top">
-          <h1>{t('admin.title')}</h1>
+          <div className="admin-title"><h1>{t('admin.title')}</h1>
+            <button type="button" className="ad-cmdk" onClick={() => setPalette(true)} aria-label={t('ad.cmd.open')}><Icon name="search" size={16} /><span>{t('ad.cmd.placeholder')}</span><kbd>Ctrl K</kbd></button></div>
           <div className="admin-who">
             <Avatar name={name || '?'} size={34} />
             <span className="admin-id"><strong>{name}</strong><small className="muted">{me?.email} · {t('admin.roles.admin')}</small></span>
@@ -228,6 +238,7 @@ function AdminFrame() {
           </div>
         </div>
         <BaseProvider value="/admin"><Outlet /></BaseProvider>
+        {palette && <CommandPalette onClose={() => setPalette(false)} />}
       </div>
     </div>
   )
@@ -237,139 +248,7 @@ function AdminFrame() {
 export function AdminHome() {
   const [params] = useSearchParams()
   const tab = params.get('tab')
-  if (tab === 'roles') return <RoleManager />
+  if (tab === 'roles') return <RolesAdmin />
   if (tab === 'committee') return <CommitteeManager />
   return <AdminDashboard />
-}
-
-function useDebounced(value, ms = 300) {
-  const [v, setV] = useState(value)
-  useEffect(() => { const id = setTimeout(() => setV(value), ms); return () => clearTimeout(id) }, [value, ms])
-  return v
-}
-
-// Role management. The buttons only call the API; the Go backend decides what is allowed
-// (admin only, no self-change, verified accounts only, never the last admin).
-function RoleManager() {
-  const { t, n } = useApp()
-  const { user: me } = useAuth()
-  const [q, setQ] = useState('')
-  const [role, setRole] = useState('')
-  const [page, setPage] = useState(1)
-  const dq = useDebounced(q)
-  useEffect(() => { setPage(1) }, [dq, role])
-  const list = useApi(`/admin/users${qs({ q: dq, role, page: page > 1 ? page : '', limit: 20 })}`)
-  const [pending, setPending] = useState(null) // { row, role }
-  const [msg, setMsg] = useState(null)
-  const [busy, setBusy] = useState(false)
-
-  const explain = (e) => {
-    if (e.message === 'target_unverified') return 'admin.err.unverified'
-    if (e.message === 'last_admin') return 'admin.err.lastAdmin'
-    if (e.status === 403) return 'admin.err.forbidden'
-    if (e.status === 404) return 'admin.err.notFound'
-    return errorKey(e) || 'admin.failed'
-  }
-  const apply = async () => {
-    setBusy(true); setMsg(null)
-    try {
-      await api(`/admin/users/${pending.row.id}/role`, { method: 'POST', body: JSON.stringify({ role: pending.role }) })
-      setMsg({ tone: 'ok', key: 'admin.roles.done' })
-      list.retry()
-    } catch (e) { setMsg({ tone: 'bad', key: explain(e) }) }
-    finally { setBusy(false); setPending(null) }
-  }
-  useEffect(() => {
-    if (!pending) return undefined
-    const onKey = (e) => e.key === 'Escape' && setPending(null)
-    addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
-  }, [pending])
-  const label = (r) => r.name || r.email
-
-  return (
-    <section aria-labelledby="roles-h">
-      <h2 id="roles-h">{t('admin.roles.title')}</h2>
-      <p className="muted">{t('admin.roles.lede')}</p>
-      <div className="filters filters-2">
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.roles.search')} aria-label={t('admin.roles.search')} />
-        <select value={role} onChange={(e) => setRole(e.target.value)} aria-label={t('admin.roles.all')}>
-          <option value="">{t('admin.roles.all')}</option>
-          <option value="admin">{t('admin.roles.admin')}</option>
-          <option value="member">{t('admin.roles.member')}</option>
-        </select>
-      </div>
-      <p className="muted small">{t('admin.roles.note')}</p>
-      <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`} role={msg.tone === 'bad' ? 'alert' : 'status'}>{t(msg.key)}</p>}</div>
-      <RoleHistory />
-      <Data q={list}>
-        {(d) => d.items.length === 0 ? <Empty>{t('admin.roles.none')}</Empty> : (
-          <>
-            <table className="table">
-              <tbody>
-                {d.items.map((r) => {
-                  const self = r.id === me?.id
-                  const admin = r.role === 'admin'
-                  return (
-                    <tr key={r.id}>
-                      <td><Avatar name={label(r)} size={34} /> <strong>{r.name || r.email}</strong>{self && <> <Badge tone="muted">{t('admin.roles.you')}</Badge></>}{r.name && <><br /><small className="muted">{r.email}</small></>}</td>
-                      <td>
-                        <Badge tone={admin ? 'gold' : 'muted'}>{t(admin ? 'admin.roles.admin' : 'admin.roles.member')}</Badge>{' '}
-                        <small className={r.emailVerified ? 'muted' : 'err'}>{t(r.emailVerified ? 'admin.roles.verified' : 'admin.roles.unverified')}</small>
-                      </td>
-                      <td className="actions">
-                        {admin
-                          ? <button className="btn btn-ghost btn-sm" onClick={() => setPending({ row: r, role: 'member' })}>{t(self ? 'admin.roles.leave' : 'admin.roles.makeMember')}</button>
-                          : <button className="btn btn-dark btn-sm" disabled={!r.emailVerified} title={r.emailVerified ? undefined : t('admin.err.unverified')} onClick={() => setPending({ row: r, role: 'admin' })}>{t('admin.roles.makeAdmin')}</button>}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            <p className="muted small">{n(d.total)} · <Link to="/admin" onClick={(e) => { e.preventDefault(); list.retry() }}>↻</Link></p>
-            <Pagination page={d.page} pages={d.pages} onPage={setPage} />
-          </>
-        )}
-      </Data>
-      {pending && (
-        <div className="modal-back" onClick={(e) => e.target === e.currentTarget && setPending(null)}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="role-confirm">
-            <p id="role-confirm">{t(pending.role === 'admin' ? 'admin.roles.confirmPromote' : pending.row.id === me?.id ? 'admin.roles.confirmLeave' : 'admin.roles.confirmDemote').replace('{who}', `${label(pending.row)} (${pending.row.email})`)}</p>
-            <div className="row">
-              <button className="btn btn-dark" autoFocus disabled={busy} onClick={apply}>{busy ? t('state.loading') : t('admin.roles.confirm')}</button>
-              <button className="btn btn-ghost" disabled={busy} onClick={() => setPending(null)}>{t('admin.roles.cancel')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  )
-}
-
-// Who changed whose role, and when (read from the audit trail).
-function RoleHistory() {
-  const { t, lang } = useApp()
-  const [open, setOpen] = useState(false)
-  const hist = useApi(open ? '/admin/role-history?limit=30' : null)
-  const when = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) }
-  return (
-    <div className="ad-role-history">
-      <button type="button" className="btn btn-ghost btn-sm" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? '▾' : '▸'} {t('admin.roles.history')}</button>
-      {open && (
-        <Data q={hist}>
-          {(d) => d.items.length === 0 ? <p className="muted">{t('admin.roles.historyNone')}</p> : (
-            <ul className="ad-list">
-              {d.items.map((r, i) => (
-                <li key={i}>
-                  <span><strong>{r.target}</strong>: {t(`admin.roles.${r.from}`)} → {t(`admin.roles.${r.to}`)}</span>
-                  <span className="muted small">{r.actor || (r.source === 'bootstrap' ? t('admin.roles.bootstrap') : '—')} · {when(r.at)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Data>
-      )}
-    </div>
-  )
 }

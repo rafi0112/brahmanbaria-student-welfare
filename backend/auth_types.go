@@ -63,6 +63,13 @@ type UserRow struct {
 	EmailVerified bool   `json:"emailVerified"`
 	MemberStatus  string `json:"memberStatus"`
 	CreatedAt     string `json:"createdAt"`
+	Disabled      bool   `json:"disabled"`
+}
+
+// UserQuery filters and orders the admin user list; every field is optional.
+type UserQuery struct {
+	Q, Role, Verified, Account, Sort string // Verified: yes|no, Account: active|deactivated, Sort: newest|oldest|name|email|role
+	Limit, Offset                    int
 }
 
 // MemberRow is what admins see in the approval queue.
@@ -124,6 +131,7 @@ type AuthStore interface {
 	// atomically, so no caller can skip them. PromoteVerifiedByEmail is the operator-only bootstrap: it promotes
 	// an account whose email Supabase has confirmed; with apply=false it only reports what it would do.
 	ListUsers(ctx context.Context, q, role string, limit, offset int) ([]UserRow, int, error)
+	SearchUsers(ctx context.Context, q UserQuery) ([]UserRow, int, error)
 	SetRole(ctx context.Context, actorID, targetID, role string) (User, error)
 	PromoteVerifiedByEmail(ctx context.Context, email string, apply bool) (user User, changed bool, err error)
 	Ping(ctx context.Context) error

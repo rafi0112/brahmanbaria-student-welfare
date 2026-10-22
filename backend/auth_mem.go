@@ -305,6 +305,59 @@ func (m *memStore) ListUsers(_ context.Context, q, role string, limit, offset in
 	return all[offset:end], total, nil
 }
 
+func (m *memStore) SearchUsers(_ context.Context, q UserQuery) ([]UserRow, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	needle := strings.ToLower(strings.TrimSpace(q.Q))
+	all := []UserRow{}
+	for id, u := range m.users {
+		name, status, created := "", "", ""
+		if p, ok := m.profiles[id]; ok {
+			name, status, created = p.Name, p.Status, p.CreatedAt
+		}
+		if (q.Role != "" && u.Role != q.Role) || (q.Verified == "yes" && !u.EmailVerified) || (q.Verified == "no" && u.EmailVerified) ||
+			(q.Account == "active" && u.Disabled) || (q.Account == "deactivated" && !u.Disabled) {
+			continue
+		}
+		if needle != "" && !strings.Contains(strings.ToLower(u.Email), needle) && !strings.Contains(strings.ToLower(name), needle) {
+			continue
+		}
+		all = append(all, UserRow{ID: id, Email: u.Email, Name: name, Role: u.Role, EmailVerified: u.EmailVerified, MemberStatus: status, CreatedAt: created, Disabled: u.Disabled})
+	}
+	label := func(r UserRow) string {
+		if r.Name != "" {
+			return strings.ToLower(r.Name)
+		}
+		return strings.ToLower(r.Email)
+	}
+	sort.SliceStable(all, func(i, j int) bool {
+		switch q.Sort {
+		case "name":
+			return label(all[i]) < label(all[j])
+		case "email":
+			return strings.ToLower(all[i].Email) < strings.ToLower(all[j].Email)
+		case "role":
+			if all[i].Role != all[j].Role {
+				return all[i].Role < all[j].Role
+			}
+			return all[i].Email < all[j].Email
+		case "oldest":
+			return all[i].ID < all[j].ID
+		}
+		return all[i].ID > all[j].ID // newest first (ids grow with registration order)
+	})
+	total := len(all)
+	lo := q.Offset
+	if lo > total {
+		lo = total
+	}
+	hi := lo + q.Limit
+	if hi > total {
+		hi = total
+	}
+	return all[lo:hi], total, nil
+}
+
 func (m *memStore) otherActiveAdmins(exclude string) int {
 	n := 0
 	for id, u := range m.users {

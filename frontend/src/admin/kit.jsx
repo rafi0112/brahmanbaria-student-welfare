@@ -320,3 +320,52 @@ export function EmptyState({ title, text, action }) {
     </div>
   )
 }
+
+// "More actions" menu: a button that opens a short list. Opens with click/Enter, moves with the arrow keys, closes with Escape.
+// It is positioned with fixed coordinates so a table's overflow never clips it.
+export function RowMenu({ label, items }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const btn = useRef(null)
+  const list = useRef(null)
+  const live = items.filter(Boolean)
+  useEffect(() => {
+    if (!open) return undefined
+    const r = btn.current.getBoundingClientRect()
+    setPos({ top: Math.min(r.bottom + 4, innerHeight - 24), right: Math.max(8, innerWidth - r.right) })
+    list.current?.querySelector('[role=menuitem]:not([disabled])')?.focus()
+    const close = () => setOpen(false)
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setOpen(false); btn.current?.focus() }
+      const els = [...(list.current?.querySelectorAll('[role=menuitem]:not([disabled])') || [])]
+      const i = els.indexOf(document.activeElement)
+      if (e.key === 'ArrowDown') { e.preventDefault(); els[(i + 1) % els.length]?.focus() }
+      if (e.key === 'ArrowUp') { e.preventDefault(); els[(i - 1 + els.length) % els.length]?.focus() }
+    }
+    const onDown = (e) => { if (!list.current?.contains(e.target) && !btn.current?.contains(e.target)) close() }
+    addEventListener('keydown', onKey)
+    addEventListener('mousedown', onDown)
+    addEventListener('scroll', close, true)
+    addEventListener('resize', close)
+    return () => { removeEventListener('keydown', onKey); removeEventListener('mousedown', onDown); removeEventListener('scroll', close, true); removeEventListener('resize', close) }
+  }, [open])
+  if (live.length === 0) return null
+  return (
+    <>
+      <button ref={btn} type="button" className="btn btn-ghost btn-sm ad-more" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>
+        <span aria-hidden="true">⋯</span>
+      </button>
+      {open && (
+        <ul ref={list} role="menu" className="ad-menu" aria-label={label} style={{ top: pos.top, right: pos.right }}>
+          {live.map((it) => (
+            <li key={it.label} role="none">
+              {it.href
+                ? <a role="menuitem" className={it.danger ? 'danger' : ''} href={it.href} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>{it.label}</a>
+                : <button role="menuitem" type="button" className={it.danger ? 'danger' : ''} disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}>{it.label}</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}

@@ -5,6 +5,8 @@ import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import Icon from './icons.jsx'
+import ListToolbar from './toolbar.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
 
@@ -33,7 +35,7 @@ function Members() {
   const { user: me } = useAuth()
   const errText = useErrText()
   const when = useWhen(lang)
-  const [f, set] = useFilters({ q: '', status: '', department: '', batch: '', verified: '', complete: '', disabled: '', page: '1', limit: '20' })
+  const [f, set] = useFilters({ q: '', status: '', department: '', batch: '', verified: '', complete: '', disabled: '', sort: 'newest', page: '1', limit: '20' })
   const depts = useApi('/departments')
   const list = useApi(`/admin/students${qs({ ...f, page: f.page === '1' ? '' : f.page })}`)
   const { notice, ok, bad, clear } = useNotice()
@@ -42,7 +44,7 @@ function Members() {
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const rows = list.data?.items || []
-  useEffect(() => setPicked([]), [f.q, f.status, f.department, f.batch, f.verified, f.complete, f.disabled, f.page, f.limit])
+  useEffect(() => setPicked([]), [f.q, f.status, f.department, f.batch, f.verified, f.complete, f.disabled, f.sort, f.page, f.limit])
 
   const act = async (path, body, doneText, opts = {}) => {
     setBusy(true); clear()
@@ -76,21 +78,27 @@ function Members() {
 
   return (
     <>
-      <div className="ad-filters">
-        <SearchBox value={f.q} onChange={(q) => set({ q })} placeholder={t('ad.stu.search')} />
-        <Select value={f.status} onChange={(status) => set({ status })} label={t('ad.stu.status')} all={t('ad.stu.anyStatus')}
-          options={[['pending', t('ad.status.pending')], ['approved', t('ad.status.approved')], ['rejected', t('ad.status.rejected')]]} />
-        <Select value={f.department} onChange={(department) => set({ department })} label={t('auth.dept')} all={t('ad.stu.anyDept')} options={(depts.data?.items || []).map((d) => [d, d])} />
-        <Select value={f.batch} onChange={(batch) => set({ batch })} label={t('auth.batch')} all={t('ad.stu.anyBatch')} options={BATCHES.map((b) => [String(b), `${t('auth.batch')} ${n(b)}`])} />
-        <Select value={f.verified} onChange={(verified) => set({ verified })} label={t('ad.stu.verified')} all={t('ad.stu.anyVerified')} options={[['yes', t('ad.stu.verifiedYes')], ['no', t('ad.stu.verifiedNo')]]} />
-        <Select value={f.complete} onChange={(complete) => set({ complete })} label={t('ad.stu.complete')} all={t('ad.stu.anyComplete')} options={[['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]]} />
-        <Select value={f.disabled} onChange={(disabled) => set({ disabled })} label={t('ad.stu.account')} all={t('ad.stu.anyAccount')} options={[['no', t('ad.stu.active')], ['yes', t('ad.stu.deactivated')]]} />
-        {filtered && <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button>}
-      </div>
-      <div className="row ad-toolbar">
-        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(false)}>{t('ad.stu.export')}</button>
-        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(true)}>{t('ad.stu.exportContact')}</button>
-      </div>
+      <ListToolbar section="students" values={f} set={set} defaults={{ sort: 'newest', limit: '20' }} total={list.data?.total} loading={list.loading}
+        search={{ placeholder: t('ad.stu.search') }}
+        views={[
+          { id: 'all', label: t('ad.stu.view.all'), patch: { status: '', complete: '' } }, { id: 'pending', label: t('ad.status.pending'), patch: { status: 'pending' } },
+          { id: 'approved', label: t('ad.status.approved'), patch: { status: 'approved' } }, { id: 'rejected', label: t('ad.status.rejected'), patch: { status: 'rejected' } },
+          { id: 'incomplete', label: t('ad.stu.view.incomplete'), patch: { complete: 'no' } },
+        ]}
+        fields={[
+          { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
+          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
+          { key: 'verified', label: t('ad.stu.verified'), all: t('ad.stu.anyVerified'), advanced: true, options: [['yes', t('ad.stu.verifiedYes')], ['no', t('ad.stu.verifiedNo')]] },
+          { key: 'complete', label: t('ad.stu.complete'), all: t('ad.stu.anyComplete'), advanced: true, options: [['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]] },
+          { key: 'disabled', label: t('ad.stu.account'), all: t('ad.stu.anyAccount'), advanced: true, options: [['no', t('ad.stu.active')], ['yes', t('ad.stu.deactivated')]] },
+        ]}
+        sorts={[['newest', t('ad.stu.sort.newest')], ['oldest', t('ad.stu.sort.oldest')], ['name', t('ad.stu.sort.name')], ['batch', t('ad.stu.sort.batch')], ['status', t('ad.stu.sort.status')]]}
+        extra={(
+          <>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(false)}><Icon name="download" size={16} /> {t('ad.stu.export')}</button>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => exportCsv(true)}>{t('ad.stu.exportContact')}</button>
+          </>
+        )} />
       <Notice notice={notice} onClose={clear} />
 
       {picked.length > 0 && (
@@ -115,7 +123,7 @@ function Members() {
               <tr>
                 <th scope="col"><input type="checkbox" checked={allOnPage} onChange={() => setPicked(allOnPage ? [] : rows.map((r) => r.id))} aria-label={t('ad.selectAll')} /></th>
                 <th scope="col">{t('ad.stu.col.member')}</th><th scope="col">{t('ad.stu.col.academic')}</th><th scope="col">{t('ad.stu.col.status')}</th>
-                <th scope="col">{t('ad.stu.col.account')}</th><th scope="col">{t('ad.stu.col.joined')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
+                <th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -126,12 +134,11 @@ function Members() {
                     <span className="ad-person"><Avatar name={r.name} size={36} /><span><strong>{r.name}</strong><br /><small className="muted">{r.email}</small></span></span>
                   </td>
                   <td data-label={t('ad.stu.col.academic')}>{r.department}<br /><small className="muted">{t('auth.batch')} {n(r.batch)}</small></td>
-                  <td data-label={t('ad.stu.col.status')}><StatusBadge status={r.status} />{r.role === 'admin' && <> <Badge tone="gold">{t('admin.roles.admin')}</Badge></>}</td>
-                  <td data-label={t('ad.stu.col.account')}>
-                    <span className={`verify ${r.emailVerified ? 'yes' : 'no'}`}>{r.emailVerified ? '✓ ' + t('admin.roles.verified') : '! ' + t('admin.roles.unverified')}</span><br />
-                    <small className="muted">{r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {r.complete ? t('ad.stu.completeYes') : t('ad.stu.completeNo')}</small>
+                  <td data-label={t('ad.stu.col.status')}>
+                    <StatusBadge status={r.status} />{r.role === 'admin' && <> <Badge tone="gold">{t('admin.roles.admin')}</Badge></>}<br />
+                    <small className={r.emailVerified ? 'muted' : 'err'}>{r.emailVerified ? '✓ ' + t('admin.roles.verified') : '! ' + t('admin.roles.unverified')} · {r.disabled ? t('ad.stu.deactivated') : t('ad.stu.active')} · {r.complete ? t('ad.stu.completeYes') : t('ad.stu.completeNo')}</small><br />
+                    <small className="muted">{when(r.createdAt)}</small>
                   </td>
-                  <td data-label={t('ad.stu.col.joined')}><small>{when(r.createdAt)}</small></td>
                   <td className="actions" data-label="">
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.view')}</button>
                     {r.status === 'pending' && <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => act(`/admin/students/${r.id}/approve`, null, t('ad.stu.approved'))}>{t('ad.stu.act.approve')}</button>}
@@ -241,11 +248,12 @@ function Imported() {
   return (
     <>
       <p className="notice">{t('ad.stu.importedNote')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
-      <div className="ad-filters">
-        <SearchBox value={f.q} onChange={(q) => set({ q })} placeholder={t('ad.stu.searchName')} />
-        <Select value={f.department} onChange={(department) => set({ department })} label={t('auth.dept')} all={t('ad.stu.anyDept')} options={(depts.data?.items || []).map((d) => [d, d])} />
-        <Select value={f.batch} onChange={(batch) => set({ batch })} label={t('auth.batch')} all={t('ad.stu.anyBatch')} options={BATCHES.map((b) => [String(b), `${t('auth.batch')} ${n(b)}`])} />
-      </div>
+      <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
+        search={{ placeholder: t('ad.stu.searchName') }}
+        fields={[
+          { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
+          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
+        ]} />
       {list.loading && <SkeletonRows />}
       {list.error && <Data q={list}>{() => null}</Data>}
       {list.data && (rows.length === 0 ? <EmptyState title={t('ad.stu.noMatch')} text={t('ad.stu.noMatchHint')} /> : (

@@ -14,7 +14,7 @@ export function HeritageList() {
   const upOptions = (ups.data?.items || []).map((u) => [u.slug, pick(u.nameBn, u.nameEn)])
   return (
     <ContentList kind="place" title={t('ad.her.title')} desc={t('ad.her.desc')} addLabel={t('ad.her.add')} addPath="/admin/heritage/new"
-      emptyHint={t('ad.her.emptyHint')} editPath={(r) => `/admin/heritage/${r.id}/edit`} publicPath={(r) => `/heritage/${r.slug}`}
+      emptyHint={t('ad.her.emptyHint')} searchPlaceholder={t('ad.her.search')} editPath={(r) => `/admin/heritage/${r.id}/edit`} publicPath={(r) => `/heritage/${r.slug}`}
       extra={[
         { key: 'category', label: t('ad.her.category'), all: t('ad.her.anyCategory'), options: CATS.map((c) => [c, t(`cat.${c}`)]) },
         { key: 'upazila', label: t('auth.upazila'), all: t('ad.her.anyUpazila'), options: upOptions },
@@ -28,11 +28,10 @@ export function HeritageList() {
             </span>
           ),
         },
-        { label: t('ad.her.category'), render: (r) => (r.data.category ? t(`cat.${r.data.category}`) : '—') },
         {
           label: t('ad.her.col.location'), render: (r) => {
             const up = (ups.data?.items || []).find((u) => u.slug === r.data.upazila)
-            return <>{up ? pick(up.nameBn, up.nameEn) : '—'}{r.data.lat != null ? <><br /><small className="muted">{r.data.lat}, {r.data.lng}</small></> : null}</>
+            return <>{r.data.category ? t(`cat.${r.data.category}`) : '—'}<br /><small className="muted">{up ? pick(up.nameBn, up.nameEn) : '—'}{r.data.lat != null ? ` · ${r.data.lat}, ${r.data.lng}` : ''}</small></>
           },
         },
         { label: t('ad.her.col.checked'), render: (r) => (r.data.verified ? <Badge tone="leaf">✓ {t('place.verified')}</Badge> : <Badge tone="muted">{t('place.unverified')}</Badge>) },

@@ -571,8 +571,14 @@ func (a *App) adminUsers(w http.ResponseWriter, r *http.Request, _ User) {
 		apiError(w, http.StatusBadRequest, "unknown role")
 		return
 	}
+	v := r.URL.Query()
+	if !userSorts[v.Get("sort")] || (v.Get("verified") != "" && v.Get("verified") != "yes" && v.Get("verified") != "no") ||
+		(v.Get("account") != "" && v.Get("account") != "active" && v.Get("account") != "deactivated") {
+		apiError(w, http.StatusBadRequest, "invalid filter")
+		return
+	}
 	pg, limit := paging(r, 50)
-	rows, total, err := a.Auth.Store.ListUsers(r.Context(), q, role, limit, (pg-1)*limit)
+	rows, total, err := a.Auth.Store.SearchUsers(r.Context(), UserQuery{Q: q, Role: role, Verified: v.Get("verified"), Account: v.Get("account"), Sort: v.Get("sort"), Limit: limit, Offset: (pg - 1) * limit})
 	if err != nil {
 		log.Printf("list users: %v", err)
 		apiError(w, 500, "could not load")

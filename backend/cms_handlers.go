@@ -85,6 +85,8 @@ type entryBody struct {
 	SortOrder *int            `json:"sortOrder"`
 	ParentID  string          `json:"parentId"`
 	Data      json.RawMessage `json:"data"`
+	// ExpectedUpdatedAt is the updatedAt the editor was opened with; a mismatch means someone else saved first.
+	ExpectedUpdatedAt string `json:"expectedUpdatedAt"`
 }
 
 func tooLong(errs map[string]string, key, v string, max int, msg string) {
@@ -348,6 +350,8 @@ func (a *App) cmsFail(w http.ResponseWriter, err error) {
 		apiError(w, http.StatusUnprocessableEntity, "album_invalid")
 	case errors.Is(err, ErrBadState):
 		apiError(w, http.StatusConflict, "bad_state")
+	case errors.Is(err, ErrStale):
+		apiError(w, http.StatusConflict, "stale")
 	case errors.Is(err, ErrReorderMismatch):
 		apiError(w, http.StatusUnprocessableEntity, "reorder_mismatch")
 	default:
@@ -463,6 +467,7 @@ func (a *App) cmsSave(w http.ResponseWriter, r *http.Request, u User) {
 	if fieldErrors(w, errs) {
 		return
 	}
+	in.ExpectedUpdatedAt = body.ExpectedUpdatedAt
 	id := r.PathValue("id")
 	var e Entry
 	var err error

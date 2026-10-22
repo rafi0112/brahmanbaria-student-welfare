@@ -159,8 +159,8 @@ func memberQuery(r *http.Request) (MemberQuery, bool) {
 	pg, limit := paging(r, 100)
 	b, _ := strconv.Atoi(v.Get("batch"))
 	q := MemberQuery{Q: strings.TrimSpace(v.Get("q")), Status: v.Get("status"), Department: v.Get("department"), Batch: b,
-		Verified: v.Get("verified"), Complete: v.Get("complete"), Disabled: v.Get("disabled"), Page: pg, Limit: limit}
-	ok := utf8.RuneCountInString(q.Q) <= 100 && (q.Status == "" || q.Status == StatusPending || q.Status == StatusApproved || q.Status == StatusRejected)
+		Verified: v.Get("verified"), Complete: v.Get("complete"), Disabled: v.Get("disabled"), Sort: v.Get("sort"), Page: pg, Limit: limit}
+	ok := memberSorts[q.Sort] && utf8.RuneCountInString(q.Q) <= 100 && (q.Status == "" || q.Status == StatusPending || q.Status == StatusApproved || q.Status == StatusRejected)
 	return q, ok
 }
 

@@ -292,11 +292,14 @@ func (s *pgStore) UpdateEntry(ctx context.Context, actorID, id string, in EntryI
 		return Entry{}, err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	var kind string
-	if err := tx.QueryRow(ctx, `SELECT kind FROM cms_entries WHERE id = $1::uuid FOR UPDATE`, id).Scan(&kind); errors.Is(err, pgx.ErrNoRows) {
+	var kind, stamp string
+	if err := tx.QueryRow(ctx, `SELECT kind, to_char(updated_at AT TIME ZONE 'UTC', `+tsFmt+`) FROM cms_entries WHERE id = $1::uuid FOR UPDATE`, id).Scan(&kind, &stamp); errors.Is(err, pgx.ErrNoRows) {
 		return Entry{}, ErrNotFound
 	} else if err != nil {
 		return Entry{}, err
+	}
+	if in.ExpectedUpdatedAt != "" && in.ExpectedUpdatedAt != stamp {
+		return Entry{}, ErrStale
 	}
 	if err := s.checkParent(ctx, tx, kind, in.ParentID); err != nil {
 		return Entry{}, err
@@ -461,12 +464,17 @@ func (s *pgStore) ListMembersAdmin(ctx context.Context, q MemberQuery) ([]Member
 	yn(q.Verified, "u.email_verified_at IS NOT NULL")
 	yn(q.Complete, "(p.phone <> '' AND p.blood_group <> '')")
 	yn(q.Disabled, "u.disabled_at IS NOT NULL")
+	order := map[string]string{"": "p.created_at DESC", "newest": "p.created_at DESC", "oldest": "p.created_at", "name": "lower(p.name)", "batch": "p.batch DESC, lower(p.name)",
+		"status": "p.status, lower(p.name)"}[q.Sort]
+	if order == "" {
+		order = "p.created_at DESC"
+	}
 	var total int
 	if err := s.db.QueryRow(ctx, `SELECT count(*)`+memberFrom+b.where(), b.args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 	args := append(append([]any{}, b.args...), q.Limit, (q.Page-1)*q.Limit)
-	rows, err := s.db.Query(ctx, `SELECT `+memberCols+memberFrom+b.where()+` ORDER BY p.created_at DESC, u.id LIMIT $`+fmt.Sprint(len(args)-1)+` OFFSET $`+fmt.Sprint(len(args)), args...)
+	rows, err := s.db.Query(ctx, `SELECT `+memberCols+memberFrom+b.where()+` ORDER BY `+order+`, u.id LIMIT $`+fmt.Sprint(len(args)-1)+` OFFSET $`+fmt.Sprint(len(args)), args...)
 	if err != nil {
 		return nil, 0, err
 	}

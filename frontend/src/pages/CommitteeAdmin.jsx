@@ -233,6 +233,8 @@ export default function CommitteeManager() {
   const explain = useExplain()
   const list = useApi('/admin/committees')
   const [sel, setSel] = useState(null)
+  const [cq, setCq] = useState('')
+  const [cs, setCs] = useState('')
   const detail = useApi(sel ? `/admin/committees/${sel}` : null)
   const [mode, setMode] = useState(null) // 'new' | 'edit' | 'add' | {edit: executive}
   const [confirm, setConfirm] = useState(null) // {text, label, run}
@@ -294,20 +296,36 @@ export default function CommitteeManager() {
       <div className="cm-layout">
         <aside className="cm-side">
           <button className="btn btn-dark btn-sm btn-block" onClick={() => { setMode('new'); setErrs(null); setMsg(null) }}>+ {t('cm.new')}</button>
+          <div className="cm-filter">
+            <input type="search" value={cq} onChange={(e) => setCq(e.target.value)} placeholder={t('cm.search')} aria-label={t('cm.search')} maxLength={100} />
+            <select value={cs} onChange={(e) => setCs(e.target.value)} aria-label={t('ad.status')}>
+              <option value="">{t('cm.anyStatus')}</option>
+              {['draft', 'published', 'archived'].map((k) => <option key={k} value={k}>{t(`cm.status.${k}`)}</option>)}
+            </select>
+          </div>
           <Data q={list}>
-            {(d) => d.items.length === 0 ? <Empty>{t('cm.noCommittees')}</Empty> : (
-              <ul className="cm-list">
-                {d.items.map((x) => (
-                  <li key={x.id}>
-                    <button className={x.id === sel ? 'on' : ''} onClick={() => { setSel(x.id); setMode(null); setMsg(null) }}>
-                      <strong>{x.name}</strong>
-                      <small className="muted">{[x.term, `${n(x.memberCount)} ${t('cm.members')}`].filter(Boolean).join(' · ')}</small>
-                      <Badge tone={x.status === 'published' ? 'gold' : 'muted'}>{t(`cm.status.${x.status}`)}</Badge>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {(d) => {
+              const shown = d.items.filter((x) => (!cs || x.status === cs) && (!cq.trim() || `${x.name} ${x.term}`.toLowerCase().includes(cq.trim().toLowerCase())))
+              if (d.items.length === 0) return <Empty>{t('cm.noCommittees')}</Empty>
+              return (
+                <>
+                  <p className="muted small" aria-live="polite">{t('ad.tb.showing')} {n(shown.length)} {t('ad.tb.of')} {n(d.items.length)}</p>
+                  {shown.length === 0 ? <Empty>{t('ad.stu.noMatch')}</Empty> : (
+                    <ul className="cm-list">
+                      {shown.map((x) => (
+                        <li key={x.id}>
+                          <button className={x.id === sel ? 'on' : ''} onClick={() => { setSel(x.id); setMode(null); setMsg(null) }}>
+                            <strong>{x.name}</strong>
+                            <small className="muted">{[x.term, `${n(x.memberCount)} ${t('cm.members')}`].filter(Boolean).join(' · ')}</small>
+                            <Badge tone={x.status === 'published' ? 'gold' : 'muted'}>{t(`cm.status.${x.status}`)}</Badge>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )
+            }}
           </Data>
         </aside>
 
