@@ -33,6 +33,19 @@ export function Photo({ id, shape = '', sketch = false, eager = false, sizes = '
   )
 }
 
+// A picture that is either one of the bundled photos (id) or an uploaded file (url).
+export function MediaPhoto({ id, url, shape = '', sketch = false, eager = false, sizes, alt, className = '' }) {
+  const [failed, setFailed] = useState(false)
+  if (!url) return <Photo id={id} shape={shape} sketch={sketch} eager={eager} sizes={sizes} alt={alt} className={className} />
+  const wrap = `photo ${shape} ${sketch ? 'sketch-frame' : ''} ${className}`
+  if (failed) return <div className={`${wrap} photo-fallback`} role="img" aria-label={alt || 'Photo unavailable'} />
+  return (
+    <div className={wrap}>
+      <img src={url} alt={alt ?? ''} loading={eager ? 'eager' : 'lazy'} decoding="async" style={{ objectFit: 'cover' }} onError={() => setFailed(true)} />
+    </div>
+  )
+}
+
 export function Credit({ id }) {
   const { t } = useApp()
   const m = images[id]
@@ -118,11 +131,11 @@ export function Crumbs({ items }) {
 
 // Rounded banner with a photo, dark overlay and white serif title (matches the page mockups).
 // `children` is rendered inside the banner (search box, filter chips).
-export function PageHero({ kicker, title, lede, image, children }) {
+export function PageHero({ kicker, title, lede, image, imageUrl, children }) {
   return (
     <header className="page-banner-wrap wrap">
       <div className="page-banner">
-        <Photo id={image} eager className="banner-photo" sizes="(min-width: 1200px) 1180px, 100vw" alt="" />
+        <MediaPhoto id={image} url={imageUrl} eager className="banner-photo" sizes="(min-width: 1200px) 1180px, 100vw" alt="" />
         <div className="banner-shade" />
         <div className="banner-copy">
           {kicker && <p className="kicker kicker-light">{kicker}</p>}

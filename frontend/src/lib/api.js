@@ -21,19 +21,22 @@ export async function api(path, opts) {
 
 // Fetch with loading / error / retry. `path` null skips the request.
 export function useApi(path) {
-  const [state, setState] = useState({ data: null, loading: !!path, error: null })
+  // `at` remembers which path the state belongs to, so the render right after the path changes
+  // reports "loading" instead of showing the previous (or empty) result
+  const [state, setState] = useState({ at: path, data: null, loading: !!path, error: null })
   const [tick, setTick] = useState(0)
   useEffect(() => {
-    if (!path) { setState({ data: null, loading: false, error: null }); return undefined }
+    if (!path) { setState({ at: path, data: null, loading: false, error: null }); return undefined }
     let live = true
-    setState((s) => ({ ...s, loading: true, error: null }))
+    setState((s) => ({ ...s, at: path, loading: true, error: null }))
     api(path)
-      .then((data) => live && setState({ data, loading: false, error: null }))
-      .catch((error) => live && setState({ data: null, loading: false, error }))
+      .then((data) => live && setState({ at: path, data, loading: false, error: null }))
+      .catch((error) => live && setState({ at: path, data: null, loading: false, error }))
     return () => { live = false }
   }, [path, tick])
   const retry = useCallback(() => setTick((t) => t + 1), [])
-  return { ...state, retry }
+  const fresh = state.at === path
+  return { data: fresh ? state.data : null, loading: path ? !fresh || state.loading : false, error: fresh ? state.error : null, retry }
 }
 
 export const qs = (obj) => {
@@ -41,4 +44,49 @@ export const qs = (obj) => {
   Object.entries(obj).forEach(([k, v]) => { if (v !== '' && v != null) p.set(k, v) })
   const s = p.toString()
   return s ? `?${s}` : ''
+}
+
+async function bearer() {
+  const session = supabase ? (await supabase.auth.getSession()).data.session : null
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+}
+
+// Uploads one picture (a File, or a Google Drive link) to the admin media endpoint with real progress events.
+// Resolves with { path, url } only when the server confirms the file is stored; rejects with the server's error code.
+export async function uploadMedia({ file, driveUrl, endpoint = '/admin/media', onProgress, signal }) {
+  const form = new FormData()
+  if (file) form.append('file', file)
+  if (driveUrl) form.append('driveUrl', driveUrl)
+  const headers = await bearer()
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${BASE}/api/v1${endpoint}`)
+    xhr.withCredentials = true
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v))
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)) }
+    xhr.onerror = () => reject(Object.assign(new Error('network'), { status: 0 }))
+    xhr.onabort = () => reject(Object.assign(new Error('aborted'), { status: 0 }))
+    xhr.onload = () => {
+      let body = null
+      try { body = JSON.parse(xhr.responseText) } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300 && body?.path) resolve(body)
+      else reject(Object.assign(new Error(body?.error || `HTTP ${xhr.status}`), { status: xhr.status }))
+    }
+    signal?.addEventListener('abort', () => xhr.abort())
+    xhr.send(form)
+  })
+}
+
+// Downloads a protected file (for example the members CSV) with the admin's token.
+export async function downloadFile(path, filename) {
+  const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', headers: await bearer() })
+  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status })
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

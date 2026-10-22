@@ -4,7 +4,8 @@ import images from '../data/images.json'
 import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useBase } from '../lib/base.js'
-import { Badge, Credit, Crumbs, Data, Empty, PageHero, Photo } from '../components/ui.jsx'
+import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
+import Markdown from '../components/Markdown.jsx'
 import { PostCard } from '../components/cards.jsx'
 import { Plane } from '../components/Sketch.jsx'
 
@@ -32,7 +33,7 @@ export function Blog() {
               <div className="blog-side">
                 {d.items.slice(1).map((p) => (
                   <Link key={p.slug} to={`${base}/blog/${p.slug}`} className="post-row">
-                    <Photo id={p.image} shape="shape-a" sizes="160px" />
+                    <MediaPhoto id={p.image} url={p.imageUrl} shape="shape-a" sizes="160px" />
                     <div><h3>{pick(p.titleBn, p.titleEn)}</h3><small className="muted">{p.date}</small></div>
                   </Link>
                 ))}
@@ -60,9 +61,9 @@ export function BlogPost() {
             <div className="row"><Badge tone="gold">{t(`cat.${p.category}`)}</Badge>{p.sample && <Badge tone="muted">{t('blog.sample')}</Badge>}</div>
             <h1>{pick(p.titleBn, p.titleEn)}</h1>
             <p className="muted">{p.author} · {p.date} · {n(p.readMin)} {t('blog.min')}</p>
-            <Photo id={p.image} shape="shape-a" sketch eager sizes="(min-width: 900px) 720px, 95vw" />
-            <Credit id={p.image} />
-            <div className="prose">{pick(p.bodyBn, p.bodyEn).map((para, i) => <p key={i}>{para}</p>)}</div>
+            <MediaPhoto id={p.image} url={p.imageUrl} alt={p.imageAlt} shape="shape-a" sketch eager sizes="(min-width: 900px) 720px, 95vw" />
+            {!p.imageUrl && <Credit id={p.image} />}
+            <div className="prose"><Markdown text={pick(p.bodyBn, p.bodyEn).join('\n\n')} /></div>
             <Link className="link-arrow" to={`${base}/blog`}>← {t('blog.back')}</Link>
             <h2>{t('blog.latest')}</h2>
             <div className="cards-2">{(more.data?.items || []).filter((x) => x.slug !== p.slug).slice(0, 2).map((x) => <PostCard key={x.slug} p={x} />)}</div>
@@ -74,52 +75,72 @@ export function BlogPost() {
 }
 
 /* ---------------- Gallery ---------------- */
-const ORDER = ['titas-sunset', 'arifail-01', 'titas-morning', 'bariura-bridge', 'kullapathar', 'dhoranti-sarail', 'anandamayi-kali', 'kasba-sunset',
-  'akhaura-water', 'alinagar-fair', 'titas-shahbazpur', 'arifail-10', 'meghna-bridge', 'bb-sunset', 'nabinagar', 'char-sonarampur', 'akhaura-station', 'titas-boat', 'arifail-06']
-
 export function Gallery() {
   const { t, pick } = useApp()
+  const res = useApi('/gallery')
+  const [album, setAlbum] = useState('')
   const [open, setOpen] = useState(null)
   const closeRef = useRef(null)
-  const ids = ORDER.filter((id) => images[id])
+  const all = res.data?.items || []
+  const albums = res.data?.albums || []
+  const items = album ? all.filter((i) => i.album === album) : all
+  const caption = (i) => pick(i.captionBn, i.captionEn) || i.alt
   useEffect(() => {
     if (open == null) return undefined
     closeRef.current?.focus()
     const key = (e) => {
       if (e.key === 'Escape') setOpen(null)
-      if (e.key === 'ArrowRight') setOpen((i) => (i + 1) % ids.length)
-      if (e.key === 'ArrowLeft') setOpen((i) => (i - 1 + ids.length) % ids.length)
+      if (e.key === 'ArrowRight') setOpen((i) => (i + 1) % items.length)
+      if (e.key === 'ArrowLeft') setOpen((i) => (i - 1 + items.length) % items.length)
     }
     addEventListener('keydown', key)
     document.body.style.overflow = 'hidden'
     return () => { removeEventListener('keydown', key); document.body.style.overflow = '' }
-  }, [open, ids.length])
-  const m = open != null ? images[ids[open]] : null
+  }, [open, items.length])
+  const m = open != null ? items[open] : null
   return (
     <>
       <PageHero kicker={t('gallery.kicker')} title={t('gallery.title')} lede={t('gallery.lede')} image="dhoranti-sarail" />
       <section className="section wrap">
-        <div className="masonry">
-          {ids.map((id, i) => (
-            <button key={id} className="masonry-item" onClick={() => setOpen(i)} aria-label={images[id].alt}>
-              <Photo id={id} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
-              <span>{images[id].alt}</span>
-            </button>
-          ))}
-        </div>
+        <Data q={res}>
+          {() => all.length === 0 ? <Empty>{t('gallery.empty')}</Empty> : (
+            <>
+              {albums.length > 0 && (
+                <div className="chips" role="group" aria-label={t('gallery.albums')}>
+                  <button className={`chip ${album === '' ? 'on' : ''}`} aria-pressed={album === ''} onClick={() => setAlbum('')}>{t('gallery.all')}</button>
+                  {albums.map((a) => <button key={a.id} className={`chip ${album === a.id ? 'on' : ''}`} aria-pressed={album === a.id} onClick={() => setAlbum(a.id)}>{pick(a.titleBn, a.titleEn)}</button>)}
+                </div>
+              )}
+              <div className="masonry">
+                {items.map((it, i) => (
+                  <button key={it.id} className="masonry-item" onClick={() => setOpen(i)} aria-label={caption(it)}>
+                    <MediaPhoto id={it.image} url={it.imageUrl} alt={it.alt || caption(it)} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
+                    <span>{caption(it)}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </Data>
       </section>
       {m && (
-        <div className="lightbox" role="dialog" aria-modal="true" aria-label={m.alt} onClick={(e) => e.target === e.currentTarget && setOpen(null)}>
+        <div className="lightbox" role="dialog" aria-modal="true" aria-label={caption(m)} onClick={(e) => e.target === e.currentTarget && setOpen(null)}>
           <button ref={closeRef} className="icon-btn lb-close" onClick={() => setOpen(null)} aria-label={t('gallery.close')}>✕</button>
-          <button className="icon-btn lb-prev" onClick={() => setOpen((open - 1 + ids.length) % ids.length)} aria-label={t('gallery.prev')}>‹</button>
+          <button className="icon-btn lb-prev" onClick={() => setOpen((open - 1 + items.length) % items.length)} aria-label={t('gallery.prev')}>‹</button>
           <figure>
-            <img src={`/images/${ids[open]}-1280.webp`} alt={m.alt} />
+            <img src={m.imageUrl || `/images/${m.image}-1280.webp`} alt={m.alt || caption(m)} />
             <figcaption>
-              <strong>{m.alt}</strong>
-              <span>{t('place.photoCredit')}: {m.author} · {t('gallery.license')}: <a href={m.licenseUrl || m.source} target="_blank" rel="noreferrer">{m.license}</a> · <a href={m.source} target="_blank" rel="noreferrer">{t('gallery.source')}</a></span>
+              <strong>{caption(m)}</strong>
+              {(m.credit || m.license || m.source) && (
+                <span>
+                  {m.credit && <>{t('place.photoCredit')}: {m.credit}</>}
+                  {m.license && <> · {t('gallery.license')}: {m.license}</>}
+                  {m.source && <> · <a href={m.source} target="_blank" rel="noreferrer">{t('gallery.source')}</a></>}
+                </span>
+              )}
             </figcaption>
           </figure>
-          <button className="icon-btn lb-next" onClick={() => setOpen((open + 1) % ids.length)} aria-label={t('gallery.next')}>›</button>
+          <button className="icon-btn lb-next" onClick={() => setOpen((open + 1) % items.length)} aria-label={t('gallery.next')}>›</button>
         </div>
       )}
     </>

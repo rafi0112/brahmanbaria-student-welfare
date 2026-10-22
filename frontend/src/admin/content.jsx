@@ -1,0 +1,195 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { api, qs, useApi } from '../lib/api.js'
+import { useApp } from '../lib/app.jsx'
+import { Data } from '../components/ui.jsx'
+import { Confirm, EmptyState, Notice, PageHeader, Pager, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+
+const NEXT = {
+  draft: [['publish', 'ad.act2.publish'], ['archive', 'ad.act2.archive']],
+  published: [['unpublish', 'ad.act2.unpublish'], ['archive', 'ad.act2.archive']],
+  archived: [['restore', 'ad.act2.restore'], ['publish', 'ad.act2.publish']],
+}
+
+export function actionConfirm(t, action, title) {
+  return t(`ad.confirm.${action}`).replace('{title}', title)
+}
+
+/* ---------------------------------------------------------------- list (blog posts, places, images) */
+
+// `columns` renders the kind-specific cells; everything else (filters, paging, bulk, status flow) is shared.
+export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint }) {
+  const { t, lang, n } = useApp()
+  const when = useWhen(lang)
+  const errText = useErrText()
+  const [f, set] = useFilters({ q: '', status: '', from: '', to: '', sort: 'updated', page: '1', limit: '20', ...Object.fromEntries(extra.map((x) => [x.key, ''])) })
+  const query = qs({ ...f, page: f.page === '1' ? '' : f.page })
+  const list = useApi(`/admin/content/${kind}${query}`)
+  const { notice, ok, bad, clear } = useNotice()
+  const [picked, setPicked] = useState([])
+  const [confirm, setConfirm] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const rows = list.data?.items || []
+  useEffect(() => setPicked([]), [query])
+  const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit', 'sort'].includes(k))
+  const clearAll = () => set({ q: '', status: '', from: '', to: '', ...Object.fromEntries(extra.map((x) => [x.key, ''])) })
+
+  const run = async (action, ids, title) => {
+    setBusy(true); clear()
+    try {
+      if (ids.length === 1) {
+        await api(`/admin/content/${kind}/${ids[0]}/${action}`, { method: 'POST' })
+        ok(t(`ad.done.${action}`))
+      } else {
+        const r = await api(`/admin/content/${kind}/bulk`, { method: 'POST', body: JSON.stringify({ ids, action }) })
+        ok(`${t('ad.bulkDone').replace('{n}', n(r.done))}${r.failed?.length ? ` ${t('ad.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`)
+        setPicked(r.failed.map((x) => x.id))
+      }
+      list.retry()
+    } catch (e) { bad(errText(e)) } finally { setBusy(false); setConfirm(null) }
+    return title
+  }
+  const ask = (action, ids, label) => setConfirm({ action, ids, text: ids.length === 1 ? actionConfirm(t, action, label) : t(`ad.confirmBulk.${action}`).replace('{n}', n(ids.length)) })
+  const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+  const allOnPage = rows.length > 0 && rows.every((r) => picked.includes(r.id))
+
+  return (
+    <section aria-labelledby={`${kind}-h`}>
+      <PageHeader title={<span id={`${kind}-h`}>{title}</span>} desc={desc} action={addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
+      <div className="ad-filters">
+        <SearchBox value={f.q} onChange={(q) => set({ q })} />
+        <Select value={f.status} onChange={(status) => set({ status })} label={t('ad.status')} all={t('ad.status.active')}
+          options={[['draft', t('ad.status.draft')], ['published', t('ad.status.published')], ['archived', t('ad.status.archived')], ['all', t('ad.status.all')]]} />
+        {extra.map((x) => (x.text
+          ? <SearchBox key={x.key} value={f[x.key]} onChange={(v) => set({ [x.key]: v })} placeholder={x.label} />
+          : <Select key={x.key} value={f[x.key]} onChange={(v) => set({ [x.key]: v })} label={x.label} all={x.all} options={x.options} />))}
+        <label className="ad-date"><span className="muted small">{t('ad.from')}</span><input type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} aria-label={t('ad.from')} /></label>
+        <label className="ad-date"><span className="muted small">{t('ad.to')}</span><input type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} aria-label={t('ad.to')} /></label>
+        <Select value={f.sort === 'updated' ? '' : f.sort} onChange={(v) => set({ sort: v || 'updated' })} label={t('ad.sort')} all={t('ad.sort.updated')}
+          options={[['published', t('ad.sort.published')], ['title', t('ad.sort.title')], ['order', t('ad.sort.order')]]} />
+        {filtered && <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button>}
+      </div>
+      <Notice notice={notice} onClose={clear} />
+      {picked.length > 0 && (
+        <div className="ad-bulk" role="region" aria-label={t('ad.bulk')}>
+          <strong>{n(picked.length)} {t('ad.selected')}</strong>
+          {['publish', 'unpublish', 'archive', 'restore'].map((a) => <button key={a} type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => ask(a, picked, '')}>{t(`ad.act2.${a}`)}</button>)}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPicked([])}>{t('ad.clearSel')}</button>
+        </div>
+      )}
+      {list.loading && <SkeletonRows />}
+      {list.error && <Data q={list}>{() => null}</Data>}
+      {list.data && (rows.length === 0 ? (
+        <EmptyState title={t(filtered ? 'ad.noMatch' : 'ad.nothingYet')} text={filtered ? t('ad.noMatchHint') : emptyHint}
+          action={filtered ? <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button> : addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
+      ) : (
+        <>
+          <table className="table rtable">
+            <thead>
+              <tr>
+                <th scope="col"><input type="checkbox" checked={allOnPage} onChange={() => setPicked(allOnPage ? [] : rows.map((r) => r.id))} aria-label={t('ad.selectAll')} /></th>
+                {columns.map((c) => <th key={c.label} scope="col">{c.label}</th>)}
+                <th scope="col">{t('ad.status')}</th><th scope="col">{t('ad.updated')}</th><th scope="col"><span className="sr-only">{t('ad.actions')}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td data-label=""><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.title}`} /></td>
+                  {columns.map((c) => <td key={c.label} data-label={c.label}>{c.render(r)}</td>)}
+                  <td data-label={t('ad.status')}><StatusBadge status={r.status} /></td>
+                  <td data-label={t('ad.updated')}><small>{when(r.updatedAt)}</small></td>
+                  <td className="actions" data-label="">
+                    <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>
+                    {NEXT[r.status].map(([a, label]) => (
+                      <button key={a} type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => ask(a, [r.id], r.title)}>{t(label)}</button>
+                    ))}
+                    {r.status === 'published' && publicPath && <a className="btn btn-ghost btn-sm" href={publicPath(r)} target="_blank" rel="noreferrer">{t('ad.openPublic')}</a>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
+        </>
+      ))}
+      {confirm && <Confirm text={confirm.text} detail={confirm.action === 'archive' ? <p className="muted small">{t('ad.archiveNote')}</p> : null}
+        label={t(`ad.act2.${confirm.action}`)} busy={busy} onYes={() => run(confirm.action, confirm.ids)} onNo={() => setConfirm(null)} />}
+    </section>
+  )
+}
+
+/* ---------------------------------------------------------------- editor plumbing */
+
+// Loads one entry (or starts a blank one), saves it and moves it through draft / published / archived.
+export function useEntryEditor(kind, id, listPath) {
+  const { t } = useApp()
+  const errText = useErrText()
+  const nav = useNavigate()
+  const existing = useApi(id ? `/admin/content/${kind}/${id}` : null)
+  const [entry, setEntry] = useState(null)
+  const [fields, setFields] = useState({})
+  const [busy, setBusy] = useState(false)
+  const { notice, ok, bad, clear } = useNotice()
+  useEffect(() => { if (existing.data) setEntry(existing.data) }, [existing.data])
+
+  const save = useCallback(async (body, afterCreatePath) => {
+    setBusy(true); setFields({}); clear()
+    try {
+      const saved = id ? await api(`/admin/content/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+        : await api(`/admin/content/${kind}`, { method: 'POST', body: JSON.stringify(body) })
+      setEntry(saved)
+      ok(t('ad.saved'))
+      if (!id && afterCreatePath) nav(afterCreatePath(saved), { replace: true })
+      return saved
+    } catch (e) {
+      if (e.fields) setFields(e.fields)
+      bad(e.fields ? t('ad.e.validation') : errText(e))
+      return null
+    } finally { setBusy(false) }
+  }, [id, kind, nav, ok, bad, clear, t, errText])
+
+  const act = useCallback(async (action) => {
+    if (!entry) return null
+    setBusy(true); clear()
+    try {
+      const e = await api(`/admin/content/${kind}/${entry.id}/${action}`, { method: 'POST' })
+      setEntry(e)
+      ok(t(`ad.done.${action}`))
+      return e
+    } catch (e) { bad(errText(e)); return null } finally { setBusy(false) }
+  }, [entry, kind, ok, bad, clear, t, errText])
+
+  return { existing, entry, fields, busy, notice, clear, save, act, ok, bad, listPath }
+}
+
+// Publish / archive controls shown next to every editor.
+export function StatusPanel({ entry, busy, onAct, dirty, publicUrl, onPreview, title }) {
+  const { t } = useApp()
+  const [confirm, setConfirm] = useState(null)
+  return (
+    <aside className="ad-side-card">
+      <h4>{t('ad.publishing')}</h4>
+      {entry ? <p><StatusBadge status={entry.status} /></p> : <p className="muted">{t('ad.notSaved')}</p>}
+      {dirty && <p className="notice small">{t('ad.unsaved')}</p>}
+      {entry && (
+        <div className="ad-stack">
+          {NEXT[entry.status].map(([a, label]) => (
+            <button key={a} type="button" className={`btn btn-sm ${a === 'publish' ? 'btn-dark' : 'btn-ghost'}`} disabled={busy || dirty} onClick={() => setConfirm(a)}
+              title={dirty ? t('ad.saveFirst') : undefined}>{t(label)}</button>
+          ))}
+          {entry.status === 'published' && publicUrl && <a className="btn btn-ghost btn-sm" href={publicUrl} target="_blank" rel="noreferrer">{t('ad.openPublic')}</a>}
+        </div>
+      )}
+      {onPreview && <button type="button" className="btn btn-ghost btn-sm" onClick={onPreview}>{t('ad.preview')}</button>}
+      {confirm && <Confirm text={actionConfirm(t, confirm, title || entry.title)} detail={confirm === 'archive' ? <p className="muted small">{t('ad.archiveNote')}</p> : null}
+        label={t(`ad.act2.${confirm}`)} busy={busy} onYes={async () => { await onAct(confirm); setConfirm(null) }} onNo={() => setConfirm(null)} />}
+    </aside>
+  )
+}
+
+export function EditorGate({ editor, children }) {
+  if (editor.existing.loading) return <SkeletonRows rows={6} />
+  if (editor.existing.error) return <Data q={editor.existing}>{() => null}</Data>
+  return children
+}

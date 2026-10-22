@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useBase } from '../lib/base.js'
-import { Badge, Credit, Crumbs, Data, Empty, PageHero, Photo } from '../components/ui.jsx'
+import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import { PlaceCard } from '../components/cards.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import Icon from '../components/Icon.jsx'
@@ -84,12 +84,14 @@ export function HeritageDetail() {
     <Data q={res}>
       {(p) => {
         const up = (ups.data?.items || []).find((u) => u.slug === p.upazila)
-        const cur = p.images[Math.min(img, p.images.length - 1)]
+        const at = Math.max(0, Math.min(img, p.images.length - 1))
+        const cur = p.images[at]
+        const curUrl = p.imageUrls?.[at]
         const nearby = (all.data?.items || []).filter((x) => x.slug !== p.slug).sort((a, b) => (b.upazila === p.upazila) - (a.upazila === p.upazila)).slice(0, 3)
         return (
           <>
             <div className="detail-banner">
-              <PageHero image={p.images[0]} title={pick(p.nameBn, p.nameEn)}>
+              <PageHero image={p.images[0]} imageUrl={p.imageUrls?.[0]} title={pick(p.nameBn, p.nameEn)}>
                 <div className="row">
                   <Badge tone="gold">{t(`cat.${p.category}`)}</Badge>
                   <span className={`verify ${p.verified ? 'yes' : 'no'}`} style={{ color: '#fff' }}>{p.verified ? t('place.verified') : t('place.unverified')}</span>
@@ -115,12 +117,12 @@ export function HeritageDetail() {
                 </article>
                 <div>
                   <div className="gallery-grid">
-                    <button className="big on" onClick={() => setImg(0)} aria-label={cur}><Photo id={cur} shape="shape-r" eager sizes="(min-width: 900px) 45vw, 95vw" /></button>
+                    <button className="big on" onClick={() => setImg(0)} aria-label={cur}><MediaPhoto id={cur} url={curUrl} shape="shape-r" eager sizes="(min-width: 900px) 45vw, 95vw" /></button>
                     {p.images.map((id, i) => (
-                      <button key={id} className={i === img ? 'on' : ''} onClick={() => setImg(i)} aria-label={`${i + 1}`}><Photo id={id} sizes="(min-width: 900px) 22vw, 45vw" /></button>
+                      <button key={id} className={i === img ? 'on' : ''} onClick={() => setImg(i)} aria-label={`${i + 1}`}><MediaPhoto id={id} url={p.imageUrls?.[i]} sizes="(min-width: 900px) 22vw, 45vw" /></button>
                     ))}
                   </div>
-                  <Credit id={cur} />
+                  {!curUrl && cur && <Credit id={cur} />}
                 </div>
               </div>
               <div className="nearby">

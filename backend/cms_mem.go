@@ -36,6 +36,9 @@ func (m *memStore) cmsInit() {
 func stamp(t time.Time) string { return t.UTC().Format(time.RFC3339) }
 
 func (m *memStore) auditLocked(actor, action, entity, entityID string, detail map[string]any) {
+	if actor == "" && !strings.HasPrefix(action, "cms.") {
+		return
+	}
 	m.cms.audit = append(m.cms.audit, memAudit{time.Now(), actor, action, entity, entityID, detail})
 }
 

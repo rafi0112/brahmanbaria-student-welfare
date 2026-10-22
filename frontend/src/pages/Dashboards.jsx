@@ -6,6 +6,7 @@ import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
 import CommitteeManager from './CommitteeAdmin.jsx'
+import AdminDashboard from '../admin/Dashboard.jsx'
 import { Logo } from '../components/Sketch.jsx'
 
 const LEVELS = ['public', 'members', 'hidden']
@@ -178,42 +179,51 @@ function DashboardBody({ user }) {
   )
 }
 
-// The admin panel is a frame (sidebar + top bar) around its sections and the pages it links to, so the sidebar
-// stays on screen whichever section or page is open.
+// The admin panel is a frame (sidebar + top bar) around its sections, so the sidebar stays on screen
+// whichever section or page is open.
 export function AdminShell() {
   return <Gate role="admin">{() => <AdminFrame />}</Gate>
 }
 
 function AdminFrame() {
   const { t } = useApp()
-  const { user: me, logout } = useAuth()
+  const { user: me, profile, logout } = useAuth()
   const go = useNavigate()
   const loc = useLocation()
   const [params] = useSearchParams()
+  const [open, setOpen] = useState(false)
+  useEffect(() => setOpen(false), [loc.pathname, loc.search])
   const onHome = loc.pathname === '/admin'
-  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'members'
-  const sections = [['members', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
-  const site = [['/admin/students', '☺', 'admin.nav.students'], ['/admin/heritage', '◬', 'admin.nav.places'], ['/admin/blog', '✎', 'admin.nav.blog'], ['/admin/gallery', '▣', 'admin.nav.gallery']]
+  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'dash'
+  const sections = [['dash', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
+  const pages = [['/admin/students', '☺', 'admin.nav.students'], ['/admin/heritage', '◬', 'admin.nav.places'], ['/admin/blog', '✎', 'admin.nav.blog'], ['/admin/gallery', '▣', 'admin.nav.gallery']]
   const here = (p) => loc.pathname === p || loc.pathname.startsWith(`${p}/`)
+  const name = profile?.name || me?.email?.split('@')[0] || ''
   return (
     <div className="admin">
-      <aside className="admin-side">
-        <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
-        <nav aria-label="Admin">
+      <aside className={`admin-side ${open ? 'open' : ''}`}>
+        <div className="admin-side-top">
+          <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
+          <button type="button" className="admin-burger" aria-expanded={open} aria-controls="admin-nav" onClick={() => setOpen(!open)}>
+            <span aria-hidden="true">{open ? '✕' : '☰'}</span> {t(open ? 'nav.close' : 'nav.menu')}
+          </button>
+        </div>
+        <nav id="admin-nav" aria-label="Admin" className="admin-nav">
           {sections.map(([k, ic, label]) => {
             const on = onHome && tab === k
-            return <Link key={k} to={k === 'members' ? '/admin' : `/admin?tab=${k}`} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
+            return <Link key={k} to={k === 'dash' ? '/admin' : `/admin?tab=${k}`} className={on ? 'on' : ''} aria-current={on ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
           })}
+          {pages.map(([to, ic, label]) => <Link key={to} to={to} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
           <small className="side-label">{t('admin.nav.site')}</small>
-          {site.map(([to, ic, label]) => <Link key={to} to={to} className={here(to) ? 'on' : ''} aria-current={here(to) ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
-          <Link to="/"><span aria-hidden="true">⌂</span>{t('admin.nav.exit')}</Link>
+          <a href="/" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">↗</span>{t('admin.nav.exit')}</a>
         </nav>
       </aside>
       <div className="admin-main">
         <div className="admin-top">
           <h1>{t('admin.title')}</h1>
           <div className="admin-who">
-            <span className="muted small">{me?.email}</span>
+            <Avatar name={name || '?'} size={34} />
+            <span className="admin-id"><strong>{name}</strong><small className="muted">{me?.email} · {t('admin.roles.admin')}</small></span>
             <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); go('/') }}>{t('auth.logout')}</button>
           </div>
         </div>
@@ -223,81 +233,13 @@ function AdminFrame() {
   )
 }
 
+// /admin shows the dashboard; ?tab=roles and ?tab=committee open the two management sections.
 export function AdminHome() {
-  const { t, n } = useApp()
-  // the section lives in the URL (?tab=roles), so the sidebar links, reloads and the back button all work
-  const [params, setParams] = useSearchParams()
-  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'members'
-  const setTab = (k) => setParams(k === 'members' ? {} : { tab: k })
-  const [status, setStatus] = useState('pending')
-  const overview = useApi('/admin/overview')
-  const list = useApi(`/admin/members?status=${status}`)
-  const stats = useApi('/stats')
-  const [err, setErr] = useState(null)
-
-  const act = async (id, verb) => {
-    setErr(null)
-    try {
-      await api(`/admin/members/${id}/${verb}`, { method: 'POST' })
-      list.retry(); overview.retry()
-    } catch (e) { setErr(errorKey(e) || 'admin.failed') }
-  }
-  const counts = overview.data?.members || {}
-
-  return (
-    <>
-        <h2>{t('admin.overview')}</h2>
-        <dl className="admin-stats">
-          {['pending', 'approved', 'rejected'].map((s) => <div key={s}><dt>{t(`admin.${s}`)}</dt><dd className="num">{n(counts[s] ?? 0)}</dd></div>)}
-          <div><dt>{t('stat.students')}</dt><dd className="num">{stats.data ? n(stats.data.students) : '–'}</dd></div>
-        </dl>
-
-        <div className="chips admin-tabs" role="tablist" aria-label={t('admin.title')}>
-          {['members', 'roles', 'committee'].map((k) => <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{t(`admin.tab.${k}`)}</button>)}
-        </div>
-
-        {tab === 'roles' && <RoleManager />}
-        {tab === 'committee' && <CommitteeManager />}
-        {tab === 'members' && <>
-        <h2>{t('admin.members')}</h2>
-        <div className="chips" role="group">
-          {['pending', 'approved', 'rejected'].map((s) => <button key={s} className={`chip ${status === s ? 'on' : ''}`} aria-pressed={status === s} onClick={() => setStatus(s)}>{t(`admin.${s}`)}</button>)}
-        </div>
-        {err && <p className="notice bad" role="alert">{t(err)}</p>}
-        <Data q={list}>
-          {(d) => d.items.length === 0 ? <Empty>{status === 'pending' ? t('admin.noPending') : t('state.empty')}</Empty> : (
-            <table className="table">
-              <tbody>
-                {d.items.map((m) => (
-                  <tr key={m.userId}>
-                    <td><Avatar name={m.name} size={34} /> <strong>{m.name}</strong><br /><small className="muted">{m.email}{!m.emailVerified && ` · ${t('admin.unverified')}`}</small></td>
-                    <td>{t('students.batch')} {n(m.batch)}<br /><small className="muted">{m.department}</small></td>
-                    <td><small className="muted">{m.union}, {m.upazila}</small></td>
-                    <td className="actions">
-                      {m.status !== 'approved' && <button className="btn btn-dark btn-sm" onClick={() => act(m.userId, 'approve')}>{t('admin.approve')}</button>}
-                      {m.status !== 'rejected' && <button className="btn btn-ghost btn-sm" onClick={() => act(m.userId, 'reject')}>{t('admin.reject')}</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Data>
-        </>}
-        {tab === 'members' && <Data q={stats}>
-          {(s) => (
-            <>
-              <h2>Blood group counts <small className="muted">(aggregate only)</small></h2>
-              <div className="bars">
-                {Object.entries(s.blood).sort((a, b) => b[1] - a[1]).map(([g, c]) => (
-                  <div key={g} className="bar"><span>{g}</span><i style={{ width: `${(c / Math.max(...Object.values(s.blood))) * 100}%` }} /><b className="num">{n(c)}</b></div>
-                ))}
-              </div>
-            </>
-          )}
-        </Data>}
-    </>
-  )
+  const [params] = useSearchParams()
+  const tab = params.get('tab')
+  if (tab === 'roles') return <RoleManager />
+  if (tab === 'committee') return <CommitteeManager />
+  return <AdminDashboard />
 }
 
 function useDebounced(value, ms = 300) {
@@ -359,6 +301,7 @@ function RoleManager() {
       </div>
       <p className="muted small">{t('admin.roles.note')}</p>
       <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`} role={msg.tone === 'bad' ? 'alert' : 'status'}>{t(msg.key)}</p>}</div>
+      <RoleHistory />
       <Data q={list}>
         {(d) => d.items.length === 0 ? <Empty>{t('admin.roles.none')}</Empty> : (
           <>
@@ -401,5 +344,32 @@ function RoleManager() {
         </div>
       )}
     </section>
+  )
+}
+
+// Who changed whose role, and when (read from the audit trail).
+function RoleHistory() {
+  const { t, lang } = useApp()
+  const [open, setOpen] = useState(false)
+  const hist = useApi(open ? '/admin/role-history?limit=30' : null)
+  const when = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) }
+  return (
+    <div className="ad-role-history">
+      <button type="button" className="btn btn-ghost btn-sm" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? '▾' : '▸'} {t('admin.roles.history')}</button>
+      {open && (
+        <Data q={hist}>
+          {(d) => d.items.length === 0 ? <p className="muted">{t('admin.roles.historyNone')}</p> : (
+            <ul className="ad-list">
+              {d.items.map((r, i) => (
+                <li key={i}>
+                  <span><strong>{r.target}</strong>: {t(`admin.roles.${r.from}`)} → {t(`admin.roles.${r.to}`)}</span>
+                  <span className="muted small">{r.actor || (r.source === 'bootstrap' ? t('admin.roles.bootstrap') : '—')} · {when(r.at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Data>
+      )}
+    </div>
   )
 }

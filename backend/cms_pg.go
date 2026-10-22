@@ -34,6 +34,9 @@ func scanEntry(r rowScanner) (Entry, error) {
 }
 
 func auditAdmin(ctx context.Context, q execer, actor, action, entity, entityID string, detail map[string]any) error {
+	if actor == "" && !strings.HasPrefix(action, "cms.") {
+		return nil // system work (such as the one-time content import) is summarised by its marker, not logged item by item
+	}
 	if detail == nil {
 		detail = map[string]any{}
 	}

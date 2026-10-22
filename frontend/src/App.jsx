@@ -7,6 +7,10 @@ import Heritage, { HeritageDetail } from './pages/Heritage.jsx'
 import { About, Blog, BlogPost, Contact, Gallery, NotFound } from './pages/Content.jsx'
 import Auth, { Verify } from './pages/Auth.jsx'
 import { AdminHome, AdminShell, Dashboard } from './pages/Dashboards.jsx'
+import StudentsAdmin from './admin/StudentsAdmin.jsx'
+import { BlogEditor, BlogList } from './admin/BlogAdmin.jsx'
+import { HeritageEditor, HeritageList } from './admin/HeritageAdmin.jsx'
+import GalleryAdmin from './admin/GalleryAdmin.jsx'
 import { Alumni, Committee, Events, FAQPage, Membership } from './pages/Community.jsx'
 
 export default function App() {
@@ -38,13 +42,15 @@ export default function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="admin" element={<AdminShell />}>
           <Route index element={<AdminHome />} />
-          <Route path="students" element={<Students />} />
-          <Route path="students/:id" element={<StudentDetail />} />
-          <Route path="heritage" element={<Heritage />} />
-          <Route path="heritage/:slug" element={<HeritageDetail />} />
-          <Route path="blog" element={<Blog />} />
-          <Route path="blog/:slug" element={<BlogPost />} />
-          <Route path="gallery" element={<Gallery />} />
+          <Route path="students" element={<StudentsAdmin />} />
+          <Route path="profile/:id" element={<StudentDetail />} />
+          <Route path="heritage" element={<HeritageList />} />
+          <Route path="heritage/new" element={<HeritageEditor />} />
+          <Route path="heritage/:id/edit" element={<HeritageEditor />} />
+          <Route path="blog" element={<BlogList />} />
+          <Route path="blog/new" element={<BlogEditor />} />
+          <Route path="blog/:id/edit" element={<BlogEditor />} />
+          <Route path="gallery" element={<GalleryAdmin />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

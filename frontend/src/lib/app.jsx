@@ -32,7 +32,12 @@ export function AppProvider({ children }) {
       lang, theme, toggleLang, toggleTheme, isDark,
       t: (k) => dict[k] ?? strings.en[k] ?? k,
       n: (v) => (lang === 'bn' ? bnDigits(v) : String(v)),
-      pick: (bn, en) => (lang === 'bn' ? bn : en),
+      // the other language is used when the chosen one is empty, so single-language content still shows
+      pick: (bn, en) => {
+        const [mine, other] = lang === 'bn' ? [bn, en] : [en, bn]
+        const empty = (v) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
+        return empty(mine) ? other : mine
+      },
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, theme, toggleLang, toggleTheme])

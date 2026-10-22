@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useBase } from '../lib/base.js'
 import { useApp } from '../lib/app.jsx'
-import { Badge, Photo, Avatar } from './ui.jsx'
+import { Badge, MediaPhoto, Avatar } from './ui.jsx'
 import Icon from './Icon.jsx'
 
 export function PlaceCard({ p, upazilas = [] }) {
@@ -10,7 +10,7 @@ export function PlaceCard({ p, upazilas = [] }) {
   const up = upazilas.find((u) => u.slug === p.upazila)
   return (
     <Link to={`${base}/heritage/${p.slug}`} className="place-card">
-      <Photo id={p.images[0]} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" />
+      <MediaPhoto id={p.images?.[0]} url={p.imageUrls?.[0]} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" />
       <div className="place-card-body">
         <span className="tag-outline">{t(`cat.${p.category}`)}</span>
         <div className="place-card-row">
@@ -32,7 +32,7 @@ export function PostCard({ p, big = false }) {
   return (
     <Link to={`${base}/blog/${p.slug}`} className={`post-card ${big ? 'big' : ''}`}>
       <div className="post-img">
-        <Photo id={p.image} shape="shape-r" sizes={big ? '(min-width: 900px) 50vw, 90vw' : '(min-width: 900px) 30vw, 90vw'} />
+        <MediaPhoto id={p.image} url={p.imageUrl} shape="shape-r" sizes={big ? '(min-width: 900px) 50vw, 90vw' : '(min-width: 900px) 30vw, 90vw'} />
         <span className="img-tag">{t(`cat.${p.category}`)}</span>
       </div>
       <div className="post-card-body">
