@@ -92,6 +92,8 @@ type ProfilePatch struct {
 // AuthStore is the persistence boundary. Postgres is used in production;
 // the in-memory implementation is for tests and explicit local development.
 type AuthStore interface {
+	CommitteeStore
+
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)
 	UserByID(ctx context.Context, id string) (User, error)

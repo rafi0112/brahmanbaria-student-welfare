@@ -5,7 +5,7 @@ const BASE = import.meta.env.VITE_API_BASE || ''
 
 export async function api(path, opts) {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
-  const headers = { 'Content-Type': 'application/json', ...(opts?.headers || {}) }
+  const headers = { ...(opts?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(opts?.headers || {}) }
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
   const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', ...opts, headers })
   let body = null

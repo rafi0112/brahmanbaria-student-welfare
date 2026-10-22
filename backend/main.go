@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,6 +36,12 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "storage-setup" {
+		if err := storageSetup(authStore); err != nil {
+			log.Fatalf("storage-setup: %v", err)
+		}
+		return
+	}
 	if pg, ok := authStore.(*pgStore); ok {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		dbStore, contentErr := pg.Content(ctx, store)
@@ -55,6 +62,9 @@ func main() {
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
+		if st := newSupabaseStorage(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", "")); st != nil {
+			app.Auth.Images, app.Auth.PhotoBase = st, st.PublicBase()
+		}
 		if app.Auth.Verifier == nil {
 			log.Printf("Supabase bearer auth disabled: configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")
 		}
@@ -257,5 +267,31 @@ func bootstrapAdmins(s AuthStore, args []string) error {
 	if ok == 0 && failed > 0 {
 		return fmt.Errorf("no account was promoted")
 	}
+	return nil
+}
+
+//go:embed storage/executive_photos.sql
+var executivePhotosSQL string
+
+// storageSetup creates the photo bucket and its upload policy (see storage/executive_photos.sql). Idempotent.
+func storageSetup(s AuthStore) error {
+	pg, ok := s.(*pgStore)
+	if !ok {
+		return fmt.Errorf("DATABASE_URL is not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	tx, err := pg.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if _, err := tx.Exec(ctx, executivePhotosSQL); err != nil {
+		return fmt.Errorf("%w (paste backend/storage/executive_photos.sql into Supabase > SQL Editor instead)", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	fmt.Println("bucket executive-photos and its admin-only upload policy are in place")
 	return nil
 }

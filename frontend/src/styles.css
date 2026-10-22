@@ -326,6 +326,35 @@ html[lang='bn'] .script-note { font-family: 'Noto Serif Bengali', serif; font-st
 .modal { width: min(460px, 100%); background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); display: grid; gap: 16px; }
 .modal p { margin: 0; }
 
+.exec-thumb { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--line); flex-shrink: 0; display: inline-block; }
+.exec-thumb-empty { width: 84px; height: 84px; border: 2px dashed var(--line); background: transparent; }
+.exec-photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--line); border: 3px solid var(--card); box-shadow: var(--shadow); }
+.exec-bio { max-width: 28ch; line-height: 1.45; }
+.committee-head { text-align: center; margin-bottom: 22px; } .committee-head h2 { margin: 0 0 4px; }
+.cm-layout { display: grid; grid-template-columns: minmax(200px, 270px) 1fr; gap: 22px; align-items: start; margin-top: 12px; }
+.cm-side { display: grid; gap: 12px; }
+.cm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cm-list button { width: 100%; text-align: left; display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; }
+.cm-list button.on { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 35%, transparent); }
+.cm-main { display: grid; gap: 16px; min-width: 0; }
+.cm-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; } .cm-head h3 { margin: 0 0 4px; } .cm-head p { margin: 0; }
+.exec-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.exec-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+.exec-text { display: grid; flex: 1 1 160px; min-width: 0; } .exec-text span { color: var(--gold-ink); font-weight: 600; font-size: .9rem; }
+.exec-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.cm-form { display: grid; gap: 4px; } .cm-form h3 { margin: 0 0 6px; }
+.cm-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cm-form textarea { width: 100%; font: inherit; }
+.photo-picker { border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; margin: 0 0 14px; } .photo-picker legend { font-weight: 600; font-size: .9rem; padding: 0 6px; }
+.photo-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; } .photo-controls { display: grid; gap: 8px; flex: 1 1 220px; min-width: 0; }
+.field.compact { margin: 0; } .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .row input { flex: 1 1 140px; min-width: 0; }
+.pick-list { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.pick-list li { padding: 0; } .pick-list li.muted { padding: 10px 12px; }
+.pick-list button { width: 100%; text-align: left; padding: 10px 12px; background: var(--card); color: var(--ink); border: 0; border-bottom: 1px solid var(--line); cursor: pointer; font: inherit; }
+.pick-list button:hover, .pick-list button:focus-visible { background: color-mix(in srgb, var(--gold) 14%, var(--card)); }
+.picked { align-items: baseline; } .check { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } .ok-text { color: var(--ok); }
+@media (max-width: 760px) { .cm-layout { grid-template-columns: 1fr; } .cm-form .two { grid-template-columns: 1fr; } }
+
 /* ---------- footer ---------- */
 .site-footer { position: relative; z-index: 1; margin-top: 50px; color: var(--on-forest); }
 .footer-wave { display: block; width: 100%; height: clamp(40px, 6vw, 80px); fill: var(--forest); margin-bottom: -1px; }

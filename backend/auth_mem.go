@@ -31,6 +31,7 @@ type memStore struct {
 	tokens   map[string]*memToken
 	sessions map[string]*memSession
 	roleLog  []RoleChange
+	cm       committeeMem
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).

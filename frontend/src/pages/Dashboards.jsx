@@ -4,6 +4,7 @@ import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
+import CommitteeManager from './CommitteeAdmin.jsx'
 import { Logo } from '../components/Sketch.jsx'
 
 const LEVELS = ['public', 'members', 'hidden']
@@ -216,10 +217,11 @@ function AdminBody() {
         </dl>
 
         <div className="chips admin-tabs" role="tablist" aria-label={t('admin.title')}>
-          {['members', 'roles'].map((k) => <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{t(`admin.tab.${k}`)}</button>)}
+          {['members', 'roles', 'committee'].map((k) => <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{t(`admin.tab.${k}`)}</button>)}
         </div>
 
         {tab === 'roles' && <RoleManager />}
+        {tab === 'committee' && <CommitteeManager />}
         {tab === 'members' && <>
         <h2>{t('admin.members')}</h2>
         <div className="chips" role="group">

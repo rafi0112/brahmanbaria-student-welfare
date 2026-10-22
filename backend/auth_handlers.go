@@ -27,14 +27,20 @@ type Auth struct {
 	SameSite     http.SameSite
 	Verifier     *supabaseVerifier
 
-	loginIP, loginEmail, registerIP, mailIP *Limiter
+	// Executive photos: Images stores them, PhotoBase is the public URL prefix, Drive* are overridable for tests.
+	Images         ImageStore
+	PhotoBase      string
+	DriveBase      string
+	DriveAllowHost func(string) bool
+
+	loginIP, loginEmail, registerIP, mailIP, uploadUser *Limiter
 }
 
 func newAuth(store AuthStore, mailer Mailer, frontendURL string, secure bool, same http.SameSite) *Auth {
 	return &Auth{
 		Store: store, Mailer: mailer, FrontendURL: strings.TrimRight(frontendURL, "/"), CookieSecure: secure, SameSite: same,
 		loginIP: newLimiter(30, 10*time.Minute), loginEmail: newLimiter(10, 15*time.Minute),
-		registerIP: newLimiter(8, time.Hour), mailIP: newLimiter(8, time.Hour),
+		registerIP: newLimiter(8, time.Hour), mailIP: newLimiter(8, time.Hour), uploadUser: newLimiter(60, time.Hour),
 	}
 }
 
@@ -80,6 +86,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /api/v1/admin/members", h(a.requireAdmin(a.adminMembers)))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/approve", h(a.requireAdmin(a.review(StatusApproved))))
 	m.HandleFunc("POST /api/v1/admin/members/{id}/reject", h(a.requireAdmin(a.review(StatusRejected))))
+	a.committeeRoutes(m, h)
 }
 
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {

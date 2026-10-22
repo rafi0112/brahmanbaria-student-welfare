@@ -117,28 +117,40 @@ export function Alumni() {
 /* ---------------- Committee ---------------- */
 export function Committee() {
   const { t } = useApp()
-  const res = useApi('/committee')
+  const res = useApi('/executive-committee')
   return (
     <>
       <PageHero kicker={t('committee.kicker')} title={t('committee.title')} lede={t('committee.lede')} image="titas-shahbazpur" />
       <section className="section wrap">
         <Data q={res}>
-          {(d) => d.items.length === 0 ? <Empty>{t('committee.empty')}</Empty> : (
-            <div className="cards-4">
-              {d.items.map((m) => (
-                <article key={m.name + m.role} className="member-card">
-                  <Avatar name={m.name} size={84} />
-                  <h3>{m.name}</h3>
-                  <p className="role">{m.role}</p>
-                  <p className="muted small">{[m.department, m.session].filter(Boolean).join(' · ')}</p>
-                </article>
-              ))}
-            </div>
+          {(d) => !d.committee || d.members.length === 0 ? <Empty>{t('committee.empty')}</Empty> : (
+            <>
+              <header className="committee-head">
+                <h2>{d.committee.name}</h2>
+                <p className="muted">{[d.committee.term, d.committee.startsOn && `${d.committee.startsOn} → ${d.committee.endsOn || '…'}`].filter(Boolean).join(' · ')}</p>
+              </header>
+              <div className="cards-4">
+                {d.members.map((m) => (
+                  <article key={m.id} className="member-card">
+                    <ExecPhoto m={m} />
+                    <h3>{m.name}</h3>
+                    <p className="role">{m.designation}</p>
+                    {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
+                  </article>
+                ))}
+              </div>
+            </>
           )}
         </Data>
       </section>
     </>
   )
+}
+
+function ExecPhoto({ m }) {
+  const [bad, setBad] = useState(false)
+  if (m.photoUrl && !bad) return <img className="exec-photo" src={m.photoUrl} alt={m.name} width={96} height={96} loading="lazy" decoding="async" onError={() => setBad(true)} />
+  return <Avatar name={m.name} size={96} />
 }
 
 /* ---------------- FAQ ---------------- */
