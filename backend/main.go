@@ -28,6 +28,12 @@ func main() {
 		Limiter:    newLimiter(5, time.Hour),
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == "apply-email-template" { // publishes docs/email-templates/invite.html to Supabase (add --apply to change it)
+		if err := runApplyEmailTemplate(os.Args[2:]); err != nil {
+			log.Fatalf("apply-email-template: %v", err)
+		}
+		return
+	}
 	authStore, closeAuth := openAuthStore()
 	defer closeAuth()
 	if len(os.Args) > 1 && os.Args[1] == "bootstrap-admin" {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"context"
 	"net/http"
@@ -520,5 +521,50 @@ func TestAdminCanRemoveASavedEmailExceptAfterActivation(t *testing.T) {
 	_ = e.mem.CompleteInvite(context.Background(), b, "")
 	if r := del(admin, b); r.Code != 409 || !strings.Contains(r.Body.String(), "already_completed") {
 		t.Fatalf("activated: %d %s", r.Code, r.Body)
+	}
+}
+
+func TestApplyInviteTemplateComparesBeforeChangingAnything(t *testing.T) {
+	var patched map[string]string
+	current := map[string]string{"mailer_subjects_invite": "You have been invited", "mailer_templates_invite_content": "<h2>You have been invited</h2>"}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer sbp_test" || r.URL.Path != "/v1/projects/abcd/config/auth" {
+			w.WriteHeader(401)
+			return
+		}
+		if r.Method == http.MethodPatch {
+			patched = map[string]string{}
+			b := make([]byte, 1<<16)
+			n, _ := r.Body.Read(b)
+			_ = json.Unmarshal(b[:n], &patched)
+			current = patched
+			w.WriteHeader(200)
+			return
+		}
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(current)
+	}))
+	defer srv.Close()
+	m := &mgmt{base: srv.URL, token: "sbp_test", client: srv.Client()}
+	html := "<!DOCTYPE html><html>{{ .ConfirmationURL }}</html>"
+	rep, err := applyInviteTemplate(context.Background(), m, "abcd", html, defaultInviteSubject, false)
+	if err != nil || patched != nil || !strings.Contains(rep, "different: run again with --apply") {
+		t.Fatalf("a preview must change nothing: %v %v %q", err, patched, rep)
+	}
+	rep, err = applyInviteTemplate(context.Background(), m, "abcd", html, defaultInviteSubject, true)
+	if err != nil || patched["mailer_templates_invite_content"] != html || patched["mailer_subjects_invite"] != defaultInviteSubject || !strings.Contains(rep, "published") {
+		t.Fatalf("apply: %v %v", err, patched)
+	}
+	if len(patched) != 2 {
+		t.Fatalf("only the invite subject and body may be touched: %v", patched)
+	}
+	if rep, _ = applyInviteTemplate(context.Background(), m, "abcd", html, defaultInviteSubject, true); !strings.Contains(rep, "already up to date") {
+		t.Fatalf("idempotent: %q", rep)
+	}
+	if _, err = applyInviteTemplate(context.Background(), &mgmt{base: srv.URL, token: "bad", client: srv.Client()}, "abcd", html, defaultInviteSubject, true); err == nil || strings.Contains(err.Error(), "bad") && !strings.Contains(err.Error(), "refused") {
+		t.Fatalf("a refused token must be explained without echoing it: %v", err)
+	}
+	if projectRef("https://abcd.supabase.co/rest/v1") != "abcd" || projectRef("http://localhost:54321") != "" {
+		t.Fatal("project ref parsing")
 	}
 }

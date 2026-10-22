@@ -35,3 +35,12 @@ Supabase accepting the request only means it handed the message to the SMTP serv
 
 ## Removing an address
 Admins can remove a saved address (row menu, or the red button inside the address dialog) unless the person has already activated their account. Nothing is sent. An earlier invitation's link may still work until it expires, and the pending user Supabase created is not deleted (that would be a destructive Auth operation); remove it from the Supabase dashboard (Authentication, Users) if needed.
+
+## Publishing the invitation template from the command line
+If the email you receive looks like Supabase's plain default ("You've been invited ... Accept invitation"), the custom template has not been published to the project yet: the application cannot change it with the Auth admin key. Either paste `docs/email-templates/invite.html` into the dashboard (Authentication, Email Templates, Invite user), or let the command do it:
+
+1. Create a personal access token at supabase.com/dashboard/account/tokens and add `SUPABASE_ACCESS_TOKEN=...` to `backend/.env` (never in chat or source control).
+2. `cd backend && go run . apply-email-template` compares the project's current invite subject and template with the repository version and changes nothing.
+3. `go run . apply-email-template --apply` publishes them (subject `Activate your BSWA account`). Only the invite subject and body are touched, and the token is never printed.
+
+Messages arriving in Spam ("similar to messages that were identified as spam") are a sender-reputation matter of the Gmail account used for SMTP, not of the template; the template improves wording and structure but cannot fix reputation. Marking messages "Not spam" and, ideally, sending from your own domain with SPF/DKIM/DMARC helps.
