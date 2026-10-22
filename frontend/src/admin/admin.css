@@ -485,3 +485,6 @@
 .adm .ad-subhead { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; } .adm .ad-subhead .notice { flex: 1 1 360px; margin: 0; }
 
 .adm .ad-push { margin-left: auto; }
+
+.adm a.ad-view { display: inline-flex; align-items: center; text-decoration: none; }
+.adm .ad-source { margin-bottom: 14px; }

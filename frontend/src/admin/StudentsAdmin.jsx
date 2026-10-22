@@ -31,9 +31,9 @@ export default function StudentsAdmin() {
       <PageHeader title={<span id="stu-h">{t(mode === 'requests' ? 'ad.nav.requests' : 'ad.nav.directory')}</span>}
         desc={t(mode === 'requests' ? 'ad.req.desc' : 'ad.dir.desc')} />
       {mode !== 'requests' && (
-        <div className="chips" role="tablist" aria-label={t('ad.nav.directory')}>
+        <div className="ad-views ad-source" role="tablist" aria-label={t('ad.nav.directory')}>
           {[['members', 'ad.dir.registered'], ['imported', 'ad.dir.records']].map(([k, label]) => (
-            <Link key={k} role="tab" aria-selected={mode === k} className={`chip ${mode === k ? 'on' : ''}`} to={k === 'members' ? '/admin/students?tab=members' : '/admin/students?tab=imported'}>{t(label)}</Link>
+            <Link key={k} role="tab" aria-selected={mode === k} className={`ad-view ${mode === k ? 'on' : ''}`} to={k === 'members' ? '/admin/students?tab=members' : '/admin/students?tab=imported'}>{t(label)}</Link>
           ))}
         </div>
       )}
