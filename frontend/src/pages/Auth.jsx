@@ -6,6 +6,7 @@ import { errorKey, useAuth } from '../lib/auth.jsx'
 import { toApiError } from '../lib/authErrors.js'
 import { Logo } from '../components/Sketch.jsx'
 import { PasswordInput } from '../components/ui.jsx'
+import AuthShell from '../components/AuthShell.jsx'
 import { googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
@@ -16,15 +17,6 @@ const MODES = {
   register: { title: 'auth.register', sub: 'auth.registerSub', fields: ['name', 'batch', 'department', 'session', 'upazila', 'union', 'gender', 'bloodGroup', 'email', 'password', 'confirm', 'terms'], submit: 'auth.submitRegister' },
   forgot: { title: 'auth.forgot', sub: 'auth.forgotSub', fields: ['email'], submit: 'auth.sendLink' },
   reset: { title: 'auth.reset', sub: 'auth.resetSub', fields: ['password', 'confirm'], submit: 'auth.setPassword' },
-}
-
-function ArtBackdrop() {
-  return (
-    <>
-      <img className="auth-art auth-art-l" src="/art/leaves-bl.webp" alt="" />
-      <img className="auth-art auth-art-r" src="/art/vine-tl.webp" alt="" />
-    </>
-  )
 }
 
 // Asks Supabase to send the signup confirmation email again (the legacy API handles the non-Supabase mode).
@@ -156,10 +148,9 @@ export default function Auth({ mode }) {
   const showForm = !done && !blocked
 
   return (
-    <section className="auth-wrap">
-      <ArtBackdrop />
+    <AuthShell variant={mode === 'register' ? 'register' : mode === 'login' ? 'login' : 'plain'} wide={mode === 'register'}>
       <div className="auth-card">
-        <Logo size={52} />
+        <Logo size={44} />
         <h1>{t(cfg.title)}</h1>
         <p className="muted">{t(cfg.sub)}</p>
         {blocked && (
@@ -173,6 +164,7 @@ export default function Auth({ mode }) {
         {done && <Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link>}
         {showForm && (
           <form onSubmit={submit} noValidate>
+            <div className={mode === 'register' ? 'form-grid' : undefined}>
             {cfg.fields.filter((f) => f !== 'terms').map((f) => (options[f] ? (
               <label key={f} className="field">
                 <span>{t(label[f])}</span>
@@ -183,7 +175,7 @@ export default function Auth({ mode }) {
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             ) : (
-              <label key={f} className="field">
+              <label key={f} className={`field${f === 'name' ? ' span-2' : ''}`}>
                 <span>{t(label[f])}</span>
                 {(() => {
                   const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
@@ -192,6 +184,7 @@ export default function Auth({ mode }) {
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             )))}
+            </div>
             {mode === 'login' && (
               <div className="row between">
                 <label className="check"><input type="checkbox" checked={v.remember} onChange={(e) => setV({ ...v, remember: e.target.checked })} />{t('auth.remember')}</label>
@@ -205,7 +198,7 @@ export default function Auth({ mode }) {
                 <p className="muted small">{t('auth.approval')}</p>
               </>
             )}
-            <button className="btn btn-dark btn-block" type="submit" disabled={busy}>{busy ? t('state.loading') : t(cfg.submit)}</button>
+            <button className="btn btn-dark btn-block auth-submit" type="submit" disabled={busy} aria-busy={busy || undefined}>{t(cfg.submit)}</button>
             {mode === 'login' && googleEnabled && (
               <button type="button" className="btn btn-ghost btn-block" onClick={async () => {
                 const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${origin()}/dashboard` } })
@@ -224,7 +217,7 @@ export default function Auth({ mode }) {
           {(mode === 'forgot' || mode === 'reset') && <Link to="/login">← {t('auth.back')}</Link>}
         </p>
       </div>
-    </section>
+    </AuthShell>
   )
 }
 
@@ -267,10 +260,9 @@ export function Verify() {
   }
 
   return (
-    <section className="auth-wrap">
-      <ArtBackdrop />
+    <AuthShell>
       <div className="auth-card center">
-        <Logo size={52} />
+        <Logo size={44} />
         <h1>{t('auth.verify')}</h1>
         {state === 'checking' && <p className="muted" role="status">{t('auth.verifying')}</p>}
         {state === 'ok' && (
@@ -293,6 +285,6 @@ export function Verify() {
         )}
         <Link to="/login">← {t('auth.back')}</Link>
       </div>
-    </section>
+    </AuthShell>
   )
 }

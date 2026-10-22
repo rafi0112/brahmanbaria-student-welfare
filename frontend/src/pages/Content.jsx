@@ -175,11 +175,13 @@ export function About() {
             </div>
           ))}
         </div>
-        <dl className="hero-stats on-paper">
-          {[['students', s?.students], ['batches', s?.batches], ['upazilas', s?.upazilas], ['places', s?.places]].map(([k, v]) => (
-            <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
-          ))}
-        </dl>
+        <div className="stats-strip about-stats">
+          <dl>
+            {[['students', s?.students], ['batches', s?.batches], ['upazilas', s?.upazilas], ['places', s?.places]].map(([k, v]) => (
+              <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
+            ))}
+          </dl>
+        </div>
       </section>
     </>
   )

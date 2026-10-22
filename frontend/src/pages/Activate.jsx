@@ -7,6 +7,7 @@ import { readUrlAuthError } from '../lib/authErrors.js'
 import { supabase, supabaseConfigured } from '../lib/supabase.js'
 import { Logo } from '../components/Sketch.jsx'
 import { PasswordInput } from '../components/ui.jsx'
+import AuthShell from '../components/AuthShell.jsx'
 
 // Captured once, before the Supabase client removes the error from the address bar.
 const urlAuthError = typeof window === 'undefined' ? null : readUrlAuthError(window.location.search, window.location.hash)
@@ -101,9 +102,9 @@ export default function Activate() {
   )
 
   return (
-    <section className="auth-wrap">
+    <AuthShell wide>
       <div className="auth-card">
-        <Logo size={52} />
+        <Logo size={44} />
         <h1>{t('ad.act2.title')}</h1>
         {step === 'checking' && <p className="muted" role="status">{t('auth.verifying')}</p>}
         {step === 'unavailable' && <p className="notice bad" role="alert">{t('ad.act2.unavailable')}</p>}
@@ -151,6 +152,6 @@ export default function Activate() {
         {step === 'has' && <><p className="notice ok" role="status">{t('ad.act2.has')}</p><Link className="btn btn-dark btn-block" to="/dashboard">{t('auth.goDashboard')}</Link></>}
         {step === 'nothing' && <><p className="notice" role="status">{t('ad.act2.nothing')}</p><Link className="btn btn-dark btn-block" to="/dashboard">{t('auth.goDashboard')}</Link></>}
       </div>
-    </section>
+    </AuthShell>
   )
 }

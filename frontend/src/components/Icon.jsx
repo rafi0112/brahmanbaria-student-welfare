@@ -14,9 +14,9 @@ const P = {
   leaf: 'M5 19C5 10 11 5 20 4c0 9-5 15-14 15zM5 19l8-8',
 }
 
-export default function Icon({ name, size = 22, stroke = 1.7 }) {
+export default function Icon({ name, size = 22, stroke = 1.7, className }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={P[name]} />
     </svg>
   )

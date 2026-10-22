@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { useAuth } from '../lib/auth.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import Icon from '../components/Icon.jsx'
+import Reveal from '../components/Reveal.jsx'
 import { Photo, Avatar } from '../components/ui.jsx'
 import { PlaceCard, PostCard } from '../components/cards.jsx'
 
@@ -15,41 +17,14 @@ const QUICK = [
   ['/gallery', 'quick.gallery', 'quick.galleryD', 'image'],
 ]
 
-const HERITAGE_RAIL = [
-  { id: 'arifail-01', bn: 'মসজিদ ও ইসলামী ঐতিহ্য', en: 'Mosques & Islamic Heritage', icon: 'landmark', to: '/heritage?category=mosque' },
-  { id: 'titas-morning', bn: 'নদী ও প্রকৃতি', en: 'Rivers & Natural Beauty', icon: 'pin', to: '/heritage?category=river' },
-  { id: 'boat-race', bn: 'নৌকাবাইচ ও লোকসংস্কৃতি', en: 'Boat Racing & Folk Culture', icon: 'users', to: '/gallery' },
-  { id: 'bariura-bridge', bn: 'ঐতিহাসিক স্থান', en: 'Historical Places', icon: 'landmark', to: '/heritage?category=bridge' },
-  { id: 'kullapathar', bn: 'স্মৃতিসৌধ ও মুক্তিযুদ্ধ', en: 'Memorials & Liberation War', icon: 'heart', to: '/heritage?category=memorial' },
-  { id: 'alinagar-fair', bn: 'লোকজীবন ও ঐতিহ্য', en: 'Local Life & Traditions', icon: 'leaf', to: '/gallery' },
+// Themes of the district, each opening the page that really holds it.
+const THEMES = [
+  { id: 'arifail-01', bn: 'মসজিদ ও ইসলামী ঐতিহ্য', en: 'Mosques & Islamic heritage', to: '/heritage?category=mosque' },
+  { id: 'titas-morning', bn: 'নদী ও প্রকৃতি', en: 'Rivers & natural beauty', to: '/heritage?category=river' },
+  { id: 'boat-race', bn: 'নৌকাবাইচ ও লোকসংস্কৃতি', en: 'Boat racing & folk culture', to: '/gallery' },
+  { id: 'bariura-bridge', bn: 'ঐতিহাসিক স্থান', en: 'Historical places', to: '/heritage?category=bridge' },
+  { id: 'kullapathar', bn: 'স্মৃতিসৌধ ও মুক্তিযুদ্ধ', en: 'Memorials & the Liberation War', to: '/heritage?category=memorial' },
 ]
-
-// Wavy tiles that drift right to left. The list is doubled for a seamless loop; the copy is hidden from
-// assistive tech and the tab order. Hover/focus pauses it, reduced-motion users get a static, scrollable row.
-function HeritageRail() {
-  const { pick } = useApp()
-  const items = [...HERITAGE_RAIL, ...HERITAGE_RAIL]
-  return (
-    <div className="heritage-rail" aria-label={pick('ব্রাহ্মণবাড়িয়ার ঐতিহ্য', 'Brahmanbaria heritage highlights')}>
-      <div className="heritage-rail-track">
-        {items.map((item, index) => {
-          const copy = index >= HERITAGE_RAIL.length
-          return (
-            <Link className="heritage-tile" to={item.to} key={`${item.id}-${index}`} aria-hidden={copy || undefined} tabIndex={copy ? -1 : undefined}>
-              <Photo id={item.id} sizes="(min-width: 900px) 330px, 74vw" alt="" />
-              <span className="heritage-tile-shade" />
-              <span className="heritage-tile-copy">
-                <span className="heritage-tile-icon"><Icon name={item.icon} size={18} /></span>
-                <span>{pick(item.bn, item.en)}</span>
-              </span>
-              <span className="heritage-tile-arrow" aria-hidden="true"><Icon name="arrow" size={13} /></span>
-            </Link>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 function MapPanel({ u }) {
   const { t, n, pick } = useApp()
@@ -62,13 +37,14 @@ function MapPanel({ u }) {
         <div><dt>{t('dir.unions')}</dt><dd className="num">{n(u.unions.length)}</dd></div>
         <div><dt>{t('dir.places')}</dt><dd className="num">{n(u.places)}</dd></div>
       </dl>
-      <Link className="btn btn-dark btn-sm" to={`/directory/${u.slug}`}>{t('dir.view')} →</Link>
+      <Link className="btn btn-outline btn-sm" to={`/directory/${u.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>
     </div>
   )
 }
 
 export default function Home() {
   const { t, n, pick } = useApp()
+  const { user } = useAuth()
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [sel, setSel] = useState('sadar')
@@ -82,153 +58,168 @@ export default function Home() {
   const s = stats.data
   const unionCount = upazilas.reduce((sum, u) => sum + u.unions.length, 0)
 
-  const submit = (e) => { e.preventDefault(); nav(`/students?q=${encodeURIComponent(q)}`) }
+  const submit = (e) => { e.preventDefault(); nav(`/students?q=${encodeURIComponent(q.trim())}`) }
+  const joinTo = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'
 
   return (
     <>
-      {/* ---------- hero ---------- */}
-      <section className="hero">
-        <div className="hero-art" aria-hidden="true">
+      {/* ---------- hero: the artwork sets the scene, the copy sits in its open sky ---------- */}
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-media" aria-hidden="true">
           <img src="/images/hero-art-1774.webp" srcSet="/images/hero-art-1000.webp 1000w, /images/hero-art-1774.webp 1774w" sizes="100vw" width="1774" height="512" alt="" fetchpriority="high" />
         </div>
-        <div className="hero-scrim" />
-        <p className="hero-note" aria-hidden="true">{pick('তিতাসের তীরে ঈমানের আলো ব্রাহ্মণবাড়িয়া', 'By the Titas, the light of faith')}</p>
-        <div className="wrap hero-main">
+        <div className="hero-shade" aria-hidden="true" />
+        <div className="wrap hero-inner">
           <div className="hero-copy">
-            <p className="hero-kicker">{pick('ইতিহাস, ঈমান, সংস্কৃতি, মানুষ', 'History, Faith, Culture, People')}</p>
-            <h1>{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</h1>
-            <p className="hero-subtitle">{pick('আমাদের ঐতিহ্য, আমাদের মানুষ', 'Our Heritage, Our People')}<br />{pick('আরও উজ্জ্বল আগামী', 'A Brighter Tomorrow')}</p>
-            <p className="lede">{pick('বিশ্ববিদ্যালয়-পড়ুয়াদের একটি কমিউনিটি, যারা আমাদের ইসলামী ঐতিহ্য, সমৃদ্ধ সংস্কৃতি ও প্রকৃতির সৌন্দর্য ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of university students, preserving our Islamic heritage, rich culture, natural beauty, and building opportunities together.')}</p>
+            <p className="eyebrow">{pick('ইতিহাস · ঈমান · সংস্কৃতি · মানুষ', 'History · Faith · Culture · People')}</p>
+            <h1 id="hero-title">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</h1>
+            <p className="hero-sub">{pick('আমাদের ঐতিহ্য, আমাদের মানুষ, আরও উজ্জ্বল আগামী', 'Our heritage, our people, a brighter tomorrow')}</p>
+            <p className="hero-lede">{pick('বিশ্ববিদ্যালয়-পড়ুয়াদের একটি কমিউনিটি, যারা জেলার ইসলামী ঐতিহ্য, সংস্কৃতি ও প্রকৃতিকে ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of university students preserving the district’s Islamic heritage, culture and natural beauty, and building opportunities together.')}</p>
             <form className="hero-search" onSubmit={submit} role="search">
+              <Icon name="search" size={18} className="hero-search-ico" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('hero.search')} aria-label={t('hero.search')} />
-              <button className="search-go" type="submit" aria-label={t('hero.searchBtn')}><Icon name="search" size={18} /></button>
+              <button className="btn btn-dark" type="submit">{t('hero.searchBtn')}</button>
             </form>
+            <div className="hero-links">
+              <Link className="btn-text" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('কমিউনিটিতে যোগ দিন', 'Join the community')} <Icon name="arrow" size={15} className="arr" /></Link>
+              <Link className="btn-text quiet" to="/heritage">{pick('ঐতিহ্য ঘুরে দেখুন', 'Explore heritage')}</Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="hero-band">
-        <svg className="band-wave" viewBox="0 0 1440 150" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 150V78C140 30 300 20 470 54S800 118 1010 78 1320 22 1440 60V150Z" fill="#0d3022" />
-          <path d="M0 78C140 30 300 20 470 54S800 118 1010 78 1320 22 1440 60" fill="none" stroke="#e6c277" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div className="band-body">
-          <div className="band-bg" />
-          <div className="wrap band-inner">
-            <HeritageRail />
-            <dl className="hero-stats">
-              {[
-                ['students', s?.students, 'users', 'শিক্ষার্থী', 'Students'],
-                ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazila'],
-                ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union Parishad'],
-                ['places', s?.places, 'landmark', 'ঐতিহাসিক স্থান', 'Historical Places'],
-              ].map(([k, v, ic, bn, en]) => (
-                <div key={k}><span className="stat-ico"><Icon name={ic} size={20} /></span><span><dd className="num">{v != null ? n(v) : '–'}</dd><dt>{pick(bn, en)}</dt></span></div>
-              ))}
-            </dl>
-          </div>
-        </div>
-        <svg className="hero-edge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 120V60C120 20 230 12 360 40c150 32 250 62 430 40 170-20 250-70 420-62 90 4 170 20 230 42v60z" />
-        </svg>
+      {/* ---------- real numbers, quietly ---------- */}
+      <section className="wrap stats-strip" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
+        <dl>
+          {[
+            ['students', s?.students, 'শিক্ষার্থী', 'Students'],
+            ['upazilas', s?.upazilas, 'উপজেলা', 'Upazilas'],
+            ['unions', unionCount || undefined, 'ইউনিয়ন পরিষদ', 'Union parishads'],
+            ['places', s?.places, 'ঐতিহাসিক স্থান', 'Historical places'],
+          ].map(([k, v, bn, en]) => (
+            <div key={k}><dt>{pick(bn, en)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
+          ))}
+        </dl>
       </section>
 
-      {/* ---------- explore our district ---------- */}
-      <section className="section wrap">
-        <div className="section-head left">
-          <div><h2>{t('quick.title')}</h2><p className="muted">{t('quick.lede')}</p></div>
-        </div>
-        <div className="quick">
-          {QUICK.map(([to, k, d, ic]) => (
-            <Link key={to} to={to} className="quick-item">
-              <span className="ico-circle"><Icon name={ic} size={20} /></span>
-              <b>{t(k)}</b>
-              <small>{t(d)}</small>
-            </Link>
+      {/* ---------- themes of the district ---------- */}
+      <section className="section wrap" aria-labelledby="themes-h">
+        <Reveal className="section-head">
+          <div>
+            <p className="kicker">{pick('ঐতিহ্যের সূচি', 'A heritage index')}</p>
+            <h2 id="themes-h">{pick('জেলাকে চিনুন বিষয় ধরে', 'Discover the district by theme')}</h2>
+          </div>
+          <Link className="link-arrow" to="/heritage">{t('common.viewAll')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
+        <div className="themes">
+          {THEMES.map((th, i) => (
+            <Reveal key={th.id} delay={i * 60} className={`theme t${i + 1}`}>
+              <Link className="theme-card" to={th.to}>
+                <Photo id={th.id} sizes={i < 2 ? '(min-width: 900px) 55vw, 82vw' : '(min-width: 900px) 33vw, 82vw'} alt="" />
+                <span className="theme-copy"><span>{pick(th.bn, th.en)}</span><Icon name="arrow" size={16} className="arr" /></span>
+              </Link>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ---------- interactive map ---------- */}
-      <section className="section wrap explore">
-        <div className="explore-copy">
-          <p className="kicker">{t('explore.kicker')}</p>
-          <h2>{t('explore.title')}</h2>
-          <p className="lede">{t('explore.lede')}</p>
-          <MapPanel u={upazilas.find((u) => u.slug === sel)} />
-          <Link className="link-arrow" to="/directory">{t('explore.cta')} →</Link>
-        </div>
-        <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
+      {/* ---------- explore the site ---------- */}
+      <section className="section wrap" aria-labelledby="quick-h">
+        <Reveal className="section-head">
+          <div><h2 id="quick-h">{t('quick.title')}</h2><p className="muted">{t('quick.lede')}</p></div>
+        </Reveal>
+        <Reveal className="quick">
+          {QUICK.map(([to, k, d, ic]) => (
+            <Link key={to} to={to} className="quick-item">
+              <span className="quick-ico"><Icon name={ic} size={18} /></span>
+              <b>{t(k)}</b>
+              <small>{t(d)}</small>
+              <Icon name="arrow" size={15} className="arr quick-arr" />
+            </Link>
+          ))}
+        </Reveal>
       </section>
 
-      {/* ---------- history, culture and people (photo collage) ---------- */}
-      <section className="section wrap collage-sec">
-        <div className="collage-copy">
+      {/* ---------- interactive map ---------- */}
+      <section className="section-tint">
+        <div className="section wrap explore">
+          <Reveal className="explore-copy">
+            <p className="kicker">{t('explore.kicker')}</p>
+            <h2>{t('explore.title')}</h2>
+            <p className="lede">{t('explore.lede')}</p>
+            <MapPanel u={upazilas.find((u) => u.slug === sel)} />
+            <Link className="link-arrow" to="/directory">{t('explore.cta')} <Icon name="arrow" size={15} className="arr" /></Link>
+          </Reveal>
+          <Reveal delay={80}>
+            <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ---------- history, culture and people ---------- */}
+      <section className="section wrap story">
+        <Reveal className="story-copy">
           <p className="kicker">{t('collage.kicker')}</p>
           <h2>{t('collage.title')}</h2>
           <p className="lede">{t('collage.body')}</p>
-          <Link className="btn btn-dark" to="/about">{t('collage.cta')} →</Link>
-        </div>
-        <div className="collage" aria-hidden="false">
-          <span className="paper-patch p1" aria-hidden="true" />
-          <span className="paper-patch p2" aria-hidden="true" />
-          <div className="c-main"><Photo id="arifail-01" shape="shape-r" sizes="(min-width: 900px) 40vw, 90vw" /></div>
-          <div className="c-left"><Photo id="titas-boat" shape="shape-r" sizes="(min-width: 900px) 20vw, 50vw" /></div>
-          <div className="c-right"><Photo id="akhaura-water" shape="shape-r" sizes="(min-width: 900px) 16vw, 40vw" /></div>
-          <img className="c-river" src="/art/river.webp" alt="" loading="lazy" />
-          <p className="script-note dark">{t('collage.script')}</p>
+          <Link className="btn btn-dark" to="/about">{t('collage.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
+        </Reveal>
+        <div className="story-media">
+          <Reveal className="story-main"><Photo id="alinagar-fair" sizes="(min-width: 900px) 42vw, 92vw" /></Reveal>
+          <Reveal className="story-side" delay={120}><Photo id="titas-boat" sizes="(min-width: 900px) 22vw, 50vw" /></Reveal>
+          <p className="story-caption">{t('collage.script')}</p>
         </div>
       </section>
 
       {/* ---------- featured places ---------- */}
-      <section className="section wrap">
-        <div className="section-head">
-          <h2>{t('featured.title')}</h2>
-          <Link className="link-arrow" to="/heritage">{t('common.viewAll')} →</Link>
-        </div>
+      <section className="section wrap" aria-labelledby="featured-h">
+        <Reveal className="section-head">
+          <h2 id="featured-h">{t('featured.title')}</h2>
+          <Link className="link-arrow" to="/heritage">{t('common.viewAll')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
         <div className="cards-3">
-          {placeList.slice(0, 3).map((p) => <PlaceCard key={p.slug} p={p} upazilas={upazilas} />)}
+          {placeList.slice(0, 3).map((p, i) => <Reveal key={p.slug} delay={i * 70}><PlaceCard p={p} upazilas={upazilas} /></Reveal>)}
         </div>
       </section>
 
       {/* ---------- student community ---------- */}
-      <section className="section wrap community">
-        <div className="community-copy">
-          <h2>{t('community.title')}</h2>
-          <p className="lede">{t('community.body')}</p>
-          <div className="avatar-row">
-            {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={44} />)}
+      <section className="section wrap">
+        <Reveal className="community">
+          <div className="community-copy">
+            <h2>{t('community.title')}</h2>
+            <p className="lede">{t('community.body')}</p>
+            <div className="avatar-row">
+              {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={40} />)}
+            </div>
+            <Link className="btn btn-dark" to="/students">{t('community.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
           </div>
-          <Link className="btn btn-dark" to="/students">{t('community.cta')} →</Link>
-        </div>
-        <figure className="community-art">
-          <blockquote>“{t('community.quote')}”</blockquote>
-          <img src="/art/students.webp" alt="" loading="lazy" />
-          <img className="art-heritage" src="/art/heritage.webp" alt="" loading="lazy" />
-        </figure>
+          <figure className="community-quote">
+            <blockquote>{t('community.quote')}</blockquote>
+            <img src="/art/students.webp" alt="" loading="lazy" />
+          </figure>
+        </Reveal>
       </section>
 
       {/* ---------- stories ---------- */}
-      <section className="section wrap">
-        <div className="section-head">
-          <div><h2>{t('stories.title')}</h2><p className="muted">{t('stories.lede')}</p></div>
-          <Link className="link-arrow" to="/blog">{t('stories.all')} →</Link>
-        </div>
+      <section className="section wrap" aria-labelledby="stories-h">
+        <Reveal className="section-head">
+          <div><h2 id="stories-h">{t('stories.title')}</h2><p className="muted">{t('stories.lede')}</p></div>
+          <Link className="link-arrow" to="/blog">{t('stories.all')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
         <div className="cards-3">
-          {(posts.data?.items || []).slice(0, 3).map((p) => <PostCard key={p.slug} p={p} />)}
+          {(posts.data?.items || []).slice(0, 3).map((p, i) => <Reveal key={p.slug} delay={i * 70}><PostCard p={p} /></Reveal>)}
         </div>
       </section>
 
       <section className="wrap section">
-        <div className="join-band">
+        <Reveal className="join-band">
           <div>
             <h2>{t('join.title')}</h2>
             <p>{t('join.body')}</p>
           </div>
-          <Link className="btn btn-leaf" to="/register">{t('join.cta')}</Link>
-          <img className="join-art" src="/art/leaves-bl.webp" alt="" loading="lazy" />
+          <Link className="btn btn-light" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('join.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
           <span className="visually-hidden">{pick('শুধু ব্রাহ্মণবাড়িয়ার শিক্ষার্থী', 'Brahmanbaria students only')}</span>
-        </div>
+        </Reveal>
       </section>
     </>
   )

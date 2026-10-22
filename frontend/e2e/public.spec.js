@@ -1,0 +1,74 @@
+import { test, expect } from '@playwright/test'
+
+// Public site: navigation, hero search, the mobile drawer and the account pages. English UI so labels are stable.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en'); localStorage.setItem('jk-theme', 'light') } catch { /* ignore */ } })
+})
+
+test('desktop navigation: links, active state and the bar settling on scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  const header = page.locator('header.site-header')
+  await expect(header).toHaveClass(/on-hero/)
+  await expect(header).not.toHaveClass(/is-scrolled/)
+  const main = page.getByRole('navigation', { name: 'Main' })
+  for (const label of ['About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'FAQ', 'Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Login', exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Register', exact: true }).first()).toBeVisible()
+  await page.mouse.wheel(0, 600)
+  await expect(header).toHaveClass(/is-scrolled/)
+  await main.getByRole('link', { name: 'About', exact: true }).click()
+  await expect(page).toHaveURL(/\/about$/)
+  await expect(main.getByRole('link', { name: 'About', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(header).not.toHaveClass(/on-hero/)
+})
+
+test('hero search goes to the student directory with the query', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Brahmanbaria' })).toBeVisible()
+  const search = page.getByRole('search')
+  await search.getByRole('textbox').fill('Finance')
+  await search.getByRole('button', { name: 'Search' }).click()
+  await expect(page).toHaveURL(/\/students\?q=Finance/)
+})
+
+test('mobile drawer opens, closes with Escape, and closes after navigating', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const menu = page.getByRole('button', { name: 'Menu' })
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden()
+  await menu.click()
+  const drawer = page.locator('#drawer')
+  await expect(drawer).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Close' })).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('Escape')
+  await expect(drawer).toBeHidden()
+  await menu.click()
+  await drawer.getByRole('link', { name: 'Gallery' }).click()
+  await expect(page).toHaveURL(/\/gallery$/)
+  await expect(drawer).toBeHidden()
+})
+
+test('login: labelled fields, password visibility toggle and the way to register', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.getByRole('heading', { level: 1, name: 'Login' })).toBeVisible()
+  const pw = page.getByLabel('Password', { exact: true })
+  await pw.fill('secret-value')
+  await expect(pw).toHaveAttribute('type', 'password')
+  await page.getByRole('button', { name: 'Show password' }).click()
+  await expect(pw).toHaveAttribute('type', 'text')
+  await page.getByRole('main').getByRole('link', { name: 'Register' }).click()
+  await expect(page).toHaveURL(/\/register$/)
+  await expect(page.getByLabel('Full name')).toBeVisible()
+})
+
+test('reduced motion: content is visible without waiting for animations', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 1280, height: 800 } })
+  const page = await ctx.newPage()
+  await page.addInitScript(() => { localStorage.setItem('jk-lang', 'en') })
+  await page.goto('/')
+  const card = page.locator('.theme').first()
+  await card.scrollIntoViewIfNeeded()
+  await expect(card).toHaveCSS('opacity', '1')
+  await ctx.close()
+})
