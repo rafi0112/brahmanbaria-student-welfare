@@ -362,6 +362,8 @@ html[lang='bn'] .script-note { font-family: 'Noto Serif Bengali', serif; font-st
 .admin-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; } .admin-top h1 { margin: 0; }
 .admin-who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+.side-label { display: block; margin: 14px 12px 2px; opacity: .6; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+
 /* ---------- footer ---------- */
 .site-footer { position: relative; z-index: 1; margin-top: 50px; color: var(--on-forest); }
 .footer-wave { display: block; width: 100%; height: clamp(40px, 6vw, 80px); fill: var(--forest); margin-bottom: -1px; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
@@ -185,13 +185,17 @@ function AdminBody() {
   const { t, n } = useApp()
   const { user: me, logout } = useAuth()
   const go = useNavigate()
-  const [tab, setTab] = useState('members')
+  // the section lives in the URL (?tab=roles), so the sidebar links, reloads and the back button all work
+  const [params, setParams] = useSearchParams()
+  const tab = ['roles', 'committee'].includes(params.get('tab')) ? params.get('tab') : 'members'
+  const setTab = (k) => setParams(k === 'members' ? {} : { tab: k })
   const [status, setStatus] = useState('pending')
   const overview = useApi('/admin/overview')
   const list = useApi(`/admin/members?status=${status}`)
   const stats = useApi('/stats')
   const [err, setErr] = useState(null)
-  const nav = [['dash', '▦'], ['students', '☺'], ['batches', '#'], ['places', '◬'], ['blog', '✎'], ['gallery', '▣'], ['messages', '✉'], ['users', '⚙']]
+  const sections = [['members', '▦', 'admin.nav.dash'], ['roles', '⚙', 'admin.tab.roles'], ['committee', '★', 'admin.tab.committee']]
+  const site = [['/students', '☺', 'admin.nav.students'], ['/heritage', '◬', 'admin.nav.places'], ['/blog', '✎', 'admin.nav.blog'], ['/gallery', '▣', 'admin.nav.gallery'], ['/', '⌂', 'nav.home']]
 
   const act = async (id, verb) => {
     setErr(null)
@@ -207,7 +211,11 @@ function AdminBody() {
       <aside className="admin-side">
         <Link to="/" className="brand brand-light"><Logo size={34} /><span><b>{t('brand')}</b></span></Link>
         <nav aria-label="Admin">
-          {nav.map(([k, ic], i) => <NavLink key={k} to="/admin" className={i === 0 ? 'on' : ''} end><span aria-hidden="true">{ic}</span>{t(`admin.nav.${k}`)}</NavLink>)}
+          {sections.map(([k, ic, label]) => (
+            <Link key={k} to={k === 'members' ? '/admin' : `/admin?tab=${k}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}><span aria-hidden="true">{ic}</span>{t(label)}</Link>
+          ))}
+          <small className="side-label">{t('admin.nav.site')}</small>
+          {site.map(([to, ic, label]) => <Link key={to} to={to}><span aria-hidden="true">{ic}</span>{t(label)}</Link>)}
         </nav>
       </aside>
       <div className="admin-main">
