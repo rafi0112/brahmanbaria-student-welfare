@@ -22,7 +22,7 @@ export const NAV = [
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
   { id: 'directory', to: '/admin/students?tab=members', icon: 'directory', label: 'ad.nav.directory', group: 'students' },
-  { id: 'alumni', to: '/admin/alumni', icon: 'users', label: 'ad.nav.alumni', group: 'people' },
+  { id: 'alumni', to: '/admin/alumni', icon: 'users', label: 'ad.nav.alumni', group: 'students' },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
   // Blog and gallery share one rule: an empty status is the working set (everything not archived).

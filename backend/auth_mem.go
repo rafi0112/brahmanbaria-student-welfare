@@ -25,6 +25,7 @@ type memSession struct {
 // memStore keeps everything in RAM. Used by tests and by AUTH_DEV_MEMORY=true; data is lost on restart.
 type memStore struct {
 	dir       memDirectory
+	settings  memSettings
 	mu        sync.Mutex
 	seq       int
 	users     map[string]*User

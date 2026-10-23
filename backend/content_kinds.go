@@ -303,6 +303,10 @@ func (a *App) reloadLive(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reference data: %w", err)
 	}
+	upTo, _, err := alumniUpTo(ctx, a.Auth.Store)
+	if err != nil {
+		return fmt.Errorf("alumni setting: %w", err)
+	}
 	a.updateData(func(s *Store) {
 		if len(recs) > 0 || s.StudentsFromDB || s.AlumniFromDB {
 			applyDirectoryRecords(s, recs)
@@ -313,6 +317,7 @@ func (a *App) reloadLive(ctx context.Context) error {
 		if len(depts) > 0 {
 			s.Depts = depts
 		}
+		s.AlumniUpTo = upTo
 		recount(s)
 	})
 	return nil

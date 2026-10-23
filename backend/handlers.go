@@ -124,8 +124,9 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	pg, limit := paging(r, 48)
 	out := []Alumnus{}
+	list := a.shownAlumni(r.Context()) // alumni records and every graduated batch
 	batch, _ := strconv.Atoi(q.Get("batch"))
-	for _, s := range a.data().Alumni {
+	for _, s := range list {
 		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
 			continue
 		}
@@ -138,7 +139,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		out = append(out, s)
 	}
 	batches, depts := map[int]int{}, map[string]int{}
-	for _, s := range a.data().Alumni {
+	for _, s := range list {
 		if s.Batch != nil {
 			batches[*s.Batch]++
 		}
@@ -157,13 +158,20 @@ func (a *App) withPlaceCounts(r *http.Request) []Upazila {
 	for _, p := range a.publishedPlaces(r) {
 		counts[p.Upazila]++
 	}
-	members := map[string]int{}
+	members, alumni := map[string]int{}, map[string]int{}
+	d := a.data()
 	for _, p := range a.directoryPeople(r.Context()) { // the same real list the directory shows, not the bundled file
-		members[p.Upazila]++
+		if !d.graduated(p.Batch) {
+			members[p.Upazila]++
+		}
+	}
+	for _, al := range a.shownAlumni(r.Context()) {
+		alumni[al.Upazila]++
 	}
 	for i := range out {
 		out[i].Places = counts[out[i].Slug]
 		out[i].Members = members[out[i].Slug]
+		out[i].AlumniCount = alumni[out[i].Slug]
 	}
 	return out
 }
@@ -240,14 +248,19 @@ func (a *App) blogOne(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 	batches := map[int]bool{}
-	students := a.directoryStudents(r.Context())
-	for _, s := range students {
+	d := a.data()
+	students := 0
+	for _, s := range a.directoryStudents(r.Context()) {
+		if d.graduated(s.Batch) {
+			continue
+		}
+		students++
 		if s.Batch != nil {
 			batches[*s.Batch] = true
 		}
 	}
 	writeJSON(w, 200, map[string]any{
-		"students": len(students), "alumni": len(a.data().Alumni), "batches": len(batches),
+		"students": students, "alumni": len(a.shownAlumni(r.Context())), "batches": len(batches), "alumniUpToBatch": d.AlumniUpTo,
 		"upazilas": len(a.data().Upazilas), "places": len(a.publishedPlaces(r)), "sample": a.data().Sample,
 	})
 }

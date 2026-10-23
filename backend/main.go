@@ -125,9 +125,15 @@ func main() {
 		if err := app.reloadLive(context.Background()); err != nil {
 			log.Fatalf("load data from the database: %v", err)
 		}
+		if err := app.ensureAlumniSetting(context.Background()); err != nil {
+			log.Fatalf("alumni setting: %v", err)
+		}
+		if err := app.reloadLive(context.Background()); err != nil {
+			log.Fatalf("load data from the database: %v", err)
+		}
 		d := app.data()
 		if d.FromDB {
-			log.Printf("data from the database: %d students, %d alumni, %d departments, %d upazilas", len(d.Students), len(d.Alumni), len(d.Depts), len(d.Upazilas))
+			log.Printf("data from the database: %d students, %d alumni, %d departments, %d upazilas; batches up to %d count as alumni", len(d.Students), len(d.Alumni), len(d.Depts), len(d.Upazilas), d.AlumniUpTo)
 		} else {
 			log.Printf("directory: no records in the database yet; using the files in %s (run import-directory)", dataDir)
 		}

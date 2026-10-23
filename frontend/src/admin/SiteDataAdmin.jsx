@@ -301,6 +301,53 @@ function AlumnusEditor({ row, depts, ups, onClose, onSaved }) {
   )
 }
 
+// Up to which batch students count as alumni. Raising it by one each year moves the graduating batch to the Alumni page.
+function AlumniCutoff({ onChanged }) {
+  const { t, n } = useApp()
+  const errText = useErrText()
+  const cur = useApi('/admin/settings/alumni')
+  const [v, setV] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+  const [ask, setAsk] = useState(false)
+  const d = cur.data
+  const value = v ?? (d ? String(d.upToBatch) : '')
+  const by = d?.studentsByBatch || {}
+  const moving = (from, to) => Object.entries(by).filter(([b]) => Number(b) > from && Number(b) <= to).reduce((x, [, c]) => x + c, 0)
+  const back = (from, to) => Object.entries(by).filter(([b]) => Number(b) > to && Number(b) <= from).reduce((x, [, c]) => x + c, 0)
+  const save = async () => {
+    setBusy(true); setMsg(null)
+    try { await api('/admin/settings/alumni', { method: 'PUT', body: JSON.stringify({ upToBatch: Number(value) }) }); setV(null); cur.retry(); onChanged(); setMsg({ tone: 'ok', text: t('ad.ac.saved').replace('{n}', n(Number(value))) }) }
+    catch (e) { setMsg({ tone: 'bad', text: e.fields?.upToBatch || errText(e) }) } finally { setBusy(false); setAsk(false) }
+  }
+  if (!d) return cur.loading ? <SkeletonRows rows={1} /> : null
+  const next = Number(value)
+  const changed = next !== d.upToBatch
+  return (
+    <section className="ad-cutoff" aria-labelledby="ac-h">
+      <div className="ad-cutoff-main">
+        <h3 id="ac-h"><Icon name="clock" size={16} /> {t('ad.ac.title')}</h3>
+        <p className="muted small">{t('ad.ac.text')}</p>
+        <div className="ad-cutoff-row">
+          <label htmlFor="ac-batch">{t('ad.ac.label')}</label>
+          <select id="ac-batch" value={value} onChange={(e) => setV(e.target.value)}>
+            <option value="0">{t('ad.ac.none')}</option>
+            {Array.from({ length: 40 }, (_, i) => i + 1).map((b) => <option key={b} value={b}>{t('auth.batch')} {n(b)}{by[b] ? ` (${n(by[b])})` : ''}</option>)}
+          </select>
+          <button type="button" className="btn btn-dark btn-sm" disabled={busy || !changed} onClick={() => setAsk(true)}>{t('ad.sd.save')}</button>
+          {d.upToBatch < 60 && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setV(String(d.upToBatch + 1))}>{t('ad.ac.nextYear').replace('{n}', n(d.upToBatch + 1))}</button>}
+        </div>
+        <p className="muted small">{t('ad.ac.now').replace('{n}', n(d.upToBatch)).replace('{shown}', n(d.alumniShown)).replace('{records}', n(d.alumniRecords))}
+          {' '}{d.suggested ? t('ad.ac.suggested').replace('{n}', n(d.suggested)) : ''}</p>
+        <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`}>{msg.text}</p>}</div>
+      </div>
+      {ask && <Confirm title={t('ad.ac.title')} label={t('ad.sd.save')} busy={busy} onYes={save} onNo={() => setAsk(false)}
+        text={next > d.upToBatch ? t('ad.ac.confirmUp').replace('{n}', n(next)).replace('{count}', n(moving(d.upToBatch, next)))
+          : t('ad.ac.confirmDown').replace('{n}', n(next)).replace('{count}', n(back(d.upToBatch, next)))} />}
+    </section>
+  )
+}
+
 export function AlumniAdmin() {
   const { t, n, pick } = useApp()
   const errText = useErrText()
@@ -323,6 +370,7 @@ export function AlumniAdmin() {
     <section>
       <PageHeader title={t('ad.al.title')} desc={t('ad.al.desc')}
         action={<button type="button" className="btn btn-dark" onClick={() => setEdit({})}><Icon name="plus" size={16} /> {t('ad.al.add')}</button>} />
+      <AlumniCutoff onChanged={() => list.retry()} />
       <ListToolbar section="alumni" values={f} set={set} defaults={{ limit: '25' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.al.search') }}
         fields={[

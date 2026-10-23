@@ -124,6 +124,8 @@ type Store struct {
 	FromDB    bool // students and alumni were read from the directory_records table
 	// StudentsFromDB and AlumniFromDB: that kind is served from the database (once true it stays, so deletions show).
 	StudentsFromDB, AlumniFromDB bool
+	// AlumniUpTo: students of this batch or earlier are shown as alumni (site_settings alumni.up_to_batch; 0 = none).
+	AlumniUpTo int
 	// Private holds the admin-only columns of each directory record (phone, email, blood group, addresses, ...), by id.
 	Private map[string]map[string]string
 }

@@ -617,3 +617,9 @@
 @media (max-width: 640px) { .ad-grid-2 { grid-template-columns: 1fr; } }
 .ad-sub-h { display: flex; align-items: center; gap: 6px; margin: 18px 0 2px; font-size: .9rem; }
 .ad-dir-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--a-line); }
+
+.ad-cutoff { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--a-line); border-radius: 14px; background: linear-gradient(180deg, color-mix(in srgb, var(--a-accent) 5%, var(--a-surface)), var(--a-surface)); }
+.ad-cutoff h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: .95rem; }
+.ad-cutoff-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0 6px; }
+.ad-cutoff-row label { font-weight: 600; font-size: .85rem; }
+.ad-cutoff-row select { min-width: 170px; }

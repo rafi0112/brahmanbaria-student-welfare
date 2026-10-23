@@ -343,13 +343,13 @@ test('imported directory: add a record by hand, edit it, delete it; no account i
   await expect(page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Person' })).toHaveCount(0)
 })
 
-test('students: a dropdown of two pages, each with its own tabs', async ({ page }) => {
+test('students: a dropdown of three pages (requests, directory, alumni)', async ({ page }) => {
   await login(page)
   const students = side(page).getByRole('button', { name: 'Students', exact: true })
   await expect(students).toHaveAttribute('aria-expanded', 'false')
   await students.click()
   await expect(students).toHaveAttribute('aria-expanded', 'true')
-  await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(2)
+  await expect(side(page).locator('.adm-parent').filter({ has: page.getByRole('button', { name: 'Students', exact: true }) }).locator('.adm-child')).toHaveCount(3)
   const pages = [
     ['Membership Requests', /tab=requests/, ['All pending requests', 'Complete profiles', 'Incomplete profiles'], [/complete=yes/, /complete=no/]],
     ['Membership Directory', /tab=members/, [], []], // Registered members: approved members only, no sub-tabs

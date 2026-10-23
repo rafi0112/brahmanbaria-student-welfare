@@ -117,6 +117,7 @@ type AuthStore interface {
 	ProfileChangeStore
 	PhotoStore
 	DirectoryRecordStore
+	SettingsStore
 
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)

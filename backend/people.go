@@ -253,7 +253,13 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 	v := a.whoIsViewing(r)
 	pg, limit := paging(r, 48)
 	batch, _ := strconv.Atoi(q.Get("batch"))
-	all := a.directoryPeople(r.Context())
+	d := a.data()
+	all := []Person{}
+	for _, p := range a.directoryPeople(r.Context()) {
+		if !d.graduated(p.Batch) { // graduated batches are on the Alumni page
+			all = append(all, p)
+		}
+	}
 	out := []Person{}
 	for _, s := range all {
 		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {

@@ -33,8 +33,8 @@ test('locations map to their section', () => {
   assert.equal(navFor('/admin/students', '?status=approved').id, 'directory')
 })
 
-test('students has two pages: membership requests and the membership directory', () => {
-  assert.deepEqual(NAV.filter((n) => n.group === 'students').map((n) => n.id), ['requests', 'directory'])
+test('students has three pages: membership requests, the membership directory and alumni', () => {
+  assert.deepEqual(NAV.filter((n) => n.group === 'students').map((n) => n.id), ['requests', 'directory', 'alumni'])
   assert.deepEqual(item('requests').tabs.map((c) => c.id), ['all', 'complete', 'incomplete'])
   assert.equal(item('directory').children, undefined)
   assert.equal(navFor('/admin/students', '?tab=members&view=review').id, 'directory')
