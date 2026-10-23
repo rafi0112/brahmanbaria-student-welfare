@@ -58,7 +58,7 @@ export default function Heritage() {
           <UpazilaMap upazilas={upazilas} places={all.data?.items || []} selected={f.upazila} onSelect={(slug) => set({ upazila: f.upazila === slug ? '' : slug })} onPin={(p) => nav(`${base}/heritage/${p.slug}`)} />
         </aside>
         <div>
-          <Data q={res}>
+          <Data q={res} skeleton="cards">
             {(d) => (
               <>
                 <p className="muted result-count" aria-live="polite">{n(d.total)} {t('heritage.found')}</p>
@@ -81,7 +81,7 @@ export function HeritageDetail() {
   const all = useApi('/heritage')
   const [img, setImg] = useState(0)
   return (
-    <Data q={res}>
+    <Data q={res} skeleton="detail">
       {(p) => {
         const up = (ups.data?.items || []).find((u) => u.slug === p.upazila)
         const at = Math.max(0, Math.min(img, p.images.length - 1))

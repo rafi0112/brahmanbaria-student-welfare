@@ -18,9 +18,9 @@ export function Events() {
   const today = new Date().toISOString().slice(0, 10)
   return (
     <>
-      <PageHero kicker={t('events.kicker')} title={t('events.title')} lede={t('events.lede')} src="/images/bswa/puppets.webp" />
+      <PageHero kicker={t('events.kicker')} title={t('events.title')} variant="arch" lede={t('events.lede')} src="/images/bswa/puppets.webp" />
       <section className="section wrap">
-        <Data q={res}>
+        <Data q={res} skeleton="cards">
           {(d) => {
             if (d.items.length === 0) return <Empty icon="calendar" title={t('events.emptyTitle')} action={<><Link className="btn btn-dark" to="/contact">{t('events.suggest')} <Icon name="arrow" size={16} className="arr" /></Link><Link className="btn btn-outline" to="/gallery">{t('events.seeGallery')}</Link></>}>{t('events.empty')}</Empty>
             const sorted = [...d.items].sort((a, b) => a.date.localeCompare(b.date))
@@ -76,7 +76,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} lede={t('alumni.lede')} src="/images/bswa/river.webp">
+      <PageHero kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="circle" lede={t('alumni.lede')} src="/images/bswa/river.webp">
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -95,7 +95,7 @@ export function Alumni() {
           {(f.q || f.batch || f.department) && <button className="btn btn-ghost btn-sm" onClick={() => { setText(''); setSp({}, { replace: true }) }}>{t('common.clear')}</button>}
         </div>
         <p className="privacy-note">🔒 {t('alumni.note')}</p>
-        <Data q={res}>
+        <Data q={res} skeleton="people">
           {(d) => (
             <>
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}</p>
@@ -134,9 +134,9 @@ export function Committee() {
   const res = useApi('/executive-committee')
   return (
     <>
-      <PageHero kicker={t('committee.kicker')} title={t('committee.title')} lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
+      <PageHero kicker={t('committee.kicker')} title={t('committee.title')} variant="frame" lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap">
-        <Data q={res}>
+        <Data q={res} skeleton="committee">
           {(d) => !d.committee || d.members.length === 0 ? <Empty icon="users" title={t('committee.emptyTitle')} action={<Link className="btn btn-outline" to="/contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>}>{t('committee.empty')}</Empty> : (
             <>
               <header className="committee-head">
@@ -192,9 +192,9 @@ export function FAQPage() {
   const res = useApi('/faq')
   return (
     <>
-      <PageHero kicker={t('faq.kicker')} title={t('faq.title')} lede={t('faq.lede')} src="/images/bswa/baul.webp" />
+      <PageHero kicker={t('faq.kicker')} title={t('faq.title')} variant="tilt" lede={t('faq.lede')} src="/images/bswa/baul.webp" />
       <section className="section wrap faq-layout">
-        <Data q={res}>
+        <Data q={res} skeleton="list">
           {(d) => (
             <div className="faq-list">
               {d.items.map((f, i) => (

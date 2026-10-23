@@ -47,7 +47,7 @@ export default function Students() {
 
   return (
     <>
-      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
+      <PageHero kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
       <div className="wrap">
         <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
           <label className="sbar-q">
@@ -80,7 +80,7 @@ export default function Students() {
             {note.askSignIn && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
             {res.data?.sample && <Badge tone="gold">{t('students.sample')}</Badge>}
           </p>
-          <Data q={res}>
+          <Data q={res} skeleton="people">
             {(d) => (
               <>
                 <p className="muted result-count" aria-live="polite">{n(d.total)} {t('students.found')}</p>
@@ -139,7 +139,7 @@ export function StudentDetail() {
   const ups = useApi('/upazilas')
   const note = useViewNote(res.data?.view)
   return (
-    <Data q={res}>
+    <Data q={res} skeleton="detail">
       {(s) => {
         const d = s.details
         const up = (ups.data?.items || []).find((u) => u.slug === s.upazila)

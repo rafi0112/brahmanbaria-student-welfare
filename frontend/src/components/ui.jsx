@@ -4,6 +4,7 @@ import images from '../data/images.json'
 import { usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import Icon from './Icon.jsx'
+import { Skeleton, SplitText } from './Motion.jsx'
 
 // Responsive WebP photo with reserved dimensions and a graceful fallback.
 // `shape` picks one of the slightly irregular frame styles.
@@ -108,8 +109,9 @@ export function ErrorState({ error, retry }) {
   )
 }
 
-export function Data({ q, children }) {
-  if (q.loading) return <Loading />
+export function Data({ q, children, skeleton = 'block', count }) {
+  const { t } = useApp()
+  if (q.loading) return <div role="status" aria-live="polite" className="sk-wrap"><span className="sr-only">{t('state.loading')}</span><Skeleton kind={skeleton} count={count} /></div>
   if (q.error) return <ErrorState error={q.error} retry={q.retry} />
   return children(q.data)
 }
@@ -141,7 +143,8 @@ export function Crumbs({ items }) {
 
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
-export function PageHero({ kicker, title, lede, image, imageUrl, src, script, children }) {
+// variant gives each page its own picture treatment: vine, bleed, arch, circle, frame, collage, tilt, wave
+export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', children }) {
   const { t } = useApp()
   let head = title, last = ''
   if (typeof title === 'string' && title.includes(' ')) {
@@ -150,12 +153,12 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, ch
     last = title.slice(i + 1)
   }
   return (
-    <header className="phero-wrap">
+    <header className={`phero-wrap phero-v-${variant}`}>
       <div className="wrap phero">
         <div className="phero-copy">
           <nav className="phero-crumbs" aria-label={t('nav.breadcrumb')}><Link to="/">{t('nav.home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{kicker || head}</span></nav>
           {kicker && <p className="eyebrow">{kicker}</p>}
-          <h1>{head}{last && <span className="hl">{last}</span>}</h1>
+          <h1 className="st-title"><SplitText text={head} />{last && <span className="hl"><SplitText text={last} start={head.split(/\s+/).length} /></span>}</h1>
           {lede && <p className="phero-lede">{lede}</p>}
           {children}
         </div>
@@ -163,6 +166,7 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, ch
           {src ? <img className="phero-img" src={src} alt="" width="700" height="460" fetchpriority="high" /> : <MediaPhoto id={image} url={imageUrl} eager sizes="(min-width: 1000px) 48vw, 100vw" alt="" />}
         </div>
         {script && <p className="phero-script" aria-hidden="true">{script}</p>}
+        <span className="phero-deco phero-deco-a" aria-hidden="true" /><span className="phero-deco phero-deco-b" aria-hidden="true" />
       </div>
     </header>
   )

@@ -4,6 +4,7 @@ import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import Icon from '../components/Icon.jsx'
+import { Marquee } from '../components/Motion.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { Avatar, Photo } from '../components/ui.jsx'
 import { SketchArt, Vine } from '../components/Decor.jsx'
@@ -64,8 +65,8 @@ export default function Home() {
            heading is given to screen readers and real links sit exactly over the drawn buttons (below it on phones). ---------- */}
       <section className="hero hero-full hero-exact" aria-labelledby="hero-title">
         <div className="hx">
-          <img className="hx-img" src="/images/bswa/hero-mockup-1436.webp" srcSet="/images/bswa/hero-mockup-720.webp 720w, /images/bswa/hero-mockup-1436.webp 1436w" sizes="100vw"
-            width="1436" height="654" alt="" fetchpriority="high" decoding="async" />
+          <img className="hx-img" src="/images/bswa/hero-4k-2400.webp" srcSet="/images/bswa/hero-4k-960.webp 960w, /images/bswa/hero-4k-1600.webp 1600w, /images/bswa/hero-4k-2400.webp 2400w, /images/bswa/hero-4k-3798.webp 3798w" sizes="100vw"
+            width="3798" height="1676" alt="" fetchpriority="high" decoding="async" />
           <h1 id="hero-title" className="sr-only">{pick('ব্রাহ্মণবাড়িয়া — আমাদের ঐতিহ্য, আমাদের মানুষ, আমাদের আগামী। ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে।', 'Brahmanbaria — Our Heritage. Our People. Our Tomorrow.')}</h1>
           <Link className="hx-hit hx-explore" to="/heritage" aria-label={pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} />
           <Link className="hx-hit hx-meet" to="/students" aria-label={pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')} />
@@ -99,12 +100,15 @@ export default function Home() {
         </div>
       </section>
 
+      <Marquee label={pick('ব্রাহ্মণবাড়িয়ার উপজেলা ও সংস্কৃতি', 'Upazilas and culture of Brahmanbaria')}
+        items={[...upazilas.map((u) => pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')), ...CULTURE.map((c) => pick(c.bn, c.en))]} />
+
       {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
       <section className="explore2" aria-labelledby="explore-h">
         <div className="explore2-grid">
           <Reveal className="ex-media ex-exact">
             {/* the supplied artwork as designed: photograph, brushed edge, sprigs and the lettering are one picture */}
-            <img src="/images/bswa/explore-mockup.webp" width="737" height="464" loading="lazy" decoding="async"
+            <img data-parallax="0.06" src="/images/bswa/explore-mockup.webp" width="737" height="464" loading="lazy" decoding="async"
               alt={pick('তিতাসের তীরে সূর্যাস্ত, মসজিদ ও নৌকা — নদী, ঐতিহ্য, মানুষ', 'Sunset on the river with a mosque and boats — rivers, heritage, people')} />
           </Reveal>
           <div className="ex-copy">

@@ -8,6 +8,7 @@ import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../com
 import Markdown from '../components/Markdown.jsx'
 import { PostCard } from '../components/cards.jsx'
 import Icon from '../components/Icon.jsx'
+import { toast } from '../components/Motion.jsx'
 
 /* ---------------- Blog ---------------- */
 export function Blog() {
@@ -26,7 +27,7 @@ export function Blog() {
         </div>
       </PageHero>
       <section className="section wrap">
-        <Data q={res}>
+        <Data q={res} skeleton="cards">
           {(d) => d.items.length === 0 ? <Empty /> : (
             <div className="blog-layout">
               <PostCard p={d.items[0]} big />
@@ -54,7 +55,7 @@ export function BlogPost() {
   const more = useApi('/blog')
   return (
     <section className="section wrap narrow">
-      <Data q={res}>
+      <Data q={res} skeleton="detail">
         {(p) => (
           <article className="article">
             <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/blog`, label: t('nav.blog') }, { label: pick(p.titleBn, p.titleEn) }]} />
@@ -100,9 +101,9 @@ export function Gallery() {
   const m = open != null ? items[open] : null
   return (
     <>
-      <PageHero kicker={t('gallery.kicker')} title={t('gallery.title')} lede={t('gallery.lede')} src="/images/bswa/puppets.webp" />
+      <PageHero kicker={t('gallery.kicker')} title={t('gallery.title')} variant="collage" lede={t('gallery.lede')} src="/images/bswa/puppets.webp" />
       <section className="section wrap">
-        <Data q={res}>
+        <Data q={res} skeleton="masonry">
           {() => all.length === 0 ? <Empty>{t('gallery.empty')}</Empty> : (
             <>
               {albums.length > 0 && (
@@ -156,7 +157,7 @@ export function About() {
   const values = [['v1', 'M9 8a3 3 0 1 0 0-.1M3 20c.7-3.6 3.2-5.5 6-5.5s5.3 1.9 6 5.5'], ['v2', 'M3 20h18M5 20V10M19 20V10M3 10l9-6 9 6'], ['v3', 'M3 10l9-5 9 5-9 5zM7 12v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4'], ['v4', 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z']]
   return (
     <>
-      <PageHero kicker={t('about.kicker')} title={t('about.title')} lede={t('about.p1')} src="/images/bswa/mosque.webp" />
+      <PageHero kicker={t('about.kicker')} title={t('about.title')} variant="vine" lede={t('about.p1')} src="/images/bswa/mosque.webp" />
       <section className="section wrap two-col">
         <div>
           <p className="lede">{t('about.p2')}</p>
@@ -207,6 +208,7 @@ export function Contact() {
       await api('/contact', { method: 'POST', body: JSON.stringify(v) })
       setSt({ status: 'ok', fields: {} })
       setV({ name: '', email: '', subject: '', message: '', website: '' })
+      toast('contact.toast')
     } catch (err) {
       setSt({ status: err.status === 429 ? 'limit' : err.fields ? 'invalid' : 'fail', fields: err.fields || {} })
     }
@@ -227,7 +229,7 @@ export function Contact() {
   ]
   return (
     <>
-      <PageHero kicker={t('contact.kicker')} title={t('contact.title')} lede={t('contact.lede')} src="/images/bswa/river.webp" />
+      <PageHero kicker={t('contact.kicker')} title={t('contact.title')} variant="wave" lede={t('contact.lede')} src="/images/bswa/river.webp" />
       <section className="section wrap contact">
         <div className="contact-main">
           {st.status === 'ok' ? (

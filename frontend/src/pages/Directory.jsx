@@ -39,7 +39,7 @@ export default function Directory() {
         <Crumbs items={[{ to: '/', label: t('nav.home') }, { label: t('nav.directory') }]} />
         <p className="hier">{t('dir.country')} <i>›</i> {pick('চট্টগ্রাম বিভাগ', 'Chattogram Division')} <i>›</i> {pick('ব্রাহ্মণবাড়িয়া জেলা', 'Brahmanbaria District')}</p>
         <div className="dir-layout">
-          <Data q={ups}>
+          <Data q={ups} skeleton="block">
             {() => (
               <>
                 <UpazilaMap upazilas={list} places={places.data?.items || []} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
@@ -97,7 +97,7 @@ export function UpazilaDetail() {
   const [q, setQ] = useState('')
   return (
     <section className="section wrap">
-      <Data q={res}>
+      <Data q={res} skeleton="cards">
         {({ upazila: u, places }) => {
           const unions = u.unions.filter((x) => x.toLowerCase().includes(q.toLowerCase()))
           return (

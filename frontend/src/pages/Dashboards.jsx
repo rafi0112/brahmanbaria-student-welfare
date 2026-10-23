@@ -5,6 +5,7 @@ import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Empty, Loading } from '../components/ui.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
+import { toast } from '../components/Motion.jsx'
 
 const LEVELS = ['members', 'hidden'] // the public site shows four fields only, so "public" no longer exists as a choice
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -202,6 +203,7 @@ export function ProfileManager({ user, view = 'all' }) {
     try {
       auth.set(await api('/me/profile', { method: 'PATCH', body: JSON.stringify(form) }))
       setMsg({ tone: 'ok', key: 'dash.saved' })
+      toast('dash.saved')
     } catch (err) {
       if (err.fields) setErrs(err.fields)
       else setMsg({ tone: 'bad', key: errorKey(err) || 'admin.failed' })
