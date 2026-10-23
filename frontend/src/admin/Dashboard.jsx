@@ -15,13 +15,17 @@ function niceMax(v) {
   return step * 4
 }
 
+// A bright, distinct colour for each bar or column; picked to stay readable on light and dark surfaces.
+const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#0ea5e9', '#22c55e', '#f97316', '#e11d48', '#06b6d4', '#84cc16', '#a855f7']
+const tone = (i) => PALETTE[i % PALETTE.length]
+
 // Ranked horizontal bars (departments, upazilas): rank, label, a gradient bar sized to the largest value, count and share.
-function BarList({ rows, label, n, total }) {
+function BarList({ rows, label, n, total, offset = 0 }) {
   const max = Math.max(1, ...rows.map((r) => r.count))
   return (
     <ol className="ch-bars">
       {rows.map((r, i) => (
-        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined} style={{ '--i': i }}>
+        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined} style={{ '--i': i, '--c': tone(i + offset) }}>
           <span className="ch-rank num" aria-hidden="true">{r.key === 'other' ? '·' : n(i + 1)}</span>
           <span className="ch-bar-label" title={label(r.key)}>{label(r.key)}</span>
           <span className="ch-bar-track"><span className="ch-bar-fill" style={{ '--w': `${(r.count / max) * 100}%` }} /></span>
@@ -33,7 +37,7 @@ function BarList({ rows, label, n, total }) {
 }
 
 // Columns on a real axis: gridlines with round tick values, a gradient column per point and a tooltip on hover or focus.
-function Columns({ rows, label, n, title, unit }) {
+function Columns({ rows, label, n, title, unit, colorful }) {
   const top = niceMax(Math.max(0, ...rows.map((r) => r.count)))
   const ticks = [top, top * 0.75, top / 2, top / 4, 0]
   return (
@@ -43,7 +47,7 @@ function Columns({ rows, label, n, title, unit }) {
         <div className="ch-grid-lines" aria-hidden="true">{ticks.map((v) => <i key={v} />)}</div>
         <div className="ch-cols">
           {rows.map((r, i) => (
-            <div key={r.key} className="ch-col" tabIndex={0} style={{ '--i': i }}>
+            <div key={r.key} className="ch-col" tabIndex={0} style={{ '--i': i, ...(colorful ? { '--c': tone(i) } : {}) }}>
               <span className="ch-col-bar" style={{ '--h': `${(r.count / top) * 100}%` }} data-zero={r.count === 0 || undefined}>
                 <span className="ch-tip" role="tooltip"><b className="num">{n(r.count)}</b> {unit}<small>{label(r.key)}</small></span>
               </span>
@@ -78,7 +82,7 @@ function Donut({ parts, n, center }) {
       </svg>
       <ul className="ch-legend">
         {parts.map((p) => (
-          <li key={p.key}><i style={{ background: p.color }} aria-hidden="true" /><span>{p.label}</span>
+          <li key={p.key} style={{ '--lg': p.color }}><i style={{ background: p.color }} aria-hidden="true" /><span>{p.label}</span>
             <b className="num">{n(p.value)}</b><small className="num">{total ? `${n(Math.round((p.value / total) * 100))}%` : '—'}</small></li>
         ))}
       </ul>
@@ -86,9 +90,9 @@ function Donut({ parts, n, center }) {
   )
 }
 
-function ChartCard({ title, sub, icon, kpi, kpiLabel, children, wide }) {
+function ChartCard({ title, sub, icon, kpi, kpiLabel, children, wide, accent = 'indigo' }) {
   return (
-    <figure className={`ch-card${wide ? ' is-wide' : ''}`}>
+    <figure className={`ch-card${wide ? ' is-wide' : ''} ch-${accent}`}>
       <figcaption>
         {icon && <span className="ch-ico" aria-hidden="true"><Icon name={icon} size={16} /></span>}
         <span className="ch-head"><h3>{title}</h3>{sub && <small>{sub}</small>}</span>
@@ -198,26 +202,26 @@ export default function Dashboard() {
 
           {ch && (
             <div className="ch-grid">
-              <ChartCard wide icon="activity" title={t('ad.ch.signups')} sub={t('ad.ch.signupsSub')}
+              <ChartCard wide accent="indigo" icon="activity" title={t('ad.ch.signups')} sub={t('ad.ch.signupsSub')}
                 kpi={n(ch.signups.reduce((x, m) => x + m.count, 0))} kpiLabel={`${t('ad.ch.thisMonth')} ${n(ch.signups[ch.signups.length - 1]?.count || 0)}`}>
                 {ch.signups.every((m) => m.count === 0) && <p className="ch-empty">{t('ad.ch.noSignups')}</p>}
                 <Columns rows={ch.signups} label={monthName} n={n} title={t('ad.ch.signups')} unit={t('ad.ch.unitSignups')} />
               </ChartCard>
-              <ChartCard icon="users" title={t('ad.ch.status')} sub={t('ad.ch.statusSub')}>
+              <ChartCard accent="emerald" icon="users" title={t('ad.ch.status')} sub={t('ad.ch.statusSub')}>
                 <Donut n={n} center={t('ad.ch.members')} parts={[
                   { key: 'approved', label: t('ad.status.approved'), value: d.members.approved, color: 'var(--a-ok)' },
                   { key: 'pending', label: t('ad.status.pending'), value: d.members.pending, color: 'var(--a-warn)' },
                   { key: 'rejected', label: t('ad.status.rejected'), value: d.members.rejected, color: 'var(--a-bad)' },
                 ]} />
               </ChartCard>
-              <ChartCard icon="star" title={t('ad.ch.batch')} sub={t('ad.ch.batchSub')} kpi={n(ch.byBatch.length)} kpiLabel={t('ad.ch.batches')}>
-                {ch.byBatch.length ? <Columns rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} unit={t('ad.ch.unitStudents')} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
+              <ChartCard accent="amber" icon="star" title={t('ad.ch.batch')} sub={t('ad.ch.batchSub')} kpi={n(ch.byBatch.length)} kpiLabel={t('ad.ch.batches')}>
+                {ch.byBatch.length ? <Columns colorful rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} unit={t('ad.ch.unitStudents')} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
-              <ChartCard icon="directory" title={t('ad.ch.dept')} sub={t('ad.ch.studentsAll')} kpi={n(ch.students)} kpiLabel={t('ad.ch.students')}>
+              <ChartCard accent="violet" icon="directory" title={t('ad.ch.dept')} sub={t('ad.ch.studentsAll')} kpi={n(ch.students)} kpiLabel={t('ad.ch.students')}>
                 {ch.byDepartment.length ? <BarList rows={ch.byDepartment} n={n} total={ch.students} label={(k) => (k === 'other' ? t('ad.ch.other') : k)} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
-              <ChartCard icon="landmark" title={t('ad.ch.upazila')} sub={t('ad.ch.studentsAll')} kpi={n(ch.byUpazila.length)} kpiLabel={t('ad.ch.upazilas')}>
-                {ch.byUpazila.length ? <BarList rows={ch.byUpazila} n={n} total={ch.students} label={upName} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
+              <ChartCard accent="teal" icon="landmark" title={t('ad.ch.upazila')} sub={t('ad.ch.studentsAll')} kpi={n(ch.byUpazila.length)} kpiLabel={t('ad.ch.upazilas')}>
+                {ch.byUpazila.length ? <BarList offset={4} rows={ch.byUpazila} n={n} total={ch.students} label={upName} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
             </div>
           )}

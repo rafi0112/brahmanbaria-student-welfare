@@ -4,7 +4,6 @@ import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import Icon from '../components/Icon.jsx'
-import { Marquee } from '../components/Motion.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { Avatar, Photo } from '../components/ui.jsx'
 import { SketchArt, Vine } from '../components/Decor.jsx'
@@ -68,8 +67,9 @@ export default function Home() {
           <img className="hx-img" src="/images/bswa/hero-4k-2400.webp" srcSet="/images/bswa/hero-4k-960.webp 960w, /images/bswa/hero-4k-1600.webp 1600w, /images/bswa/hero-4k-2400.webp 2400w, /images/bswa/hero-4k-3798.webp 3798w" sizes="100vw"
             width="3798" height="1676" alt="" fetchpriority="high" decoding="async" />
           <h1 id="hero-title" className="sr-only">{pick('ব্রাহ্মণবাড়িয়া — আমাদের ঐতিহ্য, আমাদের মানুষ, আমাদের আগামী। ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে।', 'Brahmanbaria — Our Heritage. Our People. Our Tomorrow.')}</h1>
-          <Link className="hx-hit hx-explore" to="/heritage" aria-label={pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} />
-          <Link className="hx-hit hx-meet" to="/students" aria-label={pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')} />
+          {/* crisp, real buttons laid exactly over the ones drawn in the artwork, so they stay sharp at any size */}
+          <Link className="hx-hit hx-explore" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
+          <Link className="hx-hit hx-meet" to="/students">{pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')}</Link>
         </div>
         <div className="wrap hx-actions">
           <Link className="btn btn-dark" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
@@ -99,9 +99,6 @@ export default function Home() {
           </ul>
         </div>
       </section>
-
-      <Marquee label={pick('ব্রাহ্মণবাড়িয়ার উপজেলা ও সংস্কৃতি', 'Upazilas and culture of Brahmanbaria')}
-        items={[...upazilas.map((u) => pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')), ...CULTURE.map((c) => pick(c.bn, c.en))]} />
 
       {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
       <section className="explore2" aria-labelledby="explore-h">

@@ -182,9 +182,26 @@ export function SearchBox({ value, onChange, placeholder, label }) {
     if (debounced !== value) onChange(debounced)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced])
+  const ref = useRef(null)
+  // "/" jumps to the search box from anywhere on the page (not while typing elsewhere)
+  useEffect(() => {
+    const key = (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) return
+      e.preventDefault(); ref.current?.focus()
+    }
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [])
   return (
-    <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder || t('ad.search')}
-      aria-label={label || placeholder || t('ad.search')} maxLength={100} />
+    <>
+      <input ref={ref} type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder || t('ad.search')}
+        aria-label={label || placeholder || t('ad.search')} maxLength={100} onKeyDown={(e) => { if (e.key === 'Escape' && text) { e.stopPropagation(); setText('') } }} />
+      {text
+        ? <button type="button" className="ad-search-clear" aria-label={t('common.clear')} onClick={() => { setText(''); ref.current?.focus() }}>×</button>
+        : <kbd className="ad-search-kbd" aria-hidden="true">/</kbd>}
+    </>
   )
 }
 

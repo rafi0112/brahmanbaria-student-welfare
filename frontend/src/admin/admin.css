@@ -575,3 +575,39 @@
 .danger-zone h4 { margin: 0 0 4px; color: var(--a-bad); }
 .danger-zone p { margin: 0 0 10px; }
 .ad-sure-list { margin: 0 0 14px; padding-left: 1.2em; display: grid; gap: 4px; color: var(--a-text-2); font-size: .875rem; }
+
+/* ---------- search: a soft field with an icon, a "/" hint, a clear button and a glow on focus ---------- */
+.ad-searchbox { flex: 1 1 340px; max-width: 560px; }
+.ad-searchbox .ad-icon { left: 14px; color: var(--a-text-3); transition: color var(--a-dur); }
+.ad-searchbox input[type='search'] { height: 40px; padding: 0 64px 0 40px; border-radius: 12px; border: 1px solid var(--a-line);
+  background: linear-gradient(180deg, var(--a-surface), color-mix(in srgb, var(--a-surface-2) 60%, var(--a-surface)));
+  box-shadow: 0 1px 2px rgba(18, 20, 28, .05), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: .875rem; transition: border-color var(--a-dur), box-shadow var(--a-dur-2), background var(--a-dur); }
+.ad-searchbox input[type='search']::-webkit-search-cancel-button { display: none; }
+.ad-searchbox input[type='search']:hover { border-color: var(--a-line-strong); }
+.ad-searchbox input[type='search']:focus { outline: none; border-color: color-mix(in srgb, var(--a-accent) 60%, var(--a-line)); background: var(--a-surface);
+  box-shadow: 0 0 0 4px var(--a-accent-soft), 0 8px 24px -12px color-mix(in srgb, var(--a-accent) 45%, transparent); }
+.ad-searchbox:focus-within .ad-icon { color: var(--a-accent); }
+.ad-search-kbd, .ad-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+.ad-search-kbd { min-width: 22px; text-align: center; padding: 1px 6px !important; border-radius: 6px !important; box-shadow: 0 1px 0 var(--a-line); pointer-events: none; }
+.ad-searchbox:focus-within .ad-search-kbd { opacity: 0; }
+.ad-search-clear { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 7px; background: var(--a-hover); color: var(--a-text-2); font-size: 1.05rem; line-height: 1; cursor: pointer; }
+.ad-search-clear:hover { background: var(--a-line-strong); color: var(--a-text); }
+
+/* the command search in the sidebar */
+.adm-search { height: 36px; border-radius: 10px; padding: 0 8px 0 11px; background: linear-gradient(180deg, var(--a-surface), color-mix(in srgb, var(--a-surface-2) 60%, var(--a-surface)));
+  box-shadow: 0 1px 2px rgba(18, 20, 28, .05); transition: border-color var(--a-dur), box-shadow var(--a-dur-2), color var(--a-dur); }
+.adm-search:hover { box-shadow: 0 0 0 3px var(--a-accent-soft); border-color: color-mix(in srgb, var(--a-accent) 45%, var(--a-line)); color: var(--a-text); }
+.adm-search .ad-icon { color: var(--a-accent); }
+.adm-search kbd { border-radius: 6px; padding: 1px 6px; box-shadow: 0 1px 0 var(--a-line); }
+
+/* ---------- colourful charts: an accent per card, a colour per bar and column ---------- */
+.ch-indigo { --ch-a: #6366f1; --ch-b: #38bdf8; } .ch-emerald { --ch-a: #10b981; --ch-b: #34d399; } .ch-amber { --ch-a: #f59e0b; --ch-b: #fb7185; }
+.ch-violet { --ch-a: #8b5cf6; --ch-b: #ec4899; } .ch-teal { --ch-a: #14b8a6; --ch-b: #0ea5e9; }
+.ch-card { background: linear-gradient(180deg, color-mix(in srgb, var(--ch-a) 7%, var(--a-surface)) 0, var(--a-surface) 140px); }
+.ch-card .ch-ico { color: #fff; background: linear-gradient(135deg, var(--ch-a), var(--ch-b)); box-shadow: 0 8px 18px -10px var(--ch-a); }
+.ch-card .ch-kpi b { background: linear-gradient(90deg, var(--ch-a), var(--ch-b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ch-bars li[style*='--c'] .ch-bar-fill { background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 55%, #fff)); box-shadow: 0 2px 8px -3px var(--c); }
+.ch-bars li[style*='--c']:not(.is-other) .ch-rank { color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--a-surface)); box-shadow: none; font-weight: 600; }
+.ch-bars li.is-other .ch-bar-fill { background: var(--a-line-strong); box-shadow: none; }
+.ch-col[style*='--c'] .ch-col-bar { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, #fff), var(--c)); box-shadow: 0 6px 14px -8px var(--c); }
+.ch-legend li { box-shadow: inset 3px 0 0 var(--lg, transparent); }
