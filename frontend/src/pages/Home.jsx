@@ -67,6 +67,12 @@ export default function Home() {
           <img className="hx-img" src="/images/bswa/hero-4k-2400.webp" srcSet="/images/bswa/hero-4k-960.webp 960w, /images/bswa/hero-4k-1600.webp 1600w, /images/bswa/hero-4k-2400.webp 2400w, /images/bswa/hero-4k-3798.webp 3798w" sizes="100vw"
             width="3798" height="1676" alt="" fetchpriority="high" decoding="async" />
           <h1 id="hero-title" className="sr-only">{pick('ব্রাহ্মণবাড়িয়া — আমাদের ঐতিহ্য, আমাদের মানুষ, আমাদের আগামী। ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে।', 'Brahmanbaria — Our Heritage. Our People. Our Tomorrow.')}</h1>
+          {/* the small lines of the artwork are real text, so they stay sharp at any size (the heading above is for screen readers) */}
+          <p className="hx-eyebrow" aria-hidden="true">People · Heritage · Culture · Opportunity</p>
+          <div className="hx-tag" aria-hidden="true">
+            <span className="hx-tag-en">Our Heritage. Our People. Our Tomorrow.</span>
+            <span className="hx-tag-bn" lang="bn">ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে</span>
+          </div>
           {/* crisp, real buttons laid exactly over the ones drawn in the artwork, so they stay sharp at any size */}
           <Link className="hx-hit hx-explore" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
           <Link className="hx-hit hx-meet" to="/students">{pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')}</Link>

@@ -287,7 +287,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
       </div>
 
       <button type="button" className="adm-search" onClick={onSearch} aria-label={t('ad.cmd.open')} title={`${t('ad.cmd.open')} (Ctrl K)`}>
-        <Icon name="search" size={15} /><span className="adm-fade">{t('ad.cmd.short')}</span><kbd className="adm-fade">Ctrl K</kbd>
+        <Icon name="search" size={15} /><span className="adm-fade">{t('ad.cmd.short')}</span>
       </button>
 
       <nav className="adm-nav" aria-label={t('admin.title')} onClick={(e) => { if (e.target.closest('a')) onNavigate?.() }}>

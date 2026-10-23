@@ -875,6 +875,11 @@ html[lang='bn'] .member-card h3 { font-family: 'Noto Serif Bengali', serif; font
 .hx-meet:hover { background: #fff; }
 .hx-hit:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 html[lang='bn'] .hx-hit { font-size: max(10px, .82cqw); }
+.hx-eyebrow { position: absolute; left: 22.9%; top: 15.1%; margin: 0; font: 600 max(9px, .74cqw)/1 var(--font-body); letter-spacing: .34em; text-transform: uppercase; color: #3b3a33; white-space: nowrap; }
+.hx-tag { position: absolute; left: 27.72%; top: 45.4%; display: grid; gap: .55cqw; padding-left: 1.05cqw; border-left: max(2px, .13cqw) solid #f2612b; line-height: 1; }
+.hx-tag-en { font: 400 1.86cqw/1.05 'DM Serif Display', Georgia, serif; color: #1d3b34; letter-spacing: -.005em; white-space: nowrap; }
+.hx-tag-bn { font: 600 1.42cqw/1.25 'Noto Serif Bengali', serif; color: #23231f; white-space: nowrap; }
+@media (max-width: 760px) { .hx-eyebrow { font-size: .74cqw; } }
 .hx-actions { display: none; }
 @media (max-width: 760px) {
   .hx-hit { display: none; }
