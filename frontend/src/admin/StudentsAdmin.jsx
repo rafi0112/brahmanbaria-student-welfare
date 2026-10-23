@@ -378,7 +378,7 @@ function Imported() {
       <ListToolbar section="imported" values={f} set={set} defaults={{ limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.stu.searchName') }}
         views={[
-          { id: 'all', label: `${t('ad.status.allShort')} ${n((counts.verified || 0) + (counts.awaiting || 0))}`, patch: { status: '' } },
+          { id: 'all', label: `${t('ad.status.allShort')} ${n((counts.verified || 0) + (counts.awaiting || 0) + (counts.registered || 0))}`, patch: { status: '' } },
           { id: 'awaiting', label: `${t('ad.imp.awaiting')}${counts.awaiting != null ? ` ${n(counts.awaiting)}` : ''}`, patch: { status: 'awaiting' } },
           { id: 'verified', label: `${t('ad.imp.verified')}${counts.verified != null ? ` ${n(counts.verified)}` : ''}`, patch: { status: 'verified' } },
         ]}
@@ -394,21 +394,26 @@ function Imported() {
           <DataTable caption={t('ad.stu.tab.imported')} rows={rows} rowKey={(r) => r.id}
             columns={[
               { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
-                <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{t(r.source === 'manual' ? 'ad.imp.manual' : 'ad.imp.file')}{r.phone ? ` · ${r.phone}` : ''}</small></span></Link>
+                <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t(r.source === 'member' ? 'ad.vm.member' : 'ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{t(r.source === 'member' ? 'ad.imp.member' : r.source === 'manual' ? 'ad.imp.manual' : 'ad.imp.file')}{r.phone ? ` · ${r.phone}` : ''}</small></span></Link>
               ) },
               { id: 'dept', label: t('students.dept'), width: '26%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
               { id: 'batch', label: t('students.batch'), width: '80px', cell: (r) => (r.batch ? n(r.batch) : '—') },
               { id: 'added', label: t('ad.imp.addedDate'), width: '140px', cell: (r) => <small className="dt-sub">{r.addedAt ? when(r.addedAt) : t('ad.imp.noDate')}</small> },
-              { id: 'invite', label: t('ad.inv.col'), width: '22%', cell: (r) => <InviteCell r={r} t={t} when={when} /> },
+              { id: 'invite', label: t('ad.inv.col'), width: '22%', cell: (r) => (r.source === 'member' ? <small className="dt-sub">{t('ad.imp.memberInvite')}</small> : <InviteCell r={r} t={t} when={when} />) },
               { id: 'review', label: t('ad.imp.review'), width: '22%', cell: (r) => (
-                r.verified ? (
+                r.source === 'member' ? (
+                  <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.member')}</span>
+                    <small className="dt-sub">{t(r.verified ? 'ad.imp.memberVerified' : 'ad.imp.memberUnverified')}</small></div>
+                ) : r.verified ? (
                   <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span>
                     <small className="dt-sub">{r.autoVerified ? t('ad.imp.autoVerified') : `${r.verifiedBy} · ${when(r.verifiedAt)}`}</small>
                   </div>
                 ) : <div className="dt-stack"><span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>
                   {!r.invite?.email && <small className="dt-sub is-warn">{t('ad.imp.needEmail')}</small>}</div>
               ) },
-              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
+              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (r.source === 'member' ? (
+                <div className="dt-actions"><Link className="btn btn-ghost btn-sm" to={`/admin/profile/${r.id}`}>{t('ad.stu.profilePage')}</Link></div>
+              ) : (
                 <div className="dt-actions">
                   {!r.verified && <button type="button" className="btn btn-outline btn-sm" disabled={!r.invite?.email} title={r.invite?.email ? undefined : t('ad.imp.needEmail')} onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
                   <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
@@ -420,7 +425,7 @@ function Imported() {
                     r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
                   ]} />
                 </div>
-              ) },
+              )) },
             ]} />
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useBase } from '../lib/base.js'
 import { useApp } from '../lib/app.jsx'
 import { usePhoto } from '../lib/api.js'
-import { Badge, MediaPhoto, initials } from './ui.jsx'
+import { Badge, MediaPhoto, VerifiedMark, initials } from './ui.jsx'
 import Icon from './Icon.jsx'
 
 export function PlaceCard({ p, upazilas = [] }) {
@@ -60,7 +60,7 @@ export function StudentCard({ s, upazilas = [] }) {
     <Link to={`${base}/students/${s.id}`} className="student-card">
       <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true">{photo ? <img src={photo} alt="" /> : <b>{initials(s.name)}</b>}<span className="sc-go"><Icon name="arrow" size={15} /></span></span>
       <span className="student-info">
-        <h3>{s.name}</h3>
+        <h3>{s.name}{s.verified && <VerifiedMark size={15} />}</h3>
         <p className="sc-dept">{s.department || '—'}</p>
         <p className="sc-meta">
           {s.batch ? <span>{t('students.batch')} {n(s.batch)}</span> : null}

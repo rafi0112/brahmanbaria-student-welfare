@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reflect"
-	"strings"
 	"context"
 	"net/http"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -82,6 +82,11 @@ func TestDirectoryStartsUnverifiedAndVerificationPersists(t *testing.T) {
 	e.approve(t, mid)
 	if got := importedList(t, e, admin, "?status=verified")["total"].(float64); got != 1 {
 		t.Fatalf("membership approval must not verify directory records: %v", got)
+	}
+	// the approved member, who has no directory record, is listed under All as a registered member
+	all := importedList(t, e, admin, "")
+	if int(all["total"].(float64)) != len(e.app.Store.Students)+1 || all["counts"].(map[string]any)["registered"].(float64) != 1 {
+		t.Fatalf("All lists every student, registered members included: %v %v", all["total"], all["counts"])
 	}
 	if rec := e.do("POST", "/api/v1/admin/imported-students/does-not-exist/verify", map[string]string{}, admin); rec.Code != 404 {
 		t.Fatalf("unknown record: %d", rec.Code)
@@ -206,12 +211,12 @@ func TestManualImportedRecordsCrudWithoutAccounts(t *testing.T) {
 		t.Fatalf("members cannot add: %d", rec.Code)
 	}
 	for name, bad := range map[string]map[string]any{
-		"no department":  {"name": "Zqxv Uddin", "batch": 12, "department": ""},
+		"no department":   {"name": "Zqxv Uddin", "batch": 12, "department": ""},
 		"fake department": {"name": "Zqxv Uddin", "batch": 12, "department": "Astrology"},
-		"short name":     {"name": "R", "batch": 12, "department": dept},
-		"no batch":       {"name": "Zqxv Uddin", "department": dept},
-		"bad phone":      {"name": "Zqxv Uddin", "batch": 12, "department": dept, "phone": "123"},
-		"bad session":    {"name": "Zqxv Uddin", "batch": 12, "department": dept, "session": "next year"},
+		"short name":      {"name": "R", "batch": 12, "department": dept},
+		"no batch":        {"name": "Zqxv Uddin", "department": dept},
+		"bad phone":       {"name": "Zqxv Uddin", "batch": 12, "department": dept, "phone": "123"},
+		"bad session":     {"name": "Zqxv Uddin", "batch": 12, "department": dept, "session": "next year"},
 	} {
 		if rec := e.do("POST", "/api/v1/admin/imported-students", bad, admin); rec.Code != 422 {
 			t.Errorf("%s: want 422 got %d %s", name, rec.Code, rec.Body)

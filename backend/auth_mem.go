@@ -298,7 +298,9 @@ func (m *memStore) ApprovedPeople(_ context.Context) ([]Person, error) {
 		if u == nil || u.Disabled || p.Status != StatusApproved || !p.ShowInDirectory {
 			continue
 		}
-		out = append(out, personFromProfile(p, u.Email))
+		x := personFromProfile(p, u.Email)
+		x.AccountVerified = u.EmailVerified
+		out = append(out, x)
 	}
 	return out, nil
 }

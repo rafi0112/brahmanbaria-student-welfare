@@ -111,18 +111,18 @@ func (a *App) importedRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, 
 
 type importedView struct {
 	Student
-	Source     string `json:"source"` // file (the existing directory) | manual (added by an admin)
-	Phone      string `json:"phone,omitempty"`
-	Union      string `json:"union"`
-	Gender     string `json:"gender"`
-	BloodGroup string `json:"bloodGroup"`
-	Note       string `json:"note,omitempty"`
-	AddedAt    string `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
-	Verified   bool   `json:"verified"`
-	Edited     bool   `json:"edited,omitempty"`
-	Auto       bool   `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
-	VerifiedAt string `json:"verifiedAt,omitempty"`
-	VerifiedBy string `json:"verifiedBy,omitempty"`
+	Source     string         `json:"source"` // file (the existing directory) | manual (added by an admin) | member (registered without a record)
+	Phone      string         `json:"phone,omitempty"`
+	Union      string         `json:"union"`
+	Gender     string         `json:"gender"`
+	BloodGroup string         `json:"bloodGroup"`
+	Note       string         `json:"note,omitempty"`
+	AddedAt    string         `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
+	Verified   bool           `json:"verified"`
+	Edited     bool           `json:"edited,omitempty"`
+	Auto       bool           `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
+	VerifiedAt string         `json:"verifiedAt,omitempty"`
+	VerifiedBy string         `json:"verifiedBy,omitempty"`
 	Invite     map[string]any `json:"invite,omitempty"` // saved email and the real outcome of inviting it (admin view only)
 }
 
@@ -221,8 +221,32 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		}
 		all = append(all, r)
 	}
+	// Registered members who joined without a directory record are students too, so the directory lists every one of them.
+	// Members linked to a record through an invitation already appear as that record.
+	linked := map[string]bool{}
+	for _, inv := range invites {
+		linked[inv.CompletedUser], linked[inv.ReplacesUser] = true, true
+	}
+	members, err := a.Auth.Store.ListMembers(ctx, StatusApproved)
+	if err != nil {
+		return nil, nil, err
+	}
+	memberVerified := map[string]bool{}
+	for _, m := range members {
+		if linked[m.UserID] {
+			continue
+		}
+		var bp *int
+		if m.Batch > 0 {
+			b := m.Batch
+			bp = &b
+		}
+		id := "m-" + m.UserID
+		memberVerified[id] = m.EmailVerified
+		all = append(all, rec{Student{ID: id, Name: m.Name, Batch: bp, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "member", m.Phone, "", "", m.Union, m.Gender, m.BloodGroup})
+	}
 	out := []importedView{}
-	counts := map[string]int{"verified": 0, "awaiting": 0}
+	counts := map[string]int{"verified": 0, "awaiting": 0, "registered": 0}
 	for _, r0 := range all {
 		s := r0.Student
 		if needle != "" && !contains(s.Name, needle) {
@@ -235,19 +259,23 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 			continue
 		}
 		rv, reviewed := reviews[s.ID]
-		verified := reviewed || approvedVia[s.ID]
-		if verified {
+		verified := reviewed || approvedVia[s.ID] || memberVerified[s.ID] // a registered member: approved, with a confirmed email
+		switch {
+		case r0.src == "member": // counted on their own, so the record verification figures stay about records
+			counts["registered"]++
+		case verified:
 			counts["verified"]++
-		} else {
+		default:
 			counts["awaiting"]++
 		}
-		if (status == "verified" && !verified) || (status == "awaiting" && verified) {
+		// the verified / needs-verification views are about records; registered members show under All
+		if (status != "" && r0.src == "member") || (status == "verified" && !verified) || (status == "awaiting" && verified) {
 			continue
 		}
 		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Union: r0.union, Gender: r0.gender, BloodGroup: r0.blood, Note: r0.note, AddedAt: r0.added, Verified: verified}
 		if reviewed {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
-		} else if verified {
+		} else if verified && r0.src != "member" {
 			iv.Auto = true
 		}
 		_, iv.Edited = edits[s.ID]

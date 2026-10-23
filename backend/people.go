@@ -42,6 +42,8 @@ type Person struct {
 	ShowEmail  string
 	ShowBlood  string
 	PhotoVer   string // set when the member has a photo
+	// AccountVerified: an approved member whose email is confirmed. Shown to everyone as the verified mark.
+	AccountVerified bool
 }
 
 func personFromProfile(p *Profile, email string) Person {
@@ -60,6 +62,7 @@ type personPublic struct {
 	Batch      *int   `json:"batch"`
 	Department string `json:"department"`
 	Upazila    string `json:"upazila"`
+	Verified   bool   `json:"verified"` // the verified mark: an approved member with a confirmed email
 }
 
 type personDetails struct {
@@ -116,7 +119,7 @@ func levelAllows(level, viewerKind string) bool {
 }
 
 func (p Person) view(v viewer) personView {
-	out := personView{personPublic: personPublic{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila}, View: v.Kind}
+	out := personView{personPublic: personPublic{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila, Verified: p.AccountVerified}, View: v.Kind}
 	if v.Kind == "public" {
 		return out
 	}

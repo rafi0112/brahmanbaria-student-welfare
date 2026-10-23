@@ -47,14 +47,15 @@ type publicExecutive struct {
 	Designation string `json:"designation"`
 	Bio         string `json:"bio"`
 	PhotoURL    string `json:"photoUrl"`
+	Verified    bool   `json:"verified"` // the seat is linked to an approved member whose email is confirmed
 }
 
 type publicCommittee struct {
 	Name        string `json:"name"`
 	Term        string `json:"term"`
 	Description string `json:"description"`
-	StartsOn string `json:"startsOn"`
-	EndsOn   string `json:"endsOn"`
+	StartsOn    string `json:"startsOn"`
+	EndsOn      string `json:"endsOn"`
 }
 
 func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +71,7 @@ func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]publicExecutive, 0, len(xs))
 	for _, x := range xs {
-		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo)})
+		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo), Verified: a.accountVerified(r.Context(), x.UserID)})
 	}
 	writeJSON(w, 200, map[string]any{"committee": publicCommittee{c.Name, c.Term, c.Description, c.StartsOn, c.EndsOn}, "members": out})
 }
@@ -342,4 +343,17 @@ func (a *App) linkFailed(w http.ResponseWriter, err error) bool {
 		apiError(w, http.StatusBadGateway, "image_unreachable")
 	}
 	return false
+}
+
+// accountVerified reports whether a linked account is an approved, active member with a confirmed email.
+func (a *App) accountVerified(ctx context.Context, userID string) bool {
+	if userID == "" || a.Auth == nil {
+		return false
+	}
+	u, err := a.Auth.Store.UserByID(ctx, userID)
+	if err != nil || !u.EmailVerified || u.Disabled {
+		return false
+	}
+	p, err := a.Auth.Store.ProfileByUser(ctx, userID)
+	return err == nil && p != nil && p.Status == StatusApproved
 }

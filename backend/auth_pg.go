@@ -341,7 +341,7 @@ func (s *pgStore) ReviewProfile(ctx context.Context, id, status string) error {
 
 func (s *pgStore) ApprovedPeople(ctx context.Context) ([]Person, error) {
 	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.session, p.upazila, p.union_name, p.gender, p.blood_group, p.phone,
-		p.show_phone, p.show_email, p.show_blood, u.email
+		p.show_phone, p.show_email, p.show_blood, u.email, u.email_verified_at IS NOT NULL
 		FROM profiles p JOIN users u ON u.id = p.user_id
 		WHERE p.status = 'approved' AND p.show_in_directory AND u.disabled_at IS NULL ORDER BY p.name`)
 	if err != nil {
@@ -353,7 +353,7 @@ func (s *pgStore) ApprovedPeople(ctx context.Context) ([]Person, error) {
 		var x Person
 		var id string
 		var b int
-		if err := rows.Scan(&id, &x.Name, &b, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.ShowPhone, &x.ShowEmail, &x.ShowBlood, &x.Email); err != nil {
+		if err := rows.Scan(&id, &x.Name, &b, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.ShowPhone, &x.ShowEmail, &x.ShowBlood, &x.Email, &x.AccountVerified); err != nil {
 			return nil, err
 		}
 		x.ID, x.Batch, x.Source, x.Status = "m-"+id, &b, "member", StatusApproved

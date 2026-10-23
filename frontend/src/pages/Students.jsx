@@ -4,7 +4,7 @@ import { useApi, qs, usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
-import { Badge, Crumbs, Data, Empty, Pagination, PageHero, initials } from '../components/ui.jsx'
+import { Badge, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { StudentCard } from '../components/cards.jsx'
@@ -163,7 +163,7 @@ export function StudentDetail() {
             <div className="wrap sp-head">
               <SpAvatar name={s.name} photo={d?.photoUrl} />
               <div className="sp-id">
-                <h1>{s.name}{registered && <span className="sp-check" title={t('students.registeredMember')}><Icon name="verified" size={22} /></span>}</h1>
+                <h1>{s.name}{s.verified && <VerifiedMark size={22} />}</h1>
                 <ul className="sp-chips">
                   {s.department && <li>{s.department}</li>}
                   {s.batch && <li>{t('students.batch')} {n(s.batch)}</li>}

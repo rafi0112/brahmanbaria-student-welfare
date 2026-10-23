@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import images from '../data/images.json'
 import { usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import Icon from './Icon.jsx'
 
 // Responsive WebP photo with reserved dimensions and a graceful fallback.
 // `shape` picks one of the slightly irregular frame styles.
@@ -192,4 +193,10 @@ export function PageLeaves() {
       <img className="pb pb-5" src="/art/vine-tl.webp" alt="" loading="lazy" />
     </div>
   )
+}
+
+// The verified mark next to a name: an approved member whose email is confirmed. Same mark on every page.
+export function VerifiedMark({ size = 16 }) {
+  const { t } = useApp()
+  return <span className="vmark" title={t('verified.mark')} aria-label={t('verified.mark')} role="img"><Icon name="verified" size={size} /></span>
 }

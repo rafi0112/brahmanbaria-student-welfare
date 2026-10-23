@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
-import { Avatar, Data, Empty, PageHero, Pagination, Photo } from '../components/ui.jsx'
+import { Avatar, Data, Empty, PageHero, Pagination, Photo, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 
 /* ---------------- Events ---------------- */
@@ -147,7 +147,7 @@ export function Committee() {
                       <article key={m.id} className={key === 'exec' ? 'member-card' : 'advisor-row'}>
                         <ExecPhoto m={m} size={key === 'exec' ? 96 : 52} />
                         <div>
-                          <h3>{m.name}</h3>
+                          <h3>{m.name}{m.verified && <VerifiedMark size={key === 'exec' ? 16 : 14} />}</h3>
                           <p className="role">{m.designation}</p>
                           {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
                         </div>
