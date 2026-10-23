@@ -36,7 +36,7 @@ type ManualImported struct {
 type ManualImportedInput struct {
 	Name, Department, Session, Upazila, Phone, Note string
 	Union, Gender, BloodGroup                       string
-	Batch                                          *int
+	Batch                                           *int
 }
 
 type ManualImportedStore interface {
@@ -264,7 +264,7 @@ func (a *App) validateManual(b manualBody) (ManualImportedInput, map[string]stri
 		in.Batch = &v
 	}
 	okDept := false
-	for _, d := range a.Store.Depts {
+	for _, d := range a.data().Depts {
 		if d == in.Department {
 			okDept = true
 		}
@@ -277,7 +277,7 @@ func (a *App) validateManual(b manualBody) (ManualImportedInput, map[string]stri
 	}
 	if in.Upazila != "" {
 		found := false
-		for _, u := range a.Store.Upazilas {
+		for _, u := range a.data().Upazilas {
 			if u.Slug == in.Upazila {
 				found = true
 			}
@@ -288,7 +288,7 @@ func (a *App) validateManual(b manualBody) (ManualImportedInput, map[string]stri
 	}
 	if in.Union != "" {
 		okUnion := false
-		for _, u := range a.Store.Upazilas {
+		for _, u := range a.data().Upazilas {
 			if u.Slug == in.Upazila {
 				for _, x := range u.Unions {
 					okUnion = okUnion || x == in.Union
@@ -392,7 +392,11 @@ func (a *App) manualDelete(w http.ResponseWriter, r *http.Request, u User) {
 	id := r.PathValue("id")
 	if !strings.HasPrefix(id, manualPrefix) {
 		if _, ok := a.fileImported(id); ok {
-			apiError(w, http.StatusConflict, "read_only_record")
+			if !a.data().StudentsFromDB { // still served from the bundled files: nothing to delete in the database
+				apiError(w, http.StatusConflict, "read_only_record")
+				return
+			}
+			a.deleteRecord(w, r, u, "student")
 			return
 		}
 		apiError(w, http.StatusNotFound, "imported record not found")
@@ -412,7 +416,7 @@ func (a *App) manualDelete(w http.ResponseWriter, r *http.Request, u User) {
 }
 
 func (a *App) fileImported(id string) (Student, bool) {
-	for _, s := range a.Store.Students {
+	for _, s := range a.data().Students {
 		if s.ID == id {
 			return s, true
 		}

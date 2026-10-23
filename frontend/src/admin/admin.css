@@ -611,3 +611,9 @@
 .ch-bars li.is-other .ch-bar-fill { background: var(--a-line-strong); box-shadow: none; }
 .ch-col[style*='--c'] .ch-col-bar { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, #fff), var(--c)); box-shadow: 0 6px 14px -8px var(--c); }
 .ch-legend li { box-shadow: inset 3px 0 0 var(--lg, transparent); }
+
+/* ---------- site data editors ---------- */
+.ad-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+@media (max-width: 640px) { .ad-grid-2 { grid-template-columns: 1fr; } }
+.ad-sub-h { display: flex; align-items: center; gap: 6px; margin: 18px 0 2px; font-size: .9rem; }
+.ad-dir-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--a-line); }

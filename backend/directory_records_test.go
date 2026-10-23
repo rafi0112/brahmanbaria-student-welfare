@@ -53,7 +53,7 @@ func TestDirectoryFromDatabaseKeepsPrivateColumnsForAdmins(t *testing.T) {
 		t.Fatal(err)
 	}
 	n, err := useDirectoryFromDB(ctx, e.app.Store, e.mem)
-	if err != nil || n != 1 || !e.app.Store.FromDB || len(e.app.Store.Students) != 1 || e.app.Store.Students[0].Name != "Database Person" {
+	if err != nil || n != 1 || !e.app.Store.StudentsFromDB || len(e.app.Store.Students) != 1 || e.app.Store.Students[0].Name != "Database Person" {
 		t.Fatalf("directory from the database: %d %v %+v", n, err, e.app.Store.Students)
 	}
 	// public and signed-out: four fields, no private column anywhere

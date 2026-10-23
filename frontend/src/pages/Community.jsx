@@ -31,14 +31,15 @@ export function Events() {
                 <h2>{title}</h2>
                 <div className="cards-3">
                   {items.map((e) => (
-                    <article key={e.slug} className="event-card">
+                    <article key={e.slug || e.date + e.titleEn} className="event-card">
                       <div className="event-img">
-                        {e.image ? <Photo id={e.image} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" /> : <div className="event-img-empty" aria-hidden="true" />}
+                        {e.imageUrl ? <img src={e.imageUrl} alt="" loading="lazy" decoding="async" className="event-photo" /> : e.image ? <Photo id={e.image} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" /> : <div className="event-img-empty" aria-hidden="true" />}
                         {dateParts(e.date, lang, n) && <time className="event-date" dateTime={e.date}><b>{dateParts(e.date, lang, n).day}</b><span>{dateParts(e.date, lang, n).month}</span></time>}
                       </div>
                       <h3>{pick(e.titleBn, e.titleEn)}</h3>
-                      <p className="muted meta"><Icon name="calendar" size={14} /> {e.date} {e.venue && <><Icon name="pin" size={14} /> {e.venue}</>}</p>
-                      <p>{e.summary}</p>
+                      <p className="muted meta"><Icon name="calendar" size={14} /> {e.date}{e.time ? ` · ${e.time}` : ''} {e.venue && <><Icon name="pin" size={14} /> {e.venue}</>}</p>
+                      <p>{pick(e.summaryBn, e.summaryEn) || e.summary}</p>
+                      {e.link && <a className="link-arrow" href={e.link} target="_blank" rel="noreferrer noopener">{t('events.details')} →</a>}
                     </article>
                   ))}
                 </div>

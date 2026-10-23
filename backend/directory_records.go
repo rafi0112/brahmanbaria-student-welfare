@@ -33,6 +33,8 @@ type DirectoryRecord struct {
 type DirectoryRecordStore interface {
 	DirectoryRecords(ctx context.Context) ([]DirectoryRecord, error)
 	UpsertDirectoryRecords(ctx context.Context, recs []DirectoryRecord) (added, updated int, err error)
+	// DeleteDirectoryRecord removes one record for good; ErrNotFound when there is none.
+	DeleteDirectoryRecord(ctx context.Context, id string) error
 }
 
 // ---------------------------------------------------------------- Postgres
@@ -86,6 +88,17 @@ func (s *pgStore) UpsertDirectoryRecords(ctx context.Context, recs []DirectoryRe
 		}
 	}
 	return added, updated, tx.Commit(ctx)
+}
+
+func (s *pgStore) DeleteDirectoryRecord(ctx context.Context, id string) error {
+	tag, err := s.db.Exec(ctx, `DELETE FROM directory_records WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func nonNilMap(m map[string]string) map[string]string {
@@ -143,6 +156,16 @@ func (m *memStore) UpsertDirectoryRecords(_ context.Context, recs []DirectoryRec
 	return added, updated, nil
 }
 
+func (m *memStore) DeleteDirectoryRecord(_ context.Context, id string) error {
+	m.dir.mu.Lock()
+	defer m.dir.mu.Unlock()
+	if _, ok := m.dir.recs[id]; !ok {
+		return ErrNotFound
+	}
+	delete(m.dir.recs, id)
+	return nil
+}
+
 // ---------------------------------------------------------------- the site reads the directory from the database
 
 // useDirectoryFromDB replaces the file-based students and alumni with the database records when there are any, and keeps
@@ -152,6 +175,15 @@ func useDirectoryFromDB(ctx context.Context, store *Store, s DirectoryRecordStor
 	if err != nil || len(recs) == 0 {
 		return 0, err
 	}
+	applyDirectoryRecords(store, recs)
+	recount(store)
+	return len(recs), nil
+}
+
+// applyDirectoryRecords puts the database records in place of the file lists (counts are derived by the caller).
+// Students and alumni are decided separately: a kind comes from the database once it has records there, and stays so
+// (an empty list after the last one is deleted) instead of falling back to the files.
+func applyDirectoryRecords(store *Store, recs []DirectoryRecord) {
 	students, alumni := []Student{}, []Alumnus{}
 	private := map[string]map[string]string{}
 	for _, r := range recs {
@@ -164,13 +196,14 @@ func useDirectoryFromDB(ctx context.Context, store *Store, s DirectoryRecordStor
 			students = append(students, Student{ID: r.ID, Name: r.Name, Batch: r.Batch, Department: r.Department, Session: r.Session, Upazila: r.Upazila})
 		}
 	}
-	store.Students, store.Alumni, store.Private, store.Sample = students, alumni, private, false
-	store.FromDB = true
-	for i := range store.Upazilas { // counts are derived again from the new lists
-		store.Upazilas[i].Members, store.Upazilas[i].AlumniCount = 0, 0
+	if len(students) > 0 || store.StudentsFromDB {
+		store.Students, store.StudentsFromDB, store.Sample = students, true, false
 	}
-	rebuildStoreDerived(store)
-	return len(recs), nil
+	if len(alumni) > 0 || store.AlumniFromDB {
+		store.Alumni, store.AlumniFromDB = alumni, true
+	}
+	store.Private = private
+	store.FromDB = store.StudentsFromDB && store.AlumniFromDB
 }
 
 // ---------------------------------------------------------------- import command

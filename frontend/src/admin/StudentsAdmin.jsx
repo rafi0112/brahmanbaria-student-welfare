@@ -439,7 +439,7 @@ function Imported() {
                     r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => sendInvite(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', danger: true, onClick: () => setDropEmail(r) },
                     { label: t('ad.imp.edit'), icon: 'pencil', sep: !!r.verified, onClick: () => setForm(r) },
-                    r.source === 'manual' && { label: t('ad.imp.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) },
+                    (r.source === 'manual' || r.source === 'file') && { label: t('ad.imp.delete'), icon: 'trash', danger: true, sep: true, onClick: () => setDrop(r) },
                   ]} />
                 </div>
               )) },

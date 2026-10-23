@@ -93,6 +93,9 @@ func main() {
 		if err := seedLegacyContent(seedCtx, authStore, store); err != nil {
 			log.Fatalf("seed content: %v", err)
 		}
+		if err := seedReference(seedCtx, authStore, store); err != nil {
+			log.Fatalf("seed reference data: %v", err)
+		}
 		seedCancel()
 		app.Auth = newAuth(authStore, openMailer(), env("FRONTEND_URL", "http://localhost:5173"),
 			env("COOKIE_SECURE", "false") == "true", sameSite(env("COOKIE_SAMESITE", "lax")))
@@ -116,21 +119,22 @@ func main() {
 		log.Printf("auth disabled: set DATABASE_URL (or AUTH_DEV_MEMORY=true for local testing)")
 	}
 
-	// The directory comes from the database once it has been imported; the git-ignored files are only a fallback.
-	if authStore != nil {
-		n, err := useDirectoryFromDB(context.Background(), store, authStore)
-		switch {
-		case err != nil:
-			log.Printf("directory records: %v (using the files in %s)", err, dataDir)
-		case n > 0:
-			log.Printf("directory: %d student and alumni records from the database", n)
-		default:
+	// Everything the site keeps in memory comes from the database (directory, alumni, departments, upazilas); the
+	// bundled files are only the first seed and a fallback for development without a database.
+	if app.Auth != nil {
+		if err := app.reloadLive(context.Background()); err != nil {
+			log.Fatalf("load data from the database: %v", err)
+		}
+		d := app.data()
+		if d.FromDB {
+			log.Printf("data from the database: %d students, %d alumni, %d departments, %d upazilas", len(d.Students), len(d.Alumni), len(d.Depts), len(d.Upazilas))
+		} else {
 			log.Printf("directory: no records in the database yet; using the files in %s (run import-directory)", dataDir)
 		}
 	}
 	// A fresh checkout falls back to the synthetic *.sample.json data. Fine for development; in production it would
 	// publish invented people, so refuse to start unless the records come from the database or the real files exist.
-	if env("APP_ENV", "development") == "production" && !store.FromDB {
+	if env("APP_ENV", "development") == "production" && !app.data().FromDB {
 		for _, f := range []string{"students.json", "alumni.json"} {
 			if _, err := os.Stat(filepath.Join(dataDir, f)); err != nil {
 				log.Fatalf("APP_ENV=production but the directory is not in the database and %s is missing in %s; run import-directory, sample data is never served in production", f, dataDir)

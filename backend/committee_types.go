@@ -43,8 +43,8 @@ type CommitteeInput struct {
 	Name        string `json:"name"`
 	Term        string `json:"term"`
 	Description string `json:"description"`
-	StartsOn string `json:"startsOn"`
-	EndsOn   string `json:"endsOn"`
+	StartsOn    string `json:"startsOn"`
+	EndsOn      string `json:"endsOn"`
 }
 
 // Executive is one seat. UserID links to a registered member when there is one.

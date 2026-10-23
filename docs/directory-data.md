@@ -32,3 +32,25 @@ admins see the contact columns and a "Form record" section on the person's page 
 
 Admin edits to a record (Membership Directory → Edit) are stored separately (`imported_edits`) and win over the imported values,
 so re-importing does not undo them.
+
+## Where every piece of site data lives
+
+Everything the site shows comes from Supabase (Postgres). The JSON files in `backend/data/` only seed an empty database
+once (and serve local development without a database).
+
+| Data | Table | Edited in the admin panel |
+| --- | --- | --- |
+| Accounts, member profiles, photos, roles | `users`, `profiles`, `profile_photos`, `role_changes` | Membership Requests, Membership Directory, Admin management |
+| Original directory students | `directory_records` (kind `student`), with `imported_edits`, `imported_reviews`, `directory_invites` | Membership Directory → Directory records (edit, verify, invite, delete) |
+| Students added by admins | `imported_members` | Membership Directory → Add imported member |
+| Alumni | `directory_records` (kind `alumni`) | Alumni (add, edit, delete) |
+| Executive committee | `committees`, `executives` | Executive Committee |
+| Blog, heritage places, gallery | `cms_entries` (blog, place, album, image) | Blog, Heritage places, Gallery |
+| Events, FAQ | `cms_entries` (event, faq) | Events, FAQ (add, edit, publish, order, archive) |
+| Upazilas and departments | `cms_entries` (upazila, department) | Upazilas & departments |
+| Contact messages | `contact_messages` | Messages |
+| Activity log | `admin_audit` | Activity |
+
+The bundled FAQ, departments and upazilas were copied into the database once (audit marker `cms.seed.reference`), like the
+earlier posts, places and gallery (`cms.seed.legacy`); a restart never copies them again, so admins' edits and removals stay.
+Changes to alumni, directory records, departments, upazilas and places show on the site at once, without a restart.

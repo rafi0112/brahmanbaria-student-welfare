@@ -93,6 +93,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/admin/members/{id}/reject", h(a.requireAdmin(a.review(StatusRejected))))
 	a.committeeRoutes(m, h)
 	a.cmsRoutes(m, h)
+	a.alumniAdminRoutes(m, h)
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)
@@ -238,14 +239,14 @@ func (a *App) validateProfile(q *registerReq) map[string]string {
 		errs["batch"] = "Choose your batch."
 	}
 	okDept := false
-	for _, d := range a.Store.Depts {
+	for _, d := range a.data().Depts {
 		okDept = okDept || d == q.Department
 	}
 	if !okDept {
 		errs["department"] = "Choose a department from the list."
 	}
 	okUp, okUn := false, false
-	for _, u := range a.Store.Upazilas {
+	for _, u := range a.data().Upazilas {
 		if u.Slug == q.Upazila {
 			okUp = true
 			for _, x := range u.Unions {

@@ -22,6 +22,7 @@ type App struct {
 	Limiter    *Limiter
 	Auth       *Auth
 	mu         sync.Mutex
+	dataMu     sync.RWMutex // guards Store, which reloadLive swaps
 }
 
 func (a *App) Routes() http.Handler {
@@ -34,17 +35,13 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/v1/upazilas", a.upazilas)
 	m.HandleFunc("GET /api/v1/upazilas/{slug}", a.upazila)
 	m.HandleFunc("GET /api/v1/departments", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"items": a.Store.Depts})
+		writeJSON(w, 200, map[string]any{"items": a.data().Depts})
 	})
-	m.HandleFunc("GET /api/v1/events", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"items": a.Store.Events})
-	})
+	m.HandleFunc("GET /api/v1/events", a.publicEvents)
 	m.HandleFunc("GET /api/v1/committee", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"items": a.Store.Committee})
+		writeJSON(w, 200, map[string]any{"items": a.data().Committee})
 	})
-	m.HandleFunc("GET /api/v1/faq", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"items": a.Store.FAQs})
-	})
+	m.HandleFunc("GET /api/v1/faq", a.publicFAQ)
 	m.HandleFunc("GET /api/v1/heritage", a.heritage)
 	m.HandleFunc("GET /api/v1/heritage/{slug}", a.heritageOne)
 	m.HandleFunc("GET /api/v1/blog", a.blog)
@@ -128,7 +125,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	pg, limit := paging(r, 48)
 	out := []Alumnus{}
 	batch, _ := strconv.Atoi(q.Get("batch"))
-	for _, s := range a.Store.Alumni {
+	for _, s := range a.data().Alumni {
 		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
 			continue
 		}
@@ -141,7 +138,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		out = append(out, s)
 	}
 	batches, depts := map[int]int{}, map[string]int{}
-	for _, s := range a.Store.Alumni {
+	for _, s := range a.data().Alumni {
 		if s.Batch != nil {
 			batches[*s.Batch]++
 		}
@@ -155,7 +152,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 
 // withPlaceCounts sets each upazila's place count from what is actually published.
 func (a *App) withPlaceCounts(r *http.Request) []Upazila {
-	out := append([]Upazila{}, a.Store.Upazilas...)
+	out := append([]Upazila{}, a.data().Upazilas...)
 	counts := map[string]int{}
 	for _, p := range a.publishedPlaces(r) {
 		counts[p.Upazila]++
@@ -250,8 +247,8 @@ func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, 200, map[string]any{
-		"students": len(students), "alumni": len(a.Store.Alumni), "batches": len(batches),
-		"upazilas": len(a.Store.Upazilas), "places": len(a.publishedPlaces(r)), "sample": a.Store.Sample,
+		"students": len(students), "alumni": len(a.data().Alumni), "batches": len(batches),
+		"upazilas": len(a.data().Upazilas), "places": len(a.publishedPlaces(r)), "sample": a.data().Sample,
 	})
 }
 

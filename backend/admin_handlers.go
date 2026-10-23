@@ -99,7 +99,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, _ User) {
 	if fail("imported reviews", err) {
 		return
 	}
-	totalImported := len(a.Store.Students) + len(manual)
+	totalImported := len(a.data().Students) + len(manual)
 	out["importedStudents"] = totalImported
 	out["imported"] = map[string]any{"total": totalImported, "verified": ic["verified"], "awaiting": ic["awaiting"], "addedByAdmins": len(manual)}
 	allMembers, err := s.ListMembers(ctx, "")
@@ -257,7 +257,7 @@ func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	if q.Department != nil {
 		found := false
-		for _, d := range a.Store.Depts {
+		for _, d := range a.data().Depts {
 			found = found || d == *q.Department
 		}
 		if !found {
@@ -274,7 +274,7 @@ func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	if q.Upazila != nil || q.Union != nil {
 		okUp, okUn := false, false
-		for _, x := range a.Store.Upazilas {
+		for _, x := range a.data().Upazilas {
 			if x.Slug == up {
 				okUp = true
 				for _, name := range x.Unions {

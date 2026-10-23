@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"net/http/httptest"
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -454,7 +454,10 @@ func TestInviteReportsARefusedKeyAndMapsEachFailureForTheAdmin(t *testing.T) {
 	id := e.app.Store.Students[0].ID
 	setEmail(e, admin, id, "keycheck@example.org")
 	status := 401
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(status); _, _ = w.Write([]byte(`{"msg":"Invalid API key"}`)) }))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(`{"msg":"Invalid API key"}`))
+	}))
 	defer srv.Close()
 	e.app.Auth.Inviter = newSupabaseAdmin(srv.URL, "sb_secret_wrong")
 	setKeyState("checking", "secret")

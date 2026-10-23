@@ -106,7 +106,9 @@ func validURL(s string) bool {
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }
 
-func validImageRef(s string) bool { return s == "" || photoRx.MatchString(s) || legacyImageRx.MatchString(s) }
+func validImageRef(s string) bool {
+	return s == "" || photoRx.MatchString(s) || legacyImageRx.MatchString(s)
+}
 
 func readMinutes(texts ...string) int {
 	words := 0
@@ -482,13 +484,16 @@ func (a *App) cmsSave(w http.ResponseWriter, r *http.Request, u User) {
 		a.cmsFail(w, err)
 		return
 	}
+	a.afterContentChange(r, kind)
 	writeJSON(w, status, a.entryOut(e))
 }
 
 func (a *App) cmsAction(w http.ResponseWriter, r *http.Request, u User) {
-	if _, ok := kindParam(w, r); !ok {
+	kind, ok := kindParam(w, r)
+	if !ok {
 		return
 	}
+	defer a.afterContentChange(r, kind)
 	switch r.PathValue("action") {
 	case "publish", "unpublish", "archive", "restore":
 	default:
@@ -522,6 +527,7 @@ func (a *App) cmsReorder(w http.ResponseWriter, r *http.Request, u User) {
 		a.cmsFail(w, err)
 		return
 	}
+	a.afterContentChange(r, kind)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
@@ -571,6 +577,7 @@ func (a *App) cmsBulk(w http.ResponseWriter, r *http.Request, u User) {
 		}
 		done++
 	}
+	a.afterContentChange(r, kind)
 	writeJSON(w, 200, map[string]any{"done": done, "failed": failed})
 }
 
@@ -651,8 +658,8 @@ func (a *App) placeFromEntry(e Entry) placeOut {
 // publishedPlaces returns what the public site shows: database places when accounts/content are on, else the bundled files.
 func (a *App) publishedPlaces(r *http.Request) []placeOut {
 	if a.Auth == nil {
-		out := make([]placeOut, 0, len(a.Store.Places))
-		for _, p := range a.Store.Places {
+		out := make([]placeOut, 0, len(a.data().Places))
+		for _, p := range a.data().Places {
 			out = append(out, placeOut{Place: p, ImageURLs: make([]string, len(p.Images))})
 		}
 		return out
@@ -671,8 +678,8 @@ func (a *App) publishedPlaces(r *http.Request) []placeOut {
 
 func (a *App) publishedPosts(r *http.Request) []postOut {
 	if a.Auth == nil {
-		out := make([]postOut, 0, len(a.Store.Posts))
-		for _, p := range a.Store.Posts {
+		out := make([]postOut, 0, len(a.data().Posts))
+		for _, p := range a.data().Posts {
 			if !p.Sample {
 				out = append(out, postOut{Post: p})
 			}
@@ -762,7 +769,17 @@ func (a *App) publicGallery(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"albums": albumList, "items": items})
 }
 
-
 func sortPostsByDate(ps []postOut) {
 	sort.SliceStable(ps, func(i, j int) bool { return ps[i].Date > ps[j].Date })
+}
+
+// afterContentChange reloads the in-memory reference data when departments, upazilas or places changed, so the site
+// shows the change at once.
+func (a *App) afterContentChange(r *http.Request, kind string) {
+	if !a.isLiveKind(kind) {
+		return
+	}
+	if err := a.reloadLive(r.Context()); err != nil {
+		log.Printf("reload after %s change: %v", kind, err)
+	}
 }

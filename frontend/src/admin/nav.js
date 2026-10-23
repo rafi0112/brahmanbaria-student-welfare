@@ -22,6 +22,7 @@ export const NAV = [
     { id: 'incomplete', label: 'ad.stu.view.incomplete', query: { complete: 'no' } },
   ] },
   { id: 'directory', to: '/admin/students?tab=members', icon: 'directory', label: 'ad.nav.directory', group: 'students' },
+  { id: 'alumni', to: '/admin/alumni', icon: 'users', label: 'ad.nav.alumni', group: 'people' },
   { id: 'roles', to: '/admin?tab=roles', icon: 'shield', label: 'admin.tab.roles', group: 'people' },
   { id: 'committee', to: '/admin?tab=committee', icon: 'committee', label: 'admin.tab.committee', group: 'people' },
   // Blog and gallery share one rule: an empty status is the working set (everything not archived).
@@ -39,6 +40,9 @@ export const NAV = [
     { id: 'published', label: 'ad.status.published', query: { status: 'published' } },
     { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
   ] },
+  { id: 'events', to: '/admin/events', icon: 'clock', label: 'ad.nav.events', group: 'content' },
+  { id: 'faq', to: '/admin/faq', icon: 'alert', label: 'ad.nav.faq', group: 'content' },
+  { id: 'reference', to: '/admin/places-data', icon: 'globe', label: 'ad.nav.reference', group: 'content' },
   { id: 'gallery', to: '/admin/gallery', icon: 'gallery', label: 'admin.nav.gallery', group: 'content', watch: ['status'], children: [
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
     { id: 'active', label: 'ad.status.activeShort', query: {} },

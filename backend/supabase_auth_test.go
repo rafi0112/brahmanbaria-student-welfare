@@ -552,7 +552,7 @@ func TestStudentProfileVisibilityByViewer(t *testing.T) {
 	if len(list.Items) != 1 || list.Items[0].Details == nil || list.Items[0].Details.Phone != "01812345678" {
 		t.Fatalf("member list: %+v", list)
 	}
-// a member who opts out of the directory disappears for everyone except admins
+	// a member who opts out of the directory disappears for everyone except admins
 	hide := false
 	if rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"showInDirectory": hide}, nil, bearer("member-token")...); rec.Code != 200 {
 		t.Fatalf("hide: %d", rec.Code)

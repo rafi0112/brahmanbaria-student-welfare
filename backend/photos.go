@@ -367,7 +367,6 @@ func (a *App) withMemberPhotos(ctx context.Context, rows []MemberAdminRow) {
 	}
 }
 
-
 // photoFromLink downloads and prepares an optional photo link sent with a profile form. An empty link is fine; a bad one
 // is reported as a field error on "photoLink" (and nothing else is saved).
 func (a *App) photoFromLink(w http.ResponseWriter, r *http.Request, link string) ([]byte, bool) {

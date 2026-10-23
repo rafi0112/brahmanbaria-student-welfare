@@ -87,7 +87,7 @@ func (a *App) directoryAudit(w http.ResponseWriter, r *http.Request, _ User) {
 		apiError(w, 500, "could not load")
 		return
 	}
-	total := len(a.Store.Students) + len(manual)
+	total := len(a.data().Students) + len(manual)
 	writeJSON(w, 200, map[string]any{
 		"directoryRecords": total, "withEmail": 0, "provisionable": 0, "unresolved": total,
 		"accounts": accounts, "registeredMembers": registered,

@@ -208,11 +208,11 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 		src, phone, note, added string
 		union, gender, blood    string
 	}
-	all := make([]rec, 0, len(manual)+len(a.Store.Students))
+	all := make([]rec, 0, len(manual)+len(a.data().Students))
 	for _, m := range manual { // hand-added records first, newest first
 		all = append(all, rec{Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila}, "manual", m.Phone, m.Note, m.CreatedAt, m.Union, m.Gender, m.BloodGroup})
 	}
-	for _, s := range a.Store.Students {
+	for _, s := range a.data().Students {
 		if x, has := edits[s.ID]; has { // the admin completed this record
 			s.Name, s.Batch, s.Department, s.Session, s.Upazila = x.Name, x.Batch, x.Department, x.Session, x.Upazila
 		}
@@ -274,7 +274,7 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 			continue
 		}
 		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Union: r0.union, Gender: r0.gender, BloodGroup: r0.blood, Note: r0.note, AddedAt: r0.added, Verified: verified}
-		if pv := a.Store.Private[s.ID]; pv != nil && r0.src == "file" {
+		if pv := a.data().Private[s.ID]; pv != nil && r0.src == "file" {
 			iv.Private = pv
 			if iv.Phone == "" {
 				iv.Phone = pv["phone"]
@@ -309,7 +309,7 @@ func (a *App) importedStudents(w http.ResponseWriter, r *http.Request, _ User) {
 		return
 	}
 	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample, "counts": counts})
+	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "sample": a.data().Sample, "counts": counts})
 }
 
 // importedExport streams the filtered directory as CSV (UTF-8 with a byte-order mark so Bangla opens correctly in spreadsheets).

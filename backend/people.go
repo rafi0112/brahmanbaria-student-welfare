@@ -209,7 +209,7 @@ func (a *App) directoryPeople(ctx context.Context) []Person {
 		if iv, ok := invites[s.ID]; ok {
 			p.Email = iv.Email
 		}
-		if pv := a.Store.Private[s.ID]; pv != nil { // the original form's contact columns, admins only (see personView)
+		if pv := a.data().Private[s.ID]; pv != nil { // the original form's contact columns, admins only (see personView)
 			if p.Phone == "" {
 				p.Phone = pv["phone"]
 			}
@@ -228,7 +228,7 @@ func (a *App) directoryPeople(ctx context.Context) []Person {
 		add(Student{ID: m.ID, Name: m.Name, Batch: m.Batch, Department: m.Department, Session: m.Session, Upazila: m.Upazila},
 			ManualImportedInput{Union: m.Union, Gender: m.Gender, BloodGroup: m.BloodGroup, Phone: m.Phone}, true)
 	}
-	for _, s := range a.Store.Students {
+	for _, s := range a.data().Students {
 		x, has := edits[s.ID]
 		if has {
 			s.Name, s.Batch, s.Department, s.Session, s.Upazila = x.Name, x.Batch, x.Department, x.Session, x.Upazila
@@ -284,7 +284,7 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 		items = append(items, p.view(v))
 	}
 	writeJSON(w, 200, map[string]any{
-		"items": items, "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample, "view": v.Kind,
+		"items": items, "total": len(out), "page": pg, "pages": pages, "sample": a.data().Sample, "view": v.Kind,
 		"facets": map[string]any{"batches": batches, "departments": depts},
 	})
 }
