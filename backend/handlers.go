@@ -147,7 +147,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages,
+	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "alumniUpToBatch": a.data().AlumniUpTo,
 		"facets": map[string]any{"batches": batches, "departments": depts}})
 }
 

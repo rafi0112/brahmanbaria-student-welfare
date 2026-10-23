@@ -83,7 +83,8 @@ export default function Students() {
           <Data q={res} skeleton="people">
             {(d) => (
               <>
-                <p className="muted result-count" aria-live="polite">{n(d.total)} {t('students.found')}</p>
+                <p className="muted result-count" aria-live="polite">{n(d.total)} {t('students.found')}
+                  {d.alumniUpToBatch > 0 && <> · {t('students.fromBatch').replace('{n}', n(d.alumniUpToBatch + 1))} <Link className="link-arrow" to="/alumni">{t('students.earlierAlumni').replace('{n}', n(d.alumniUpToBatch))} →</Link></>}</p>
                 {d.items.length === 0 ? <Empty /> : <div className="student-grid">{d.items.map((s, i) => <Reveal key={s.id} delay={(i % 3) * 50}><StudentCard s={s} upazilas={upazilas} /></Reveal>)}</div>}
                 <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />
               </>

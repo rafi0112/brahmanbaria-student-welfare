@@ -290,7 +290,7 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 		items = append(items, p.view(v))
 	}
 	writeJSON(w, 200, map[string]any{
-		"items": items, "total": len(out), "page": pg, "pages": pages, "sample": a.data().Sample, "view": v.Kind,
+		"items": items, "total": len(out), "page": pg, "pages": pages, "sample": a.data().Sample, "view": v.Kind, "alumniUpToBatch": d.AlumniUpTo,
 		"facets": map[string]any{"batches": batches, "departments": depts},
 	})
 }

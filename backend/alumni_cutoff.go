@@ -129,11 +129,18 @@ func (s *Store) graduated(batch *int) bool {
 	return batch != nil && s.AlumniUpTo > 0 && *batch <= s.AlumniUpTo
 }
 
-// shownAlumni is every alumnus the site shows: the alumni records, then every student or member whose batch has
-// graduated (a person already on the alumni list by name and batch is not repeated).
+// shownAlumni is every alumnus the site shows: the alumni records up to the saved batch (and those without a batch),
+// then every student or member whose batch has graduated. A person already listed by name and batch is not repeated.
+// The saved batch decides for everyone, so an alumni record of a later batch waits until that batch is reached.
+// With the setting at 0 nobody is moved and every alumni record is shown.
 func (a *App) shownAlumni(ctx context.Context) []Alumnus {
 	d := a.data()
-	out := append([]Alumnus{}, d.Alumni...)
+	out := []Alumnus{}
+	for _, al := range d.Alumni {
+		if d.AlumniUpTo == 0 || al.Batch == nil || *al.Batch <= d.AlumniUpTo {
+			out = append(out, al)
+		}
+	}
 	seen := map[string]bool{}
 	key := func(name string, b *int) string {
 		k := strings.ToLower(strings.Join(strings.Fields(name), " "))
@@ -142,7 +149,7 @@ func (a *App) shownAlumni(ctx context.Context) []Alumnus {
 		}
 		return k
 	}
-	for _, al := range d.Alumni {
+	for _, al := range out {
 		seen[key(al.Name, al.Batch)] = true
 	}
 	for _, p := range a.directoryPeople(ctx) {

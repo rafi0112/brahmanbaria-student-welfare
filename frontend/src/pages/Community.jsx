@@ -99,7 +99,8 @@ export function Alumni() {
         <Data q={res} skeleton="people">
           {(d) => (
             <>
-              <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}</p>
+              <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}
+                {d.alumniUpToBatch > 0 && <> · {t('alumni.upTo').replace('{n}', n(d.alumniUpToBatch))} <Link className="link-arrow" to="/students">{t('alumni.laterStudents').replace('{n}', n(d.alumniUpToBatch + 1))} →</Link></>}</p>
               {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (
                 <div className="cards-3">
                   {d.items.map((a) => (
