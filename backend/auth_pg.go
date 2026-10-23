@@ -312,7 +312,7 @@ func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error
 func (s *pgStore) ListMembers(ctx context.Context, status string) ([]MemberRow, error) {
 	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.upazila, p.union_name, p.phone, p.blood_group, p.status,
 		p.show_in_directory, p.show_phone, p.show_email, p.show_blood, to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-		u.email, u.email_verified_at IS NOT NULL
+		u.email, u.email_verified_at IS NOT NULL, p.session, p.gender
 		FROM profiles p JOIN users u ON u.id = p.user_id
 		WHERE ($1 = '' OR p.status = $1) ORDER BY p.created_at`, status)
 	if err != nil {
@@ -323,7 +323,7 @@ func (s *pgStore) ListMembers(ctx context.Context, status string) ([]MemberRow, 
 	for rows.Next() {
 		var m MemberRow
 		if err := rows.Scan(&m.UserID, &m.Name, &m.Batch, &m.Department, &m.Upazila, &m.Union, &m.Phone, &m.BloodGroup, &m.Status,
-			&m.ShowInDirectory, &m.ShowPhone, &m.ShowEmail, &m.ShowBlood, &m.CreatedAt, &m.Email, &m.EmailVerified); err != nil {
+			&m.ShowInDirectory, &m.ShowPhone, &m.ShowEmail, &m.ShowBlood, &m.CreatedAt, &m.Email, &m.EmailVerified, &m.Session, &m.Gender); err != nil {
 			return nil, err
 		}
 		out = append(out, m)

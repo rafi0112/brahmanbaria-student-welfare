@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -91,13 +92,18 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, _ User) {
 	if fail("imported", err) {
 		return
 	}
-	_, ic, err := a.importedAll(ctx, url.Values{}) // the same derived verification as the directory tabs
+	dirRows, ic, err := a.importedAll(ctx, url.Values{}) // the same derived verification as the directory tabs
 	if fail("imported reviews", err) {
 		return
 	}
 	totalImported := len(a.Store.Students) + len(manual)
 	out["importedStudents"] = totalImported
 	out["imported"] = map[string]any{"total": totalImported, "verified": ic["verified"], "awaiting": ic["awaiting"], "addedByAdmins": len(manual)}
+	allMembers, err := s.ListMembers(ctx, "")
+	if fail("member list", err) {
+		return
+	}
+	out["charts"] = dashboardCharts(dirRows, allMembers, time.Now())
 
 	committees, err := s.ListCommittees(ctx)
 	if fail("committees", err) {
@@ -440,3 +446,86 @@ func (a *App) studentsExport(w http.ResponseWriter, r *http.Request, u User) {
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "member.export", "user", "", map[string]any{"rows": exported, "withContact": withContact})
 }
 
+type chartBar struct {
+	Key   string `json:"key"`
+	Count int    `json:"count"`
+}
+
+// dashboardCharts summarises real data for the dashboard charts: every student in the directory (records and registered
+// members) by department, upazila and batch, member sign-ups per month for the last twelve months, and member gender.
+func dashboardCharts(students []importedView, members []MemberRow, now time.Time) map[string]any {
+	tally := func(key func(importedView) string) map[string]int {
+		m := map[string]int{}
+		for _, s := range students {
+			if k := key(s); k != "" {
+				m[k]++
+			}
+		}
+		return m
+	}
+	ranked := func(m map[string]int, top int) []chartBar {
+		out := make([]chartBar, 0, len(m))
+		for k, c := range m {
+			out = append(out, chartBar{k, c})
+		}
+		sort.Slice(out, func(i, j int) bool {
+			if out[i].Count != out[j].Count {
+				return out[i].Count > out[j].Count
+			}
+			return out[i].Key < out[j].Key
+		})
+		if top > 0 && len(out) > top {
+			rest := 0
+			for _, b := range out[top:] {
+				rest += b.Count
+			}
+			out = append(out[:top], chartBar{"other", rest})
+		}
+		return out
+	}
+	batches := tally(func(s importedView) string {
+		if s.Batch == nil || *s.Batch <= 0 {
+			return ""
+		}
+		return strconv.Itoa(*s.Batch)
+	})
+	byBatch := make([]chartBar, 0, len(batches))
+	for k, c := range batches {
+		byBatch = append(byBatch, chartBar{k, c})
+	}
+	sort.Slice(byBatch, func(i, j int) bool {
+		a, _ := strconv.Atoi(byBatch[i].Key)
+		b, _ := strconv.Atoi(byBatch[j].Key)
+		return a < b
+	})
+
+	// sign-ups per month, oldest first, always twelve months so the axis never jumps
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -11, 0)
+	months := make([]chartBar, 12)
+	idx := map[string]int{}
+	for i := range months {
+		k := start.AddDate(0, i, 0).Format("2006-01")
+		months[i], idx[k] = chartBar{k, 0}, i
+	}
+	gender := map[string]int{}
+	for _, m := range members {
+		if len(m.CreatedAt) >= 7 {
+			if i, ok := idx[m.CreatedAt[:7]]; ok {
+				months[i].Count++
+			}
+		}
+		g := m.Gender
+		if g == "" {
+			g = "unknown"
+		}
+		gender[g]++
+	}
+	return map[string]any{
+		"students":     len(students),
+		"byDepartment": ranked(tally(func(s importedView) string { return s.Department }), 12),
+		"byUpazila":    ranked(tally(func(s importedView) string { return s.Upazila }), 0),
+		"byBatch":      byBatch,
+		"signups":      months,
+		"gender":       ranked(gender, 0),
+	}
+}
