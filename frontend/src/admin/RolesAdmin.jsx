@@ -28,6 +28,8 @@ export default function RolesAdmin() {
   const [only, setOnly] = useState('') // email whose history is shown
   const rows = list.data?.items || []
   const filtered = !!(f.q || f.verified || f.account)
+  // the one remaining active administrator cannot leave or be removed (the server enforces this too)
+  const soleAdmin = !filtered && rows.length === list.data?.total && rows.filter((x) => !x.disabled && x.emailVerified).length <= 1
 
   // when and by whom each current administrator was last promoted (from the real role history)
   const promoted = useMemo(() => {
@@ -94,7 +96,7 @@ export default function RolesAdmin() {
                   <RowMenu label={`${t('ad.actions')}: ${label(x)}`} items={[
                     { label: t('ad.pm.viewProfile'), icon: 'users', onClick: () => go(`/admin/students?q=${encodeURIComponent(x.email)}`) },
                     { label: t('ad.pm.viewHistory'), icon: 'clock', onClick: () => { setOnly(x.email); setShowHistory(true) } },
-                    { label: t(x.id === me?.id ? 'admin.roles.leave' : 'admin.roles.makeMember'), icon: 'down', danger: true, sep: true, onClick: () => setDemote(x) },
+                    { label: t(x.id === me?.id ? 'admin.roles.leave' : 'admin.roles.makeMember'), icon: 'down', danger: true, sep: true, onClick: () => { if (soleAdmin && !x.disabled && x.emailVerified) bad(t('admin.err.lastAdmin')); else setDemote(x) } },
                   ]} />
                 </div>
               ) },

@@ -82,8 +82,11 @@ export default function Auth({ mode }) {
       const email = v.email.trim()
       if (mode === 'register' && supabaseConfigured) {
         // The member details travel as user metadata; the profile is created at first sign-in (see AuthProvider).
-        const { error } = await supabase.auth.signUp({ email, password: v.password, options: { data: profile, emailRedirectTo: `${origin()}/verify-email` } })
+        const { data, error } = await supabase.auth.signUp({ email, password: v.password, options: { data: profile, emailRedirectTo: `${origin()}/verify-email` } })
         if (error) throw toApiError(error)
+        // For an address that already has an account Supabase answers with a look-alike user that has no identities and
+        // sends no email. One email, one account: say so instead of waiting for a message that will never come.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) { setErrs({ email: t('auth.e.exists') }); setNotice({ tone: 'bad', key: 'auth.e.existsNote' }); return }
         nav(`/verify-email?email=${encodeURIComponent(email)}`)
       } else if (mode === 'register') {
         await api('/auth/register', { method: 'POST', body: JSON.stringify({ ...profile, email, password: v.password }) })
@@ -115,7 +118,8 @@ export default function Auth({ mode }) {
       }
     } catch (err) {
       if (err.fields) setErrs(err.fields)
-      if (err.code === 'weak_password') setErrs({ password: t('auth.e.pass') })
+      if (err.code === 'user_already_exists' || err.code === 'email_exists') { setErrs({ email: t('auth.e.exists') }); setNotice({ tone: 'bad', key: 'auth.e.existsNote' }) }
+      else if (err.code === 'weak_password') setErrs({ password: t('auth.e.pass') })
       else if (err.message === 'email_not_verified' || err.status === 403) { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
       else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
       else if (err.status === 429) setNotice({ tone: 'bad', key: 'auth.rateLimited' })
