@@ -19,7 +19,7 @@ test('committee: create, describe, add seats without accounts, edit, reorder, pu
   await page.locator('input[type=email]').fill(E2E.email)
   await page.locator('input[type=password]').fill(E2E.password)
   await page.locator('form button[type=submit]').click()
-  await page.waitForURL(/dashboard|admin/)
+  await page.waitForURL((u) => u.pathname === '/')
   await page.goto('/admin?tab=committee')
   const f = () => page.locator('form.cm-form').first()
 

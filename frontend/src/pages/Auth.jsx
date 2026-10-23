@@ -47,6 +47,9 @@ export default function Auth({ mode }) {
   // Password reset with Supabase needs the recovery session that the emailed link creates.
   const [recovery, setRecovery] = useState(mode === 'reset' && supabaseConfigured ? (urlAuthError ? 'expired' : 'checking') : 'ready')
 
+  // someone who is already signed in has no use for the login page
+  useEffect(() => { if (mode === 'login' && auth.user) nav('/', { replace: true }) }, [mode, auth.user, nav])
+
   useEffect(() => {
     if (mode !== 'reset' || !supabaseConfigured || urlAuthError) return undefined
     let live = true
@@ -99,7 +102,7 @@ export default function Auth({ mode }) {
         } else {
           auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: v.password }) }))
         }
-        nav('/dashboard') // opens My profile; administrators continue to the panel from there
+        nav('/', { replace: true })
       } else if (mode === 'forgot') {
         if (supabaseConfigured) {
           // Unknown addresses get the same answer, so the form cannot be used to find registered emails.

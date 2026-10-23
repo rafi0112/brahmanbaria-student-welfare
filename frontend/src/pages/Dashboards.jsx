@@ -19,12 +19,12 @@ export function Gate({ role, children }) {
   return children(user)
 }
 
-// The old dashboard address (login, Google sign-in and email links still lead here) opens "My profile" over the home page.
+// The old dashboard address (Google sign-in and email links still lead here) sends people to the home page.
 export function Dashboard() {
   const { user, loading } = useAuth()
   if (loading) return <section className="section wrap narrow"><Loading /></section>
   if (!user) return <Navigate to="/login" replace />
-  return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace state={{ openProfile: true }} />
+  return <Navigate to="/" replace />
 }
 
 function CompleteProfile({ defaultName, onDone }) {

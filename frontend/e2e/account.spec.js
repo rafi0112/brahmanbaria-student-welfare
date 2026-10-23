@@ -30,7 +30,7 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await page.locator('input[type=email]').fill(E2E.email)
   await page.locator('input[type=password]').fill(E2E.password)
   await page.locator('form button[type=submit]').click()
-  await page.waitForURL(/dashboard|admin/)
+  await page.waitForURL((u) => u.pathname === '/')
   // give the admin a member profile so the dialog has everything to show
   const made = await page.request.post('/api/v1/me/profile', { data: { name: 'Test Admin Person', batch: 16, department: 'Finance', session: '2019-20', upazila: 'kasba', union: 'Kuti', phone: '01712345678', gender: 'female', bloodGroup: 'O+' } })
   expect([201, 409]).toContain(made.status())
