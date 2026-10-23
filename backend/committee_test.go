@@ -173,8 +173,12 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	if os.Getenv("LIVE_TEMP_TABLES") != "1" {
 		t.Skip("set LIVE_TEMP_TABLES=1 to run against PostgreSQL temp tables")
 	}
-	loadDotEnv(".env")
+	// only DATABASE_URL is read from .env; loading the whole file would leak real settings (mail recipients, keys)
+	// into every other test in this process
 	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		url = dotEnvValue(".env", "DATABASE_URL")
+	}
 	if url == "" {
 		t.Skip("DATABASE_URL is not set")
 	}
@@ -732,4 +736,19 @@ func TestSeedCommitteeFromTheBundledFile(t *testing.T) {
 	if err := seedCommittee(s, []string{"--file=data/committee-2026-2027.json", "--apply"}); err == nil {
 		t.Fatal("running it twice must refuse instead of duplicating")
 	}
+}
+
+// dotEnvValue reads one KEY=VALUE line from a .env file without touching the environment.
+func dotEnvValue(path, key string) string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if k, v, ok := strings.Cut(line, "="); ok && strings.TrimSpace(k) == key {
+			return strings.Trim(strings.TrimSpace(v), `"'`)
+		}
+	}
+	return ""
 }

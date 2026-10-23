@@ -455,6 +455,21 @@ test('site data from the database: events, FAQ and alumni are created in the pan
   await page.goto('/alumni?q=Zqxv')
   await expect(page.getByText('Zqxv E2E Alumnus')).toBeVisible()
   await expect(page.getByText('01712345678')).toHaveCount(0) // contact details stay admin-only
+  // the same email and invitation steps as a directory record
+  await page.goto('/admin/alumni?q=Zqxv')
+  const arow = page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Alumnus' })
+  await expect(arow.getByRole('button', { name: 'Verify', exact: true })).toBeDisabled() // needs an email first
+  await arow.getByRole('button', { name: /Actions/ }).click()
+  await page.getByRole('menuitem', { name: 'Add email' }).click()
+  const edlg = page.getByRole('dialog')
+  await edlg.getByLabel('Email').fill('zqxv.alumnus@example.test')
+  await edlg.getByRole('button', { name: 'Save' }).click()
+  await expect(edlg).toBeHidden()
+  await expect(arow).toContainText('zqxv.alumnus@example.test')
+  await expect(arow.getByRole('button', { name: 'Verify', exact: true })).toBeEnabled()
+  await arow.getByRole('button', { name: 'Verify', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Verify' }).click()
+  await expect(arow).toContainText('Verified')
   // and delete it again
   await page.goto('/admin/alumni?q=Zqxv')
   await page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Alumnus' }).getByRole('button', { name: /Actions/ }).click()

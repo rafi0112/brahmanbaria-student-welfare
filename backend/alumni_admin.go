@@ -26,7 +26,12 @@ func (a *App) alumniAdminRoutes(m *http.ServeMux, h func(func(http.ResponseWrite
 
 type alumniAdminRow struct {
 	Alumnus
-	Private map[string]string `json:"private"`
+	Private      map[string]string `json:"private"`
+	Invite       map[string]any    `json:"invite,omitempty"`
+	Verified     bool              `json:"verified"`
+	AutoVerified bool              `json:"autoVerified,omitempty"`
+	VerifiedAt   string            `json:"verifiedAt,omitempty"`
+	VerifiedBy   string            `json:"verifiedBy,omitempty"`
 }
 
 func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
@@ -34,6 +39,9 @@ func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
 	needle := strings.TrimSpace(q.Get("q"))
 	batch, _ := strconv.Atoi(q.Get("batch"))
 	d := a.data()
+	invites, _ := a.Auth.Store.Invites(r.Context())
+	reviews, _ := a.Auth.Store.ImportedReviews(r.Context())
+	status := q.Get("status") // "", verified, awaiting, invited
 	out := []alumniAdminRow{}
 	for _, al := range d.Alumni {
 		pv := d.Private[al.ID]
@@ -46,7 +54,27 @@ func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
 		if dep := q.Get("department"); dep != "" && al.Department != dep {
 			continue
 		}
-		out = append(out, alumniAdminRow{Alumnus: al, Private: nonNilMap(pv)})
+		row := alumniAdminRow{Alumnus: al, Private: nonNilMap(pv)}
+		if rv, ok := reviews[al.ID]; ok {
+			row.Verified, row.VerifiedAt, row.VerifiedBy = true, rv.VerifiedAt, rv.VerifiedBy
+		}
+		if inv, ok := invites[al.ID]; ok {
+			row.Invite = a.inviteView(inv)
+			// activating the invitation and an approved membership verify the record, as for directory students
+			for _, uid := range []string{inv.CompletedUser, inv.ReplacesUser} {
+				if uid == "" || row.Verified {
+					continue
+				}
+				if p, err := a.Auth.Store.ProfileByUser(r.Context(), uid); err == nil && p != nil && p.Status == StatusApproved {
+					row.Verified, row.AutoVerified = true, true
+					row.Invite["emailVerified"] = true
+				}
+			}
+		}
+		if (status == "verified" && !row.Verified) || (status == "awaiting" && row.Verified) || (status == "invited" && row.Invite == nil) {
+			continue
+		}
+		out = append(out, row)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
 	pg, limit := paging(r, 25)

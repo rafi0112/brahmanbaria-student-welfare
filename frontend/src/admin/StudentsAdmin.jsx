@@ -327,7 +327,7 @@ function RejectDialog({ row, busy, onYes, onNo }) {
 /* ---------------------------------------------------------------- imported directory */
 
 // Small check beside a name. It is only drawn when the real condition holds, and always carries a written explanation.
-function VerifiedMark({ label }) {
+export function VerifiedMark({ label }) {
   return <span className="vmark" title={label} role="img" aria-label={label}><Icon name="verified" size={15} /></span>
 }
 
@@ -522,7 +522,7 @@ function ImportedForm({ row, depts, onClose, onSaved }) {
 
 // What an admin can truthfully say about a person's activation: an address is saved, Supabase accepted the invitation request
 // (which is not proof it reached an inbox), it failed, or the person finished activating.
-function InviteCell({ r, t, when }) {
+export function InviteCell({ r, t, when }) {
   const inv = r.invite
   if (!inv) return <small className="dt-sub">{t('ad.inv.none')}</small>
   const label = inv.status === 'completed' ? t('ad.inv.completed') : inv.status === 'failed' ? t('ad.inv.failed') : inv.status === 'sent' ? (inv.expired ? t('ad.inv.expired') : t('ad.inv.sent')) : t('ad.inv.saved')
@@ -538,10 +538,11 @@ function InviteCell({ r, t, when }) {
 }
 
 // Save the address an activation email will go to. Nothing is sent here.
-function EmailDialog({ row, onClose, onSaved, onRemove }) {
+// initial: an address to suggest when none is saved yet (for example the email from the original form)
+export function EmailDialog({ row, onClose, onSaved, onRemove, initial = '' }) {
   const { t } = useApp()
   const errText = useErrText()
-  const [email, setEmail] = useState(row.invite?.email || '')
+  const [email, setEmail] = useState(row.invite?.email || initial)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const dirty = email.trim().toLowerCase() !== (row.invite?.email || '')

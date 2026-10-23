@@ -438,6 +438,9 @@ func (a *App) importedExtra(ctx context.Context, id string) ManualImportedInput 
 			}
 		}
 	}
+	if pv := a.data().Private[id]; pv != nil { // the original form's contact columns prefill the activation form
+		return ManualImportedInput{BloodGroup: pv["bloodGroup"], Phone: pv["phone"]}
+	}
 	return ManualImportedInput{}
 }
 
@@ -450,6 +453,11 @@ func (a *App) importedFind(ctx context.Context, id string) (Student, bool) {
 			}
 		}
 		return s, true
+	}
+	for _, al := range a.data().Alumni { // alumni records: the same email, invitation and verification steps
+		if al.ID == id {
+			return Student{ID: al.ID, Name: al.Name, Batch: al.Batch, Department: al.Department, Upazila: al.Upazila}, true
+		}
 	}
 	if strings.HasPrefix(id, manualPrefix) {
 		rows, err := a.Auth.Store.ListManualImported(ctx)

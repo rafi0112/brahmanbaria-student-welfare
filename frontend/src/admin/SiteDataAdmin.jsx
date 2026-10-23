@@ -6,6 +6,7 @@ import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pag
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
 import Icon from './icons.jsx'
+import { EmailDialog, InviteCell, VerifiedMark } from './StudentsAdmin.jsx'
 
 // Admin pages for the rest of the site's data, all stored in the database: events, FAQ questions, departments,
 // upazilas (editorial entries) and alumni (directory records). Each page lists, adds, edits, publishes or removes.
@@ -351,7 +352,7 @@ function AlumniCutoff({ onChanged }) {
 export function AlumniAdmin() {
   const { t, n, pick } = useApp()
   const errText = useErrText()
-  const [f, set] = useFilters({ q: '', department: '', batch: '', page: '1', limit: '25' })
+  const [f, set] = useFilters({ q: '', department: '', batch: '', status: '', page: '1', limit: '25' })
   const list = useApi(`/admin/alumni${qs({ ...f, page: f.page === '1' ? '' : f.page })}`)
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
@@ -359,7 +360,19 @@ export function AlumniAdmin() {
   const [edit, setEdit] = useState(null)
   const [drop, setDrop] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [emailRow, setEmailRow] = useState(null)
+  const [dropEmail, setDropEmail] = useState(null)
+  const [verify, setVerify] = useState(null)
+  const [undo, setUndo] = useState(null)
+  const { lang } = useApp()
+  const when = useWhen(lang)
   const rows = list.data?.items || []
+  // the same steps as a directory record: save an email, send (or resend) the activation link, verify
+  const post = async (path, method, done, after) => {
+    setBusy(true); clear()
+    try { await api(path, { method, body: method === 'DELETE' ? undefined : '{}' }); ok(t(done)); list.retry() }
+    catch (e) { bad(errText(e)); list.retry() } finally { setBusy(false); after?.() }
+  }
   const upName = (slug) => { const u = (ups.data?.items || []).find((x) => x.slug === slug); return u ? pick(u.nameBn, u.nameEn) : '' }
   const remove = async () => {
     setBusy(true); clear()
@@ -373,6 +386,12 @@ export function AlumniAdmin() {
       <AlumniCutoff onChanged={() => list.retry()} />
       <ListToolbar section="alumni" values={f} set={set} defaults={{ limit: '25' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: t('ad.al.search') }}
+        views={[
+          { id: 'all', label: t('ad.status.allShort'), patch: { status: '' } },
+          { id: 'awaiting', label: t('ad.imp.awaiting'), patch: { status: 'awaiting' } },
+          { id: 'verified', label: t('ad.imp.verified'), patch: { status: 'verified' } },
+          { id: 'invited', label: t('ad.al.withEmail'), patch: { status: 'invited' } },
+        ]}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
           { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: Array.from({ length: 30 }, (_, i) => [String(i + 1), `${t('auth.batch')} ${n(i + 1)}`]) },
@@ -384,14 +403,27 @@ export function AlumniAdmin() {
         <>
           <DataTable caption={t('ad.al.title')} rows={rows} rowKey={(r) => r.id}
             columns={[
-              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.name}</strong><small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div> },
-              { id: 'work', label: t('ad.al.workplace'), width: '24%', cell: (r) => <small className="dt-sub dt-clamp">{r.workplace || '—'}</small> },
-              { id: 'acad', label: t('ad.stu.col.academic'), width: '20%', cell: (r) => <div className="dt-stack"><small className="dt-sub dt-trunc">{r.department || '—'}</small><small className="dt-sub">{r.batch ? `${t('auth.batch')} ${n(r.batch)}` : ''} {upName(r.upazila)}</small></div> },
-              { id: 'contact', label: t('ad.al.private'), width: '20%', cell: (r) => <div className="dt-stack"><small className="dt-sub dt-trunc">{r.private.phone || '—'}</small><small className="dt-sub dt-trunc">{r.private.email || ''}</small></div> },
-              { id: 'actions', srLabel: t('ad.actions'), width: '120px', className: 'dt-actions-cell', cell: (r) => (
+              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div> },
+              { id: 'work', label: t('ad.al.workplace'), width: '18%', cell: (r) => <small className="dt-sub dt-clamp">{r.workplace || '—'}</small> },
+              { id: 'acad', label: t('ad.stu.col.academic'), width: '16%', cell: (r) => <div className="dt-stack"><small className="dt-sub dt-trunc">{r.department || '—'}</small><small className="dt-sub">{r.batch ? `${t('auth.batch')} ${n(r.batch)}` : ''} {upName(r.upazila)}</small></div> },
+              { id: 'invite', label: t('ad.inv.col'), width: '20%', cell: (r) => (r.invite ? <InviteCell r={r} t={t} when={when} />
+                : <div className="dt-stack"><small className="dt-sub">{t('ad.inv.none')}</small>{r.private.email && <small className="dt-sub dt-trunc" title={r.private.email}>{t('ad.al.formEmail')}: {r.private.email}</small>}</div>) },
+              { id: 'review', label: t('ad.imp.review'), width: '16%', cell: (r) => (
+                r.verified
+                  ? <div className="dt-stack"><span className="st st-approved"><span className="st-dot" aria-hidden="true" />{t('ad.imp.verified')}</span><small className="dt-sub">{r.autoVerified ? t('ad.imp.autoVerified') : `${r.verifiedBy || ''} · ${when(r.verifiedAt)}`}</small></div>
+                  : <div className="dt-stack"><span className="st st-pending"><span className="st-dot" aria-hidden="true" />{t('ad.imp.awaiting')}</span>{!r.invite?.email && <small className="dt-sub is-warn">{t('ad.imp.needEmail')}</small>}</div>
+              ) },
+              { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.edit')}</button>
-                  <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[{ label: t('ad.al.delete'), icon: 'trash', danger: true, onClick: () => setDrop(r) }]} />
+                  {!r.verified && <button type="button" className="btn btn-outline btn-sm" disabled={!r.invite?.email || busy} title={r.invite?.email ? undefined : t('ad.imp.needEmail')} onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
+                  <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
+                    { label: t('ad.edit'), icon: 'pencil', onClick: () => setEdit(r) },
+                    { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
+                    r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => post(`/admin/imported-students/${r.id}/invite`, 'POST', 'ad.inv.sentOk') },
+                    r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', onClick: () => setDropEmail(r) },
+                    r.verified && !r.autoVerified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
+                    { label: t('ad.al.delete'), icon: 'trash', danger: true, sep: true, onClick: () => setDrop(r) },
+                  ]} />
                 </div>
               ) },
             ]} />
@@ -400,6 +432,14 @@ export function AlumniAdmin() {
       ))}
       {edit && <AlumnusEditor row={edit.id ? edit : null} depts={depts.data?.items || []} ups={ups.data?.items || []} onClose={() => setEdit(null)}
         onSaved={() => { const isNew = !edit.id; setEdit(null); ok(t(isNew ? 'ad.al.created' : 'ad.al.saved')); list.retry() }} />}
+      {emailRow && <EmailDialog row={emailRow} initial={emailRow.private?.email || ''} onClose={() => setEmailRow(null)}
+        onSaved={() => { setEmailRow(null); ok(t('ad.inv.emailSaved')); list.retry() }} onRemove={() => { setDropEmail(emailRow); setEmailRow(null) }} />}
+      {dropEmail && <Confirm tone="danger" title={t('ad.inv.removeEmail')} text={t('ad.inv.removeText').replace('{who}', dropEmail.name)} label={t('ad.inv.removeEmail')} busy={busy}
+        onYes={() => post(`/admin/imported-students/${dropEmail.id}/email`, 'DELETE', 'ad.inv.emailRemoved', () => setDropEmail(null))} onNo={() => setDropEmail(null)} />}
+      {verify && <Confirm text={t('ad.imp.verifyConfirm').replace('{who}', verify.name)} label={t('ad.imp.verify')} busy={busy}
+        onYes={() => post(`/admin/imported-students/${verify.id}/verify`, 'POST', 'ad.imp.done', () => setVerify(null))} onNo={() => setVerify(null)} />}
+      {undo && <Confirm tone="danger" text={t('ad.imp.unverifyText').replace('{who}', undo.name)} label={t('ad.imp.unverify')} busy={busy}
+        onYes={() => post(`/admin/imported-students/${undo.id}/unverify`, 'POST', 'ad.imp.undone', () => setUndo(null))} onNo={() => setUndo(null)} />}
       {drop && <Confirm tone="danger" title={t('ad.al.delete')} text={t('ad.al.deleteText').replace('{who}', drop.name)} label={t('ad.al.delete')} busy={busy} onYes={remove} onNo={() => setDrop(null)} />}
     </section>
   )
