@@ -85,6 +85,7 @@ export default function Auth({ mode }) {
       const email = v.email.trim()
       if (mode === 'register' && supabaseConfigured) {
         // The member details travel as user metadata; the profile is created at first sign-in (see AuthProvider).
+        await supabase.auth.signOut({ scope: 'local' }) // a new account starts clean, without someone else's session in this browser
         const { data, error } = await supabase.auth.signUp({ email, password: v.password, options: { data: profile, emailRedirectTo: `${origin()}/verify-email` } })
         if (error) throw toApiError(error)
         // For an address that already has an account Supabase answers with a look-alike user that has no identities and
