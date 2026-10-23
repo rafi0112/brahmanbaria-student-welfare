@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { api, sendPhoto } from '../lib/api.js'
+import { api, sendPhoto, sendPhotoLink } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar } from './ui.jsx'
 
@@ -13,6 +13,15 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
   const input = useRef(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [link, setLink] = useState('')
+  const fromLink = async () => {
+    const l = link.trim()
+    if (!/^https:\/\/\S+$/.test(l)) { setErr(t('photo.e.link')); return }
+    setBusy(true); setErr('')
+    try { onDone(await sendPhotoLink(uploadPath, l), 'set'); setLink('') }
+    catch (x) { setErr(t(x.message === 'drive_not_public' ? 'photo.e.drive' : x.status === 429 ? 'auth.rateLimited' : 'photo.e.linkBad')) }
+    finally { setBusy(false) }
+  }
   const pick = async (e) => {
     const f = e.target.files?.[0]
     e.target.value = ''
@@ -35,6 +44,11 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
         <input ref={input} type="file" accept="image/jpeg,image/png" hidden onChange={pick} />
         <button type="button" className="btn btn-outline btn-sm" disabled={busy} aria-busy={busy || undefined} onClick={() => input.current?.click()}>{t(photo ? 'photo.change' : 'photo.upload')}</button>
         {photo && <button type="button" className="btn btn-quiet btn-sm" disabled={busy} onClick={remove}>{t('photo.remove')}</button>}
+        <span className="photo-link">
+          <input type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder={t('photo.linkPh')} aria-label={t('photo.linkLabel')} disabled={busy}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); fromLink() } }} />
+          <button type="button" className="btn btn-outline btn-sm" disabled={busy || !link.trim()} onClick={fromLink}>{t('photo.useLink')}</button>
+        </span>
         <small className="muted">{t('photo.hint')}</small>
         {err && <small className="err" role="alert">{err}</small>}
       </div>

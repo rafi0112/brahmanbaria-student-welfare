@@ -50,8 +50,9 @@ type publicExecutive struct {
 }
 
 type publicCommittee struct {
-	Name     string `json:"name"`
-	Term     string `json:"term"`
+	Name        string `json:"name"`
+	Term        string `json:"term"`
+	Description string `json:"description"`
 	StartsOn string `json:"startsOn"`
 	EndsOn   string `json:"endsOn"`
 }
@@ -71,7 +72,7 @@ func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
 	for _, x := range xs {
 		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo)})
 	}
-	writeJSON(w, 200, map[string]any{"committee": publicCommittee{c.Name, c.Term, c.StartsOn, c.EndsOn}, "members": out})
+	writeJSON(w, 200, map[string]any{"committee": publicCommittee{c.Name, c.Term, c.Description, c.StartsOn, c.EndsOn}, "members": out})
 }
 
 func (a *App) listCommittees(w http.ResponseWriter, r *http.Request, _ User) {

@@ -127,3 +127,14 @@ export async function sendPhoto(path, file) {
   if (!res.ok) throw Object.assign(new Error(body?.error || `HTTP ${res.status}`), { status: res.status })
   return body
 }
+
+// Same as sendPhoto, with a public image link (Google Drive share link or any https image) instead of a file.
+export async function sendPhotoLink(path, link) {
+  const form = new FormData()
+  form.append('imageUrl', link)
+  const res = await fetch(`${BASE}/api/v1${path}`, { method: 'POST', credentials: 'include', headers: await bearer(), body: form })
+  let body = null
+  try { body = await res.json() } catch { /* empty */ }
+  if (!res.ok) throw Object.assign(new Error(body?.error || `HTTP ${res.status}`), { status: res.status })
+  return body
+}

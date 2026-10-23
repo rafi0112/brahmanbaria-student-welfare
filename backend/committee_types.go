@@ -29,6 +29,7 @@ type Committee struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Term        string `json:"term"`
+	Description string `json:"description"`
 	StartsOn    string `json:"startsOn"`
 	EndsOn      string `json:"endsOn"`
 	Status      string `json:"status"`
@@ -39,8 +40,9 @@ type Committee struct {
 }
 
 type CommitteeInput struct {
-	Name     string `json:"name"`
-	Term     string `json:"term"`
+	Name        string `json:"name"`
+	Term        string `json:"term"`
+	Description string `json:"description"`
 	StartsOn string `json:"startsOn"`
 	EndsOn   string `json:"endsOn"`
 }
@@ -112,8 +114,11 @@ func validDate(s string) bool {
 }
 
 func (in *CommitteeInput) clean() map[string]string {
-	in.Name, in.Term = strings.TrimSpace(in.Name), strings.TrimSpace(in.Term)
+	in.Name, in.Term, in.Description = strings.TrimSpace(in.Name), strings.TrimSpace(in.Term), strings.TrimSpace(in.Description)
 	errs := map[string]string{}
+	if runes(in.Description) > 1000 {
+		errs["description"] = "Keep the introduction under 1000 characters."
+	}
 	if n := runes(in.Name); n < 2 || n > 100 {
 		errs["name"] = "Committee name must be 2-100 characters."
 	}

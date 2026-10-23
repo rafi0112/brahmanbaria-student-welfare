@@ -100,3 +100,11 @@ The template uses only `{{ .ConfirmationURL }}` plus `{{ .SiteURL }}` for the lo
 ## Profile photos
 
 Members upload a JPEG or PNG (up to 5 MB) from the account menu → My profile; admins can set or remove any member's photo in the member drawer. The server decodes the file, crops it to a square, scales it to 480 px and re-encodes it as JPEG (which strips EXIF/GPS), then stores it in PostgreSQL (`profile_photos`, migration 017). Photos are served only through the API (`/api/v1/me/photo`, `/api/v1/students/m-{id}/photo`) to the member, approved members (when the member is listed in the directory) and admins: the same audience as other personal details. The public sees initials.
+
+## Photo links and the executive committee
+
+- **Photo links:** wherever a profile is created or updated, a public image link can be given instead of a file: Google Drive (shared as "Anyone with the link") or any https image. This applies to registration, activation, completing a profile, the profile dialog and the admin member drawer. The server downloads it once through the same guarded fetcher as committee photos (no private hosts, size and type checks), squares and re-encodes it, and stores it like an upload.
+- **Admins on public pages:** a signed-in admin sees every detail and photo on the public student pages (the `admin` view).
+- **Executive committee:** committees have an optional introduction (`description`, migration 018). The public page groups seats into executive committee, teacher advisors and student advisors by designation.
+- **Seeding a committee:** `go run . seed-committee` previews a committee from `backend/data/committee-2026-2027.json`. Add `--apply` to create it and `--publish` to publish it, using the same store methods as the admin panel. It refuses to run twice.
+- **Committee photos:** set them in the admin panel (file, Google Drive link or any https link); they are stored in the `executive-photos` bucket.

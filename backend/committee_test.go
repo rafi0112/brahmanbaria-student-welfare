@@ -192,6 +192,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig14, _ := migrationFS.ReadFile("migrations/014_directory_edits.sql")
 	mig15, _ := migrationFS.ReadFile("migrations/015_directory_person_fields.sql")
 	mig17, _ := migrationFS.ReadFile("migrations/017_profile_photos.sql")
+	mig18, _ := migrationFS.ReadFile("migrations/018_committee_description.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -213,7 +214,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12)), string(mig13), temp(string(mig14)), string(mig15), temp(string(mig17))} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12)), string(mig13), temp(string(mig14)), string(mig15), temp(string(mig17)), string(mig18)} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}
@@ -705,5 +706,25 @@ func TestAnyImageLinkIsFetchedSafely(t *testing.T) {
 	}
 	if !blockedIP(net.ParseIP("100.64.1.1")) || blockedIP(net.ParseIP("8.8.8.8")) {
 		t.Error("blockedIP classification wrong")
+	}
+}
+
+func TestSeedCommitteeFromTheBundledFile(t *testing.T) {
+	s := newMemStore()
+	if err := seedCommittee(s, []string{"--file=data/committee-2026-2027.json"}); err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if cs, _ := s.ListCommittees(context.Background()); len(cs) != 0 {
+		t.Fatal("a preview must not create anything")
+	}
+	if err := seedCommittee(s, []string{"--file=data/committee-2026-2027.json", "--apply", "--publish"}); err != nil {
+		t.Fatal(err)
+	}
+	c, xs, err := s.PublishedCommittee(context.Background())
+	if err != nil || len(xs) != 27 || c.Description == "" || xs[0].Designation != "সভাপতি" || xs[26].Name != "মেহেদী হাসান রুদ্র" {
+		t.Fatalf("published: %+v %d %v", c, len(xs), err)
+	}
+	if err := seedCommittee(s, []string{"--file=data/committee-2026-2027.json", "--apply"}); err == nil {
+		t.Fatal("running it twice must refuse instead of duplicating")
 	}
 }

@@ -119,7 +119,7 @@ function PhotoPicker({ value, onChange }) {
 /* ---- committee details ---- */
 function CommitteeForm({ initial, onSubmit, onCancel, busy, errs }) {
   const { t } = useApp()
-  const [v, setV] = useState(initial || { name: '', term: '', startsOn: '', endsOn: '' })
+  const [v, setV] = useState(initial || { name: '', term: '', description: '', startsOn: '', endsOn: '' })
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value })
   return (
     <form className="card-form cm-form" onSubmit={(e) => { e.preventDefault(); onSubmit(v) }} noValidate>
@@ -128,6 +128,9 @@ function CommitteeForm({ initial, onSubmit, onCancel, busy, errs }) {
       </label>
       <label className="field"><span>{t('cm.term')}</span>
         <input value={v.term} onChange={set('term')} maxLength={80} placeholder="2026–27" />{errs?.term && <small className="err">{errs.term}</small>}
+      </label>
+      <label className="field"><span>{t('cm.description')}</span>
+        <textarea rows="3" value={v.description || ''} onChange={set('description')} maxLength={1000} aria-invalid={!!errs?.description} />{errs?.description && <small className="err">{errs.description}</small>}
       </label>
       <div className="two">
         <label className="field"><span>{t('cm.starts')}</span><input type="date" value={v.startsOn} onChange={set('startsOn')} />{errs?.startsOn && <small className="err">{errs.startsOn}</small>}</label>
@@ -350,7 +353,7 @@ export default function CommitteeManager() {
                   </header>
                   {frozen && <p className="notice">{t('cm.frozen')}</p>}
 
-                  {mode === 'edit' && <CommitteeForm initial={{ name: c.name, term: c.term, startsOn: c.startsOn, endsOn: c.endsOn }} busy={busy} errs={errs}
+                  {mode === 'edit' && <CommitteeForm initial={{ name: c.name, term: c.term, description: c.description || '', startsOn: c.startsOn, endsOn: c.endsOn }} busy={busy} errs={errs}
                     onSubmit={(v) => run(() => api(`/admin/committees/${sel}`, { method: 'PATCH', body: body(v) }))} onCancel={() => setMode(null)} />}
 
                   {members.length === 0 ? <Empty>{t('cm.noMembers')}</Empty> : (

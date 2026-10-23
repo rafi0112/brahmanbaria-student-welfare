@@ -206,6 +206,7 @@ func (a *App) sendLink(ctx context.Context, u User, purpose string) {
 
 type registerReq struct {
 	Phone      string `json:"phone"`
+	PhotoLink  string `json:"photoLink"` // optional public image link (Google Drive or any https image)
 	Session    string `json:"session"`
 	Gender     string `json:"gender"`     // optional: female | male | other; empty means unspecified
 	BloodGroup string `json:"bloodGroup"` // optional
@@ -297,6 +298,10 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}
+	photo, ok := a.photoFromLink(w, r, q.PhotoLink)
+	if !ok {
+		return
+	}
 	hash, err := hashPassword(q.Password)
 	if err != nil {
 		apiError(w, 500, "could not create account")
@@ -307,6 +312,9 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone}})
 	switch err {
 	case nil:
+		if photo != nil {
+			_ = a.Auth.Store.SetProfilePhoto(r.Context(), u.ID, photo, "image/jpeg")
+		}
 		a.sendLink(r.Context(), u, PurposeVerify)
 	case ErrEmailTaken: // same response either way, so the form cannot be used to find registered emails
 	default:
@@ -531,6 +539,10 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		apiError(w, http.StatusConflict, "profile_locked") // approved details change only through the committee
 		return
 	}
+	photo, ok := a.photoFromLink(w, r, q.PhotoLink)
+	if !ok {
+		return
+	}
 	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
 		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
 		Upazila: q.Upazila, Union: q.Union, Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone,
@@ -538,6 +550,11 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		log.Printf("profile upsert: %v", err)
 		apiError(w, http.StatusInternalServerError, "could not create profile")
 		return
+	}
+	if photo != nil {
+		if err := a.Auth.Store.SetProfilePhoto(r.Context(), u.ID, photo, "image/jpeg"); err != nil {
+			log.Printf("profile photo from link: %v", err)
+		}
 	}
 	a.completeInviteFor(r.Context(), u)
 	writeJSON(w, http.StatusCreated, a.meBody(r.Context(), u))

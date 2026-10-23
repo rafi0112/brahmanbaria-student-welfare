@@ -11,7 +11,7 @@ import (
 const (
 	tsFmt = `'YYYY-MM-DD"T"HH24:MI:SS"Z"'`
 	// c is the alias of committees in every query that uses committeeCols.
-	committeeCols = `c.id::text, c.name, c.term, COALESCE(to_char(c.starts_on, 'YYYY-MM-DD'), ''), COALESCE(to_char(c.ends_on, 'YYYY-MM-DD'), ''), c.status,
+	committeeCols = `c.id::text, c.name, c.term, c.description, COALESCE(to_char(c.starts_on, 'YYYY-MM-DD'), ''), COALESCE(to_char(c.ends_on, 'YYYY-MM-DD'), ''), c.status,
 		COALESCE(to_char(c.published_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), COALESCE(to_char(c.archived_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''),
 		to_char(c.created_at AT TIME ZONE 'UTC', ` + tsFmt + `),
 		(SELECT count(*) FROM executives x WHERE x.committee_id = c.id AND x.removed_at IS NULL)`
@@ -22,7 +22,7 @@ type rowScanner interface{ Scan(dest ...any) error }
 
 func scanCommittee(r rowScanner) (Committee, error) {
 	var c Committee
-	err := r.Scan(&c.ID, &c.Name, &c.Term, &c.StartsOn, &c.EndsOn, &c.Status, &c.PublishedAt, &c.ArchivedAt, &c.CreatedAt, &c.MemberCount)
+	err := r.Scan(&c.ID, &c.Name, &c.Term, &c.Description, &c.StartsOn, &c.EndsOn, &c.Status, &c.PublishedAt, &c.ArchivedAt, &c.CreatedAt, &c.MemberCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -129,9 +129,9 @@ func (s *pgStore) CreateCommittee(ctx context.Context, actorID string, in Commit
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	var id string
-	if err := tx.QueryRow(ctx, `INSERT INTO committees (name, term, starts_on, ends_on, created_by, updated_by)
-		VALUES ($1, $2, $3::date, $4::date, NULLIF($5, '')::uuid, NULLIF($5, '')::uuid) RETURNING id::text`,
-		in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, `INSERT INTO committees (name, term, starts_on, ends_on, created_by, updated_by, description)
+		VALUES ($1, $2, $3::date, $4::date, NULLIF($5, '')::uuid, NULLIF($5, '')::uuid, $6) RETURNING id::text`,
+		in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description).Scan(&id); err != nil {
 		return Committee{}, err
 	}
 	if err := audit(ctx, tx, id, "", actorID, "committee.create"); err != nil {
@@ -169,9 +169,9 @@ func (s *pgStore) UpdateCommittee(ctx context.Context, actorID, id string, in Co
 	if status == CommitteeArchived {
 		return Committee{}, ErrCommitteeArchived
 	}
-	if _, err := tx.Exec(ctx, `UPDATE committees SET name = $2, term = $3, starts_on = $4::date, ends_on = $5::date,
+	if _, err := tx.Exec(ctx, `UPDATE committees SET name = $2, term = $3, starts_on = $4::date, ends_on = $5::date, description = $7,
 		updated_by = NULLIF($6, '')::uuid, updated_at = now() WHERE id = $1::uuid`,
-		id, in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID); err != nil {
+		id, in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description); err != nil {
 		return Committee{}, err
 	}
 	if err := audit(ctx, tx, id, "", actorID, "committee.update"); err != nil {

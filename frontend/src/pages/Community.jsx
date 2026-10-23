@@ -137,17 +137,25 @@ export function Committee() {
               <header className="committee-head">
                 <h2>{d.committee.name}</h2>
                 <p className="muted">{[d.committee.term, d.committee.startsOn && `${d.committee.startsOn} → ${d.committee.endsOn || '…'}`].filter(Boolean).join(' · ')}</p>
+                {d.committee.description && <p className="committee-intro">{d.committee.description}</p>}
               </header>
-              <div className="cards-4">
-                {d.members.map((m) => (
-                  <article key={m.id} className="member-card">
-                    <ExecPhoto m={m} />
-                    <h3>{m.name}</h3>
-                    <p className="role">{m.designation}</p>
-                    {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
-                  </article>
-                ))}
-              </div>
+              {groupSeats(d.members).map(([key, seats]) => seats.length > 0 && (
+                <section key={key} className="cm-group" aria-labelledby={`cg-${key}`}>
+                  <h3 id={`cg-${key}`} className="cm-group-h">{t(`committee.group.${key}`)}<span>{seats.length}</span></h3>
+                  <div className={key === 'exec' ? 'cards-4' : 'cm-advisors'}>
+                    {seats.map((m) => (
+                      <article key={m.id} className={key === 'exec' ? 'member-card' : 'advisor-row'}>
+                        <ExecPhoto m={m} size={key === 'exec' ? 96 : 52} />
+                        <div>
+                          <h3>{m.name}</h3>
+                          <p className="role">{m.designation}</p>
+                          {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </>
           )}
         </Data>
@@ -156,10 +164,21 @@ export function Committee() {
   )
 }
 
-function ExecPhoto({ m }) {
+function ExecPhoto({ m, size = 96 }) {
   const [bad, setBad] = useState(false)
-  if (m.photoUrl && !bad) return <img className="exec-photo" src={m.photoUrl} alt={m.name} width={96} height={96} loading="lazy" decoding="async" onError={() => setBad(true)} />
-  return <Avatar name={m.name} size={96} />
+  if (m.photoUrl && !bad) return <img className="exec-photo" src={m.photoUrl} alt={m.name} width={size} height={size} style={{ width: size, height: size }} loading="lazy" decoding="async" onError={() => setBad(true)} />
+  return <Avatar name={m.name} size={size} />
+}
+
+// Seats are shown in three groups by their designation; the order inside each group is the admin's order.
+function groupSeats(members) {
+  const teacher = (d) => /শিক্ষক উপদেষ্টা|teacher advis/i.test(d)
+  const student = (d) => /ছাত্র উপদেষ্টা|student advis|alumni advis/i.test(d)
+  return [
+    ['exec', members.filter((m) => !teacher(m.designation) && !student(m.designation))],
+    ['teachers', members.filter((m) => teacher(m.designation))],
+    ['students', members.filter((m) => student(m.designation))],
+  ]
 }
 
 /* ---------------- FAQ ---------------- */

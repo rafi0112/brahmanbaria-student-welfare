@@ -42,6 +42,12 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "seed-committee" { // creates a committee from a JSON file (preview unless --apply)
+		if err := seedCommittee(authStore, os.Args[2:]); err != nil {
+			log.Fatalf("seed-committee: %v", err)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "storage-setup" {
 		if err := storageSetup(authStore); err != nil {
 			log.Fatalf("storage-setup: %v", err)

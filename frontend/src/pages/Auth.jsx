@@ -14,7 +14,7 @@ const origin = () => window.location.origin
 
 const MODES = {
   login: { title: 'auth.login', sub: 'auth.loginSub', fields: ['email', 'password'], submit: 'auth.submitLogin' },
-  register: { title: 'auth.register', sub: 'auth.registerSub', fields: ['name', 'batch', 'department', 'session', 'upazila', 'union', 'gender', 'bloodGroup', 'phone', 'email', 'password', 'confirm', 'terms'], submit: 'auth.submitRegister' },
+  register: { title: 'auth.register', sub: 'auth.registerSub', fields: ['name', 'batch', 'department', 'session', 'upazila', 'union', 'gender', 'bloodGroup', 'phone', 'email', 'photoLink', 'password', 'confirm', 'terms'], submit: 'auth.submitRegister' },
   forgot: { title: 'auth.forgot', sub: 'auth.forgotSub', fields: ['email'], submit: 'auth.sendLink' },
   reset: { title: 'auth.reset', sub: 'auth.resetSub', fields: ['password', 'confirm'], submit: 'auth.setPassword' },
 }
@@ -38,7 +38,7 @@ export default function Auth({ mode }) {
   const cfg = MODES[mode]
   const depts = useApi(mode === 'register' ? '/departments' : null)
   const ups = useApi(mode === 'register' ? '/upazilas' : null)
-  const [v, setV] = useState({ name: '', phone: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
+  const [v, setV] = useState({ name: '', phone: '', photoLink: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
   const [errs, setErrs] = useState({})
   const [notice, setNotice] = useState(null) // { tone: 'ok' | 'bad', key }
   const [busy, setBusy] = useState(false)
@@ -64,6 +64,7 @@ export default function Auth({ mode }) {
     if (cfg.fields.includes('email') && !emailOk(v.email)) e.email = t('auth.e.email')
     if (cfg.fields.includes('password') && v.password.length < (mode === 'login' ? 1 : 8)) e.password = t('auth.e.pass')
     if (cfg.fields.includes('confirm') && v.confirm !== v.password) e.confirm = t('auth.e.match')
+    if (cfg.fields.includes('photoLink') && v.photoLink.trim() && !/^https:\/\/\S+$/.test(v.photoLink.trim())) e.photoLink = t('photo.e.link')
     if (cfg.fields.includes('terms') && !v.terms) e.terms = t('auth.e.terms')
     return e
   }
@@ -77,7 +78,7 @@ export default function Auth({ mode }) {
     if (mode === 'reset' && !supabaseConfigured && !token) { setNotice({ tone: 'bad', key: 'auth.noToken' }); return }
     setBusy(true)
     try {
-      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, session: v.session.trim(), upazila: v.upazila, union: v.union, gender: v.gender, bloodGroup: v.bloodGroup, phone: v.phone.trim() }
+      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, session: v.session.trim(), upazila: v.upazila, union: v.union, gender: v.gender, bloodGroup: v.bloodGroup, phone: v.phone.trim(), photoLink: v.photoLink.trim() }
       const email = v.email.trim()
       if (mode === 'register' && supabaseConfigured) {
         // The member details travel as user metadata; the profile is created at first sign-in (see AuthProvider).
@@ -138,7 +139,7 @@ export default function Auth({ mode }) {
   const optional = { gender: true, bloodGroup: true }
   const setSel = (k) => (e) => setV({ ...v, [k]: e.target.value, ...(k === 'upazila' ? { union: '' } : {}) })
   const bind = (k) => ({ value: v[k], onChange: (e) => setV({ ...v, [k]: e.target.value }), 'aria-invalid': !!errs[k], 'aria-describedby': errs[k] ? `${k}-err` : undefined })
-  const label = { session: 'auth.session', gender: 'auth.gender', bloodGroup: 'auth.blood', batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', phone: 'auth.phone', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
+  const label = { session: 'auth.session', gender: 'auth.gender', bloodGroup: 'auth.blood', batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', phone: 'auth.phone', photoLink: 'photo.linkLabel', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
 
   const resend = async () => {
     try { await resendConfirmation(v.email); setNotice({ tone: 'ok', key: 'auth.resent' }) }
@@ -176,12 +177,13 @@ export default function Auth({ mode }) {
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             ) : (
-              <label key={f} className={`field${f === 'name' ? ' span-2' : ''}`}>
+              <label key={f} className={`field${f === 'name' || f === 'photoLink' ? ' span-2' : ''}`}>
                 <span>{t(label[f])}</span>
                 {(() => {
-                  const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : f === 'phone' ? 'tel' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
-                  return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : f === 'phone' ? 'tel' : 'text'} inputMode={f === 'phone' ? 'numeric' : undefined} maxLength={f === 'phone' ? 11 : undefined} placeholder={f === 'session' ? '2020-21' : f === 'phone' ? '01XXXXXXXXX' : undefined} {...props} />
+                  const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'off' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
+                  return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'url' : 'text'} inputMode={f === 'phone' ? 'numeric' : f === 'photoLink' ? 'url' : undefined} maxLength={f === 'phone' ? 11 : undefined} placeholder={f === 'session' ? '2020-21' : f === 'phone' ? '01XXXXXXXXX' : f === 'photoLink' ? 'https://drive.google.com/…' : undefined} {...props} />
                 })()}
+                {f === 'photoLink' && !errs[f] && <small className="muted">{t('photo.linkHint')}</small>}
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             )))}

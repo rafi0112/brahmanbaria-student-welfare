@@ -33,7 +33,7 @@ function CompleteProfile({ defaultName, onDone }) {
   const { t, n, pick } = useApp()
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
-  const [v, setV] = useState({ name: defaultName, batch: '', department: '', upazila: '', union: '', phone: '', gender: '', bloodGroup: '' })
+  const [v, setV] = useState({ name: defaultName, batch: '', department: '', upazila: '', union: '', phone: '', gender: '', bloodGroup: '', photoLink: '' })
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -85,6 +85,10 @@ function CompleteProfile({ defaultName, onDone }) {
       <label className="field"><span>{t('auth.phone')}</span>
         <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} value={v.phone} placeholder="01XXXXXXXXX" onChange={(e) => setV({ ...v, phone: e.target.value })} aria-invalid={!!errs.phone} />
         {errs.phone && <small className="err">{errs.phone}</small>}
+      </label>
+      <label className="field"><span>{t('photo.linkLabel')}</span>
+        <input type="url" inputMode="url" value={v.photoLink} placeholder="https://drive.google.com/…" onChange={(e) => setV({ ...v, photoLink: e.target.value })} aria-invalid={!!errs.photoLink} />
+        {errs.photoLink ? <small className="err">{errs.photoLink}</small> : <small className="muted">{t('photo.linkHint')}</small>}
       </label>
       <label className="field"><span>{t('auth.gender')}</span>
         <select value={v.gender} onChange={(e) => setV({ ...v, gender: e.target.value })}>

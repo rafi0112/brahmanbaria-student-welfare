@@ -269,16 +269,26 @@ func (a *App) putPhoto(w http.ResponseWriter, r *http.Request, actor User, targe
 		return
 	}
 	defer r.MultipartForm.RemoveAll() //nolint:errcheck
-	f, _, err := r.FormFile("file")
-	if err != nil {
-		apiError(w, http.StatusUnprocessableEntity, "no_photo")
-		return
-	}
-	defer f.Close()
-	raw, err := io.ReadAll(io.LimitReader(f, maxPhotoBytes+1))
-	if err != nil {
-		apiError(w, http.StatusBadRequest, "invalid request body")
-		return
+	var raw []byte
+	if link := strings.TrimSpace(r.FormValue("imageUrl")); link != "" {
+		// a public link (Google Drive share link or any https image): downloaded once, then treated like an upload
+		data, err := a.fetchLinked(r.Context(), link)
+		if !a.linkFailed(w, err) {
+			return
+		}
+		raw = data
+	} else {
+		f, _, err := r.FormFile("file")
+		if err != nil {
+			apiError(w, http.StatusUnprocessableEntity, "no_photo")
+			return
+		}
+		defer f.Close()
+		raw, err = io.ReadAll(io.LimitReader(f, maxPhotoBytes+1))
+		if err != nil {
+			apiError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
 	}
 	data, err := squarePhoto(raw)
 	if err != nil {
@@ -357,3 +367,31 @@ func (a *App) withMemberPhotos(ctx context.Context, rows []MemberAdminRow) {
 	}
 }
 
+
+// photoFromLink downloads and prepares an optional photo link sent with a profile form. An empty link is fine; a bad one
+// is reported as a field error on "photoLink" (and nothing else is saved).
+func (a *App) photoFromLink(w http.ResponseWriter, r *http.Request, link string) ([]byte, bool) {
+	link = strings.TrimSpace(link)
+	if link == "" {
+		return nil, true
+	}
+	fail := func(msg string) ([]byte, bool) {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": map[string]string{"photoLink": msg}})
+		return nil, false
+	}
+	if len(link) > 1000 || !strings.HasPrefix(strings.ToLower(link), "https://") {
+		return fail("Use a public https link to an image.")
+	}
+	raw, err := a.fetchLinked(r.Context(), link)
+	switch {
+	case errors.Is(err, ErrDriveNotPublic):
+		return fail("Share the Google Drive file as 'Anyone with the link' and try again.")
+	case err != nil:
+		return fail("The link does not open a JPG or PNG image.")
+	}
+	data, err := squarePhoto(raw)
+	if err != nil {
+		return fail("The link does not open a usable JPG or PNG image (at least 64 px, up to 5 MB).")
+	}
+	return data, true
+}

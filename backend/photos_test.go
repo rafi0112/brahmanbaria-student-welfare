@@ -188,3 +188,64 @@ func TestProfilePhotosFollowTheViewerRules(t *testing.T) {
 		t.Fatalf("own delete: %d", got.Code)
 	}
 }
+
+func TestProfilePhotoFromALink(t *testing.T) {
+	img := testPNG(t, 300, 300)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/me.png" {
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write(img)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html>not an image</html>"))
+	}))
+	defer srv.Close()
+	e := authApp(t)
+	e.app.Auth.AllowPrivateImageHosts = true
+	ctx := context.Background()
+
+	// registration: a bad link is a field error and creates nothing
+	bad := validReg("link.bad@example.com")
+	bad["photoLink"] = "http://example.com/x.png"
+	if rec := e.do("POST", "/api/v1/auth/register", bad, nil); rec.Code != 422 || !strings.Contains(rec.Body.String(), "photoLink") {
+		t.Fatalf("plain http must be refused: %d %s", rec.Code, rec.Body)
+	}
+	if _, err := e.mem.UserByEmail(ctx, "link.bad@example.com"); err != ErrNotFound {
+		t.Fatal("a refused registration must not create the account")
+	}
+
+	// in-app update: the same endpoint as uploads accepts imageUrl (the test server is plain http, allowed for tests)
+	c := e.member(t, "link.ok@example.com")
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	_ = mw.WriteField("imageUrl", srv.URL+"/me.png")
+	_ = mw.Close()
+	req := httptest.NewRequest("POST", "/api/v1/me/photo", &body)
+	req.RemoteAddr = "9.9.9.9:1000"
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.AddCookie(c)
+	rec := httptest.NewRecorder()
+	e.app.Routes().ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "/api/v1/me/photo?v=") {
+		t.Fatalf("photo from link: %d %s", rec.Code, rec.Body)
+	}
+	u, _ := e.mem.UserByEmail(ctx, "link.ok@example.com")
+	if data, _, _, err := e.mem.ProfilePhoto(ctx, u.ID); err != nil || len(data) == 0 {
+		t.Fatalf("stored: %v", err)
+	}
+	// a link to something that is not an image is refused
+	body.Reset()
+	mw = multipart.NewWriter(&body)
+	_ = mw.WriteField("imageUrl", srv.URL+"/page")
+	_ = mw.Close()
+	req = httptest.NewRequest("POST", "/api/v1/me/photo", &body)
+	req.RemoteAddr = "9.9.9.9:1000"
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.AddCookie(c)
+	rec = httptest.NewRecorder()
+	e.app.Routes().ServeHTTP(rec, req)
+	if rec.Code == 200 {
+		t.Fatalf("an html page must be refused: %d", rec.Code)
+	}
+}

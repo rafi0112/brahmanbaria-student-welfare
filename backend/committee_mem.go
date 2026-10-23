@@ -119,7 +119,7 @@ func (m *memStore) CreateCommittee(_ context.Context, actorID string, in Committ
 	m.cm.seq++
 	now := time.Now()
 	c := &memCommittee{Committee: Committee{
-		ID: fmt.Sprintf("c%04d", m.cm.seq), Name: in.Name, Term: in.Term, StartsOn: in.StartsOn, EndsOn: in.EndsOn,
+		ID: fmt.Sprintf("c%04d", m.cm.seq), Name: in.Name, Term: in.Term, Description: in.Description, StartsOn: in.StartsOn, EndsOn: in.EndsOn,
 		Status: CommitteeDraft, CreatedAt: now.Format(time.RFC3339Nano),
 	}, createdAt: now}
 	m.cm.committees[c.ID] = c
@@ -138,7 +138,7 @@ func (m *memStore) UpdateCommittee(_ context.Context, actorID, id string, in Com
 	if c.Status == CommitteeArchived {
 		return Committee{}, ErrCommitteeArchived
 	}
-	c.Name, c.Term, c.StartsOn, c.EndsOn = in.Name, in.Term, in.StartsOn, in.EndsOn
+	c.Name, c.Term, c.StartsOn, c.EndsOn, c.Description = in.Name, in.Term, in.StartsOn, in.EndsOn, in.Description
 	m.cmLog(id, "", actorID, "committee.update")
 	return m.cmView(c), nil
 }
