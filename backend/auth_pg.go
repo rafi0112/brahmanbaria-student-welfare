@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -168,12 +169,39 @@ func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string, veri
 		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &verifiedAt, &disabledAt)
 	if err != nil {
 		if isUnique(err) {
+			// The address may still sit on a leftover row whose Supabase account was deleted; free it once, then retry.
+			if freed, ferr := s.releaseOrphanEmail(ctx, id, email); ferr == nil && freed {
+				return s.EnsureExternalUser(ctx, id, email, verified)
+			}
 			return User{}, ErrEmailTaken
 		}
 		return User{}, err
 	}
 	u.EmailVerified, u.Disabled = verifiedAt != nil, disabledAt != nil
 	return u, nil
+}
+
+// releaseOrphanEmail frees an email address held by a leftover users row when Supabase Auth has since given that address
+// to a new account (the old Supabase account was deleted and the person registered again). Only a row that is clearly
+// abandoned qualifies: no Supabase account any more, no local password, a plain member, and no member profile. Nothing is
+// deleted; the old row keeps its history and only its address is changed to a reserved, undeliverable one.
+func (s *pgStore) releaseOrphanEmail(ctx context.Context, newID, email string) (bool, error) {
+	var hasAuth bool
+	if err := s.db.QueryRow(ctx, `SELECT to_regclass('auth.users') IS NOT NULL`).Scan(&hasAuth); err != nil || !hasAuth {
+		return false, err
+	}
+	tag, err := s.db.Exec(ctx, `UPDATE users u SET email = 'released+' || u.id::text || '@invalid.invalid', updated_at = now()
+		WHERE lower(u.email) = lower($2) AND u.id <> $1::uuid AND u.password_hash = '' AND u.role = 'member'
+		  AND NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = u.id)
+		  AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id)
+		  AND EXISTS (SELECT 1 FROM auth.users a WHERE a.id = $1::uuid AND lower(a.email) = lower($2))`, newID, email)
+	if err != nil {
+		return false, err
+	}
+	if tag.RowsAffected() > 0 {
+		log.Printf("released the email of a leftover account so Supabase user %s can sign in", newID)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 func (s *pgStore) SetEmailVerified(ctx context.Context, id string) error {
