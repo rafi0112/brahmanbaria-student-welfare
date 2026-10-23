@@ -102,14 +102,10 @@ export default function Home() {
       {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
       <section className="explore2" aria-labelledby="explore-h">
         <div className="explore2-grid">
-          <Reveal className="ex-media">
-            <div className="ex-img blob-b">
-              <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 46vw, 100vw" width="1672" height="941" alt={pick('তিতাসের তীরে সূর্যাস্ত ও মসজিদ', 'Sunset over the river with a mosque on the bank')} loading="lazy" decoding="async" />
-              <span className="ex-shade" aria-hidden="true" />
-              <p className="ex-script" aria-hidden="true"><span>{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span><small>{pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</small><small>{pick('আরও উজ্জ্বল আগামী', 'A brighter tomorrow')}</small></p>
-            </div>
-            <Vine className="vine-ex-tr" />
-            <Vine className="vine-ex-br" flip />
+          <Reveal className="ex-media ex-exact">
+            {/* the supplied artwork as designed: photograph, brushed edge, sprigs and the lettering are one picture */}
+            <img src="/images/bswa/explore-mockup.webp" width="737" height="464" loading="lazy" decoding="async"
+              alt={pick('তিতাসের তীরে সূর্যাস্ত, মসজিদ ও নৌকা — নদী, ঐতিহ্য, মানুষ', 'Sunset on the river with a mosque and boats — rivers, heritage, people')} />
           </Reveal>
           <div className="ex-copy">
             <Reveal>

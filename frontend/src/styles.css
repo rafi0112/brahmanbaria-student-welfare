@@ -878,3 +878,83 @@ html[lang='bn'] .member-card h3 { font-family: 'Noto Serif Bengali', serif; font
   .hx-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 18px; }
   .hx-actions .btn { flex: 1 1 200px; justify-content: center; }
 }
+
+/* explore section: the supplied picture, flush with the left edge like the design */
+.ex-exact img { display: block; width: 100%; height: auto; aspect-ratio: 737 / 464; }
+
+/* =================================================================== premium polish for the inner pages */
+/* page hero: breadcrumb, calmer spacing, no half-circle at the edge */
+.phero-wrap::before { display: none; }
+.phero-wrap { padding-top: clamp(18px, 2.6vw, 36px); background: none; }
+.phero-crumbs { display: flex; align-items: center; gap: 8px; margin: 0 0 18px; font-size: .82rem; color: var(--muted); }
+.phero-crumbs a { color: var(--muted); text-decoration: none; } .phero-crumbs a:hover { color: var(--accent-text); }
+.phero-crumbs [aria-current] { color: var(--ink-2); font-weight: 600; }
+.phero-crumbs span[aria-hidden] { opacity: .5; }
+
+/* rich empty state */
+.state-rich { gap: 12px; padding: clamp(36px, 5vw, 64px) 20px; border: 1px solid var(--line); border-style: solid; color: var(--ink-2);
+  background: radial-gradient(60% 80% at 50% 0%, color-mix(in srgb, var(--peach) 30%, transparent), transparent 70%), color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 1px 2px rgba(30, 32, 36, .04), 0 18px 40px -28px rgba(30, 32, 36, .25); }
+.state-rich p { max-width: 52ch; margin: 0; color: var(--muted); }
+.state-ico { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; color: var(--accent-text); background: color-mix(in srgb, var(--accent) 12%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
+.state-title { margin: 4px 0 0; font-size: clamp(1.4rem, 2.2vw, 1.8rem); }
+.state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+
+/* a toolbar card for filters (alumni) */
+.toolbar-card { padding: 12px; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: 0 10px 30px -24px rgba(30, 32, 36, .35); }
+
+/* alumni cards */
+.alumni-card { display: grid; grid-template-columns: none; gap: 12px; align-content: start; padding: 20px; transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.alumni-card:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -24px rgba(30, 32, 36, .35); }
+.al-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.al-head h3 { margin: 0 0 3px; font: 700 1.02rem/1.3 var(--font-body); }
+.al-role { margin: 0; color: var(--accent-text); font-size: .86rem; font-weight: 600; }
+.al-work { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--paper-2); color: var(--ink-2); font-size: .86rem; }
+.al-work svg { flex: none; margin-top: 2px; color: var(--muted); }
+.al-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.al-chips .chip-mini { padding: 3px 9px; border-radius: 99px; font-size: .76rem; background: var(--paper-2); color: var(--ink-2); }
+.al-chips .is-batch { background: color-mix(in srgb, var(--teal) 12%, var(--card)); color: var(--teal); }
+
+/* FAQ: numbered questions beside a help card */
+.faq-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: clamp(20px, 3vw, 40px); align-items: start; }
+.faq-layout .faq-list { margin: 0; }
+.faq-item { padding: 2px 22px; box-shadow: 0 1px 2px rgba(30, 32, 36, .03); }
+.faq-item[open] { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: 0 16px 34px -26px rgba(233, 79, 32, .45); }
+.faq-item summary { align-items: center; padding: 16px 0; }
+.faq-n { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; font-size: .78rem; color: var(--muted); background: var(--paper-2); }
+.faq-item[open] .faq-n { color: #fff; background: var(--accent); }
+.faq-q { flex: 1; }
+.faq-item p { padding-left: 46px; line-height: 1.7; }
+.faq-help { position: sticky; top: calc(var(--nav-h) + 20px); display: grid; gap: 12px; justify-items: start; padding: 26px; border-radius: var(--r-lg); color: #fff;
+  background: radial-gradient(80% 60% at 100% 0%, color-mix(in srgb, var(--teal) 60%, #fff 0%), transparent), linear-gradient(160deg, var(--teal), var(--evergreen, #04362C)); }
+.faq-help h2 { margin: 0; color: #fff; font-size: 1.5rem; }
+.faq-help p { margin: 0; color: color-mix(in srgb, #fff 82%, transparent); }
+.faq-help .state-ico { color: #fff; background: rgba(255, 255, 255, .12); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); }
+.faq-help-link { color: #fff; font-size: .9rem; opacity: .85; } .faq-help-link:hover { opacity: 1; }
+
+/* About: value chips, the numbers as a band, a closing call to action */
+.value { padding: 24px; transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.value:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -26px rgba(30, 32, 36, .35); }
+.value-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: var(--accent-text); background: color-mix(in srgb, var(--accent) 11%, var(--card)); }
+.about-stats > dl, .about-stats { border-top: 0; border-bottom: 0; }
+.about-stats { border-radius: var(--r-lg); background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); padding: clamp(10px, 1.6vw, 18px); }
+.cta-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-top: clamp(32px, 5vw, 56px); padding: clamp(26px, 4vw, 44px);
+  border-radius: var(--r-lg); color: #fff; background: radial-gradient(60% 120% at 100% 0%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 60%), linear-gradient(150deg, var(--teal), #04362C); }
+.cta-band h2 { margin: 0 0 6px; color: #fff; } .cta-band p { margin: 0; max-width: 56ch; color: color-mix(in srgb, #fff 82%, transparent); }
+.cta-band-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* gallery: the caption rides on a soft gradient, the photo zooms a little */
+.masonry-item { overflow: hidden; border-radius: 22px; }
+.masonry-item .photo img { transition: transform .6s var(--ease); }
+.masonry-item:hover .photo img, .masonry-item:focus-visible .photo img { transform: scale(1.04); }
+.masonry-item::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, .62)); }
+.masonry-item:hover::after, .masonry-item:focus-visible::after { opacity: 1; }
+.masonry-item span { left: 14px; right: 14px; bottom: 14px; font-size: .86rem; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+.masonry-item:hover span, .masonry-item:focus-visible span { transform: none; }
+
+@media (max-width: 900px) {
+  .faq-layout { grid-template-columns: 1fr; } .faq-help { position: static; }
+  .faq-item p { padding-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .alumni-card, .value, .masonry-item .photo img { transition: none; } }

@@ -83,9 +83,17 @@ export function Loading() {
   return <div className="state" role="status" aria-live="polite"><span className="spinner" aria-hidden="true" />{t('state.loading')}</div>
 }
 
-export function Empty({ children }) {
+export function Empty({ children, icon, title, action }) {
   const { t } = useApp()
-  return <div className="state state-empty">{children || t('state.empty')}</div>
+  if (!icon && !title && !action) return <div className="state state-empty">{children || t('state.empty')}</div>
+  return (
+    <div className="state state-empty state-rich">
+      {icon && <span className="state-ico" aria-hidden="true"><Icon name={icon} size={26} /></span>}
+      {title && <h2 className="state-title">{title}</h2>}
+      <p>{children || t('state.empty')}</p>
+      {action && <div className="state-actions">{action}</div>}
+    </div>
+  )
 }
 
 export function ErrorState({ error, retry }) {
@@ -134,6 +142,7 @@ export function Crumbs({ items }) {
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
 export function PageHero({ kicker, title, lede, image, imageUrl, src, script, children }) {
+  const { t } = useApp()
   let head = title, last = ''
   if (typeof title === 'string' && title.includes(' ')) {
     const i = title.lastIndexOf(' ')
@@ -144,6 +153,7 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, ch
     <header className="phero-wrap">
       <div className="wrap phero">
         <div className="phero-copy">
+          <nav className="phero-crumbs" aria-label={t('nav.breadcrumb')}><Link to="/">{t('nav.home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{kicker || head}</span></nav>
           {kicker && <p className="eyebrow">{kicker}</p>}
           <h1>{head}{last && <span className="hl">{last}</span>}</h1>
           {lede && <p className="phero-lede">{lede}</p>}

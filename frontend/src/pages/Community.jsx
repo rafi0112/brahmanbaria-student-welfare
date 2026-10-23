@@ -22,7 +22,7 @@ export function Events() {
       <section className="section wrap">
         <Data q={res}>
           {(d) => {
-            if (d.items.length === 0) return <Empty>{t('events.empty')}</Empty>
+            if (d.items.length === 0) return <Empty icon="calendar" title={t('events.emptyTitle')} action={<><Link className="btn btn-dark" to="/contact">{t('events.suggest')} <Icon name="arrow" size={16} className="arr" /></Link><Link className="btn btn-outline" to="/gallery">{t('events.seeGallery')}</Link></>}>{t('events.empty')}</Empty>
             const sorted = [...d.items].sort((a, b) => a.date.localeCompare(b.date))
             const up = sorted.filter((e) => e.date >= today)
             const past = sorted.filter((e) => e.date < today).reverse()
@@ -83,7 +83,7 @@ export function Alumni() {
         </div>
       </PageHero>
       <section className="section wrap">
-        <div className="filters filters-2">
+        <div className="filters filters-2 toolbar-card">
           <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>
             <option value="">{t('students.allBatches')}</option>
             {Object.keys(facets?.batches || {}).sort((a, b) => a - b).map((b) => <option key={b} value={b}>{t('students.batch')} {n(b)} ({n(facets.batches[b])})</option>)}
@@ -99,17 +99,22 @@ export function Alumni() {
           {(d) => (
             <>
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}</p>
-              {d.items.length === 0 ? <Empty /> : (
+              {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (
                 <div className="cards-3">
                   {d.items.map((a) => (
                     <article key={a.id} className="alumni-card">
-                      <Avatar name={a.name} size={54} />
-                      <div>
-                        <h3>{a.name}</h3>
-                        {(a.designation || a.occupation) && <p>{[a.designation, a.occupation].filter(Boolean).join(' · ')}</p>}
-                        {a.workplace && <p className="muted">{a.workplace}</p>}
-                        <p className="muted small">{[a.department, a.batch ? `${t('students.batch')} ${n(a.batch)}` : ''].filter(Boolean).join(' · ')}</p>
-                      </div>
+                      <header className="al-head">
+                        <Avatar name={a.name} size={52} />
+                        <div>
+                          <h3>{a.name}</h3>
+                          {(a.designation || a.occupation) && <p className="al-role">{[...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')}</p>}
+                        </div>
+                      </header>
+                      {a.workplace && <p className="al-work"><Icon name="landmark" size={15} /> <span>{a.workplace}</span></p>}
+                      <p className="al-chips">
+                        {a.department && <span className="chip-mini">{a.department}</span>}
+                        {a.batch ? <span className="chip-mini is-batch">{t('students.batch')} {n(a.batch)}</span> : null}
+                      </p>
                     </article>
                   ))}
                 </div>
@@ -132,7 +137,7 @@ export function Committee() {
       <PageHero kicker={t('committee.kicker')} title={t('committee.title')} lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap">
         <Data q={res}>
-          {(d) => !d.committee || d.members.length === 0 ? <Empty>{t('committee.empty')}</Empty> : (
+          {(d) => !d.committee || d.members.length === 0 ? <Empty icon="users" title={t('committee.emptyTitle')} action={<Link className="btn btn-outline" to="/contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>}>{t('committee.empty')}</Empty> : (
             <>
               <header className="committee-head">
                 <h2>{d.committee.name}</h2>
@@ -188,22 +193,26 @@ export function FAQPage() {
   return (
     <>
       <PageHero kicker={t('faq.kicker')} title={t('faq.title')} lede={t('faq.lede')} src="/images/bswa/baul.webp" />
-      <section className="section wrap narrow">
+      <section className="section wrap faq-layout">
         <Data q={res}>
           {(d) => (
             <div className="faq-list">
-              {d.items.map((f) => (
-                <details key={f.qEn} className="faq-item">
-                  <summary>{pick(f.qBn, f.qEn)}</summary>
+              {d.items.map((f, i) => (
+                <details key={f.qEn} className="faq-item" open={i === 0}>
+                  <summary><span className="faq-n num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><span className="faq-q">{pick(f.qBn, f.qEn)}</span></summary>
                   <p>{pick(f.aBn, f.aEn)}</p>
                 </details>
               ))}
             </div>
           )}
         </Data>
-        <p className="muted center">
-          <Link className="link-arrow" to="/contact">{t('footer.send')} →</Link>
-        </p>
+        <aside className="faq-help">
+          <span className="state-ico" aria-hidden="true"><Icon name="mail" size={22} /></span>
+          <h2>{t('faq.helpTitle')}</h2>
+          <p>{t('faq.helpText')}</p>
+          <Link className="btn btn-dark" to="/contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>
+          <Link className="faq-help-link" to="/membership">{t('faq.helpMember')} →</Link>
+        </aside>
       </section>
     </>
   )

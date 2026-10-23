@@ -170,7 +170,7 @@ export function About() {
         <div className="values">
           {values.map(([k, d]) => (
             <div key={k} className="value">
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+              <span className="value-ico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg></span>
               <h3>{t(`about.${k}`)}</h3><p className="muted">{t(`about.${k}d`)}</p>
             </div>
           ))}
@@ -181,6 +181,13 @@ export function About() {
               <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
             ))}
           </dl>
+        </div>
+        <div className="cta-band">
+          <div><h2>{t('about.ctaTitle')}</h2><p>{t('about.ctaText')}</p></div>
+          <div className="cta-band-actions">
+            <Link className="btn btn-dark" to="/register">{t('nav.register')} <Icon name="arrow" size={16} className="arr" /></Link>
+            <Link className="btn btn-on-dark" to="/committee">{t('nav.committee')}</Link>
+          </div>
         </div>
       </section>
     </>
