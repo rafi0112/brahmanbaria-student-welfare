@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useBase } from '../lib/base.js'
 import { useApp } from '../lib/app.jsx'
-import { Badge, MediaPhoto, Avatar } from './ui.jsx'
+import { Badge, MediaPhoto, initials } from './ui.jsx'
 import Icon from './Icon.jsx'
 
 export function PlaceCard({ p, upazilas = [] }) {
@@ -44,28 +44,33 @@ export function PostCard({ p, big = false }) {
   )
 }
 
+const TINTS = ['peach', 'teal', 'orange', 'sand']
+function tintOf(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 997; return TINTS[h % TINTS.length] }
+
+// A student in the directory: a monogram panel (no portraits are stored), then name, department, batch and place.
+// Members see extra details only when the API sends them.
 export function StudentCard({ s, upazilas = [] }) {
   const { t, n, pick } = useApp()
   const base = useBase()
   const up = upazilas.find((u) => u.slug === s.upazila)
+  const place = up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''
   return (
     <Link to={`${base}/students/${s.id}`} className="student-card">
-      <Avatar name={s.name} size={58} />
-      <div className="student-info">
+      <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true"><b>{initials(s.name)}</b><span className="sc-go"><Icon name="arrow" size={15} /></span></span>
+      <span className="student-info">
         <h3>{s.name}</h3>
-        <p>{s.department || '—'}</p>
-        <p className="muted">
-          {s.batch ? `${t('students.batch')} ${n(s.batch)}` : ''}{s.batch && up ? ' · ' : ''}{up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''}
+        <p className="sc-dept">{s.department || '—'}</p>
+        <p className="sc-meta">
+          {s.batch ? <span>{t('students.batch')} {n(s.batch)}</span> : null}
+          {place ? <span><Icon name="pin" size={13} /> {place}</span> : null}
         </p>
-        {s.details && (
+        {s.details && (s.details.phone || s.details.bloodGroup) && (
           <p className="student-extra">
-            {s.details.session && <span>{s.details.session}</span>}
             {s.details.phone && <span className="num">{s.details.phone}</span>}
             {s.details.bloodGroup && <span className="chip-mini">{s.details.bloodGroup}</span>}
           </p>
         )}
-      </div>
-      <span className="pill-btn">{t('students.view')}</span>
+      </span>
     </Link>
   )
 }

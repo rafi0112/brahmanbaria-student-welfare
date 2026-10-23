@@ -29,7 +29,7 @@ export default function Directory() {
 
   return (
     <>
-      <PageHero kicker={t('dir.kicker')} title={t('dir.title')} lede={t('dir.lede')} image="titas-shahbazpur">
+      <PageHero kicker={t('dir.kicker')} title={t('dir.title')} lede={t('dir.lede')} src="/images/bswa/river.webp">
         <div className="banner-search" role="search">
           <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('dir.search')} aria-label={t('dir.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>

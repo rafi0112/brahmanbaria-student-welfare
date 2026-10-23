@@ -129,19 +129,26 @@ export function Crumbs({ items }) {
   )
 }
 
-// Rounded banner with a photo, dark overlay and white serif title (matches the page mockups).
-// `children` is rendered inside the banner (search box, filter chips).
-export function PageHero({ kicker, title, lede, image, imageUrl, children }) {
+// Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
+// search or chips (`children`) and a photograph beside it. Decorative image, real text.
+export function PageHero({ kicker, title, lede, image, imageUrl, src, children }) {
+  let head = title, last = ''
+  if (typeof title === 'string' && title.includes(' ')) {
+    const i = title.lastIndexOf(' ')
+    head = title.slice(0, i + 1)
+    last = title.slice(i + 1)
+  }
   return (
-    <header className="page-banner-wrap wrap">
-      <div className="page-banner">
-        <MediaPhoto id={image} url={imageUrl} eager className="banner-photo" sizes="(min-width: 1200px) 1180px, 100vw" alt="" />
-        <div className="banner-shade" />
-        <div className="banner-copy">
-          {kicker && <p className="kicker kicker-light">{kicker}</p>}
-          <h1>{title}</h1>
-          {lede && <p className="lede">{lede}</p>}
+    <header className="phero-wrap">
+      <div className="wrap phero">
+        <div className="phero-copy">
+          {kicker && <p className="eyebrow">{kicker}</p>}
+          <h1>{head}{last && <span className="hl">{last}</span>}</h1>
+          {lede && <p className="phero-lede">{lede}</p>}
           {children}
+        </div>
+        <div className="phero-media">
+          {src ? <img className="phero-img" src={src} alt="" width="700" height="460" fetchpriority="high" /> : <MediaPhoto id={image} url={imageUrl} eager sizes="(min-width: 1000px) 48vw, 100vw" alt="" />}
         </div>
       </div>
     </header>
@@ -157,11 +164,13 @@ export function initials(name) {
   return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase()
 }
 
+// A monogram in one of four soft palette tints, chosen from the name so it stays the same for the same person.
 export function Avatar({ name, size = 52 }) {
   let h = 0
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 997
+  const tint = ['peach', 'teal', 'orange', 'sand'][h % 4]
   return (
-    <span className="avatar" style={{ width: size, height: size, background: `hsl(${(h % 60) + 95} 28% 32%)`, fontSize: size * 0.36 }} aria-hidden="true">
+    <span className={`avatar tint-${tint}`} style={{ width: size, height: size, fontSize: size * 0.36 }} aria-hidden="true">
       {initials(name)}
     </span>
   )

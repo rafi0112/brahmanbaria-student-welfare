@@ -28,7 +28,7 @@ export default function Heritage() {
   const upazilas = ups.data?.items || []
   return (
     <>
-      <PageHero kicker={t('heritage.kicker')} title={t('nav.heritage')} lede={t('heritage.lede')} image="arifail-06">
+      <PageHero kicker={t('heritage.kicker')} title={t('nav.heritage')} lede={t('heritage.lede')} src="/images/bswa/mosque.webp">
         <div className="banner-search" role="search">
           <input type="search" value={f.q} onChange={(e) => set({ q: e.target.value })} placeholder={t('heritage.search')} aria-label={t('heritage.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -94,8 +94,8 @@ export function HeritageDetail() {
               <PageHero image={p.images[0]} imageUrl={p.imageUrls?.[0]} title={pick(p.nameBn, p.nameEn)}>
                 <div className="row">
                   <Badge tone="gold">{t(`cat.${p.category}`)}</Badge>
-                  <span className={`verify ${p.verified ? 'yes' : 'no'}`} style={{ color: '#fff' }}>{p.verified ? t('place.verified') : t('place.unverified')}</span>
-                  {up && <Link to={`/directory/${up.slug}`} style={{ color: '#fff' }}>📍 {pick(up.nameBn, up.nameEn)}</Link>}
+                  <span className={`verify ${p.verified ? 'yes' : 'no'}`} >{p.verified ? t('place.verified') : t('place.unverified')}</span>
+                  {up && <Link to={`/directory/${up.slug}`}>📍 {pick(up.nameBn, up.nameEn)}</Link>}
                 </div>
               </PageHero>
             </div>

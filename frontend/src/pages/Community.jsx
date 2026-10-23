@@ -6,13 +6,19 @@ import { Avatar, Data, Empty, PageHero, Pagination, Photo } from '../components/
 import Icon from '../components/Icon.jsx'
 
 /* ---------------- Events ---------------- */
+function dateParts(date, lang, n) {
+  const d = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return null
+  return { day: n(d.getDate()), month: d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { month: 'short' }) }
+}
+
 export function Events() {
-  const { t, pick } = useApp()
+  const { t, pick, n, lang } = useApp()
   const res = useApi('/events')
   const today = new Date().toISOString().slice(0, 10)
   return (
     <>
-      <PageHero kicker={t('events.kicker')} title={t('events.title')} lede={t('events.lede')} image="alinagar-fair" />
+      <PageHero kicker={t('events.kicker')} title={t('events.title')} lede={t('events.lede')} src="/images/bswa/puppets.webp" />
       <section className="section wrap">
         <Data q={res}>
           {(d) => {
@@ -26,7 +32,10 @@ export function Events() {
                 <div className="cards-3">
                   {items.map((e) => (
                     <article key={e.slug} className="event-card">
-                      {e.image && <Photo id={e.image} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" />}
+                      <div className="event-img">
+                        {e.image ? <Photo id={e.image} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" /> : <div className="event-img-empty" aria-hidden="true" />}
+                        {dateParts(e.date, lang, n) && <time className="event-date" dateTime={e.date}><b>{dateParts(e.date, lang, n).day}</b><span>{dateParts(e.date, lang, n).month}</span></time>}
+                      </div>
                       <h3>{pick(e.titleBn, e.titleEn)}</h3>
                       <p className="muted meta"><Icon name="calendar" size={14} /> {e.date} {e.venue && <><Icon name="pin" size={14} /> {e.venue}</>}</p>
                       <p>{e.summary}</p>
@@ -67,7 +76,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} lede={t('alumni.lede')} image="kasba-sunset">
+      <PageHero kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} lede={t('alumni.lede')} src="/images/bswa/river.webp">
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -120,7 +129,7 @@ export function Committee() {
   const res = useApi('/executive-committee')
   return (
     <>
-      <PageHero kicker={t('committee.kicker')} title={t('committee.title')} lede={t('committee.lede')} image="titas-shahbazpur" />
+      <PageHero kicker={t('committee.kicker')} title={t('committee.title')} lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap">
         <Data q={res}>
           {(d) => !d.committee || d.members.length === 0 ? <Empty>{t('committee.empty')}</Empty> : (
@@ -159,7 +168,7 @@ export function FAQPage() {
   const res = useApi('/faq')
   return (
     <>
-      <PageHero kicker={t('faq.kicker')} title={t('faq.title')} lede={t('faq.lede')} image="dhoranti-sarail" />
+      <PageHero kicker={t('faq.kicker')} title={t('faq.title')} lede={t('faq.lede')} src="/images/bswa/baul.webp" />
       <section className="section wrap narrow">
         <Data q={res}>
           {(d) => (
@@ -186,7 +195,7 @@ export function Membership() {
   const { t, n } = useApp()
   return (
     <>
-      <PageHero kicker={t('member.kicker')} title={t('member.title')} lede={t('member.lede')} image="nabinagar" />
+      <PageHero kicker={t('member.kicker')} title={t('member.title')} lede={t('member.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap two-col">
         <div>
           <h2>{t('member.who')}</h2>

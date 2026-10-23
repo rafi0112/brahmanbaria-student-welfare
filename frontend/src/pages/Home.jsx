@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
-import { Photo, Avatar } from '../components/ui.jsx'
+import { Avatar } from '../components/ui.jsx'
 import { PlaceCard, PostCard } from '../components/cards.jsx'
 
 const QUICK = [
@@ -17,13 +17,12 @@ const QUICK = [
   ['/gallery', 'quick.gallery', 'quick.galleryD', 'image'],
 ]
 
-// Themes of the district, each opening the page that really holds it.
-const THEMES = [
-  { id: 'arifail-01', bn: 'মসজিদ ও ইসলামী ঐতিহ্য', en: 'Mosques & Islamic heritage', to: '/heritage?category=mosque' },
-  { id: 'titas-morning', bn: 'নদী ও প্রকৃতি', en: 'Rivers & natural beauty', to: '/heritage?category=river' },
-  { id: 'boat-race', bn: 'নৌকাবাইচ ও লোকসংস্কৃতি', en: 'Boat racing & folk culture', to: '/gallery' },
-  { id: 'bariura-bridge', bn: 'ঐতিহাসিক স্থান', en: 'Historical places', to: '/heritage?category=bridge' },
-  { id: 'kullapathar', bn: 'স্মৃতিসৌধ ও মুক্তিযুদ্ধ', en: 'Memorials & the Liberation War', to: '/heritage?category=memorial' },
+// The cultural pillars of the district, each opening the page that really holds it.
+const CULTURE = [
+  { img: 'mosque', w: 530, h: 500, bn: 'ইসলামী ঐতিহ্য', en: 'Islamic Heritage', sbn: 'মসজিদ ও স্থাপত্য', sen: 'Mosques & architecture', to: '/heritage?category=mosque' },
+  { img: 'baul', w: 382, h: 400, bn: 'বাউল ও লোকসংস্কৃতি', en: 'Baul & Folk Culture', sbn: 'গান, গল্প ও যন্ত্র', sen: 'Music, stories & instruments', to: '/gallery' },
+  { img: 'puppets', w: 395, h: 512, bn: 'পুতুল নাচ', en: 'Putul Nach', sbn: 'ঐতিহ্যবাহী পুতুল নাচ', sen: 'Traditional puppet dance', to: '/gallery' },
+  { img: 'river', w: 740, h: 421, bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', sbn: 'তিতাস, মেঘনা ও আরও', sen: 'The Titas, the Meghna and more', to: '/heritage?category=river' },
 ]
 
 function MapPanel({ u }) {
@@ -63,63 +62,53 @@ export default function Home() {
 
   return (
     <>
-      {/* ---------- hero: the artwork sets the scene, the copy sits in its open sky ---------- */}
+      {/* ---------- hero: copy on the cream canvas, the river-and-mosque artwork beside it ---------- */}
       <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-media" aria-hidden="true">
-          <img src="/images/hero-art-1774.webp" srcSet="/images/hero-art-1000.webp 1000w, /images/hero-art-1774.webp 1774w" sizes="100vw" width="1774" height="512" alt="" fetchpriority="high" />
-        </div>
-        <div className="hero-shade" aria-hidden="true" />
-        <div className="wrap hero-inner">
+        <div className="wrap hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow">{pick('ইতিহাস · ঈমান · সংস্কৃতি · মানুষ', 'History · Faith · Culture · People')}</p>
-            <h1 id="hero-title">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</h1>
-            <p className="hero-sub">{pick('আমাদের ঐতিহ্য, আমাদের মানুষ, আরও উজ্জ্বল আগামী', 'Our heritage, our people, a brighter tomorrow')}</p>
-            <p className="hero-lede">{pick('বিশ্ববিদ্যালয়-পড়ুয়াদের একটি কমিউনিটি, যারা জেলার ইসলামী ঐতিহ্য, সংস্কৃতি ও প্রকৃতিকে ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of university students preserving the district’s Islamic heritage, culture and natural beauty, and building opportunities together.')}</p>
+            <p className="eyebrow">{pick('ব্রাহ্মণবাড়িয়া · বাংলাদেশ', 'Brahmanbaria · Bangladesh')}</p>
+            <h1 id="hero-title">
+              <span>{pick('আমাদের ঐতিহ্য।', 'Our Heritage.')}</span>{' '}
+              <span>{pick('আমাদের মানুষ।', 'Our People.')}</span>{' '}
+              <span className="hl">{pick('আমাদের আগামী।', 'Our Tomorrow.')}</span>
+            </h1>
+            <p className="hero-lede">{pick('ব্রাহ্মণবাড়িয়ার শিক্ষার্থীদের একটি কমিউনিটি, যারা জেলার ইসলামী ঐতিহ্য, বাউল সংগীত, পুতুল নাচ ও নদীর সৌন্দর্যকে ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of Brahmanbaria’s students, preserving the district’s Islamic heritage, Baul music, Putul Nach and river landscapes, and building opportunities together.')}</p>
+            <div className="hero-actions">
+              <Link className="btn btn-dark" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
+              <Link className="btn btn-outline" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('কমিউনিটিতে যোগ দিন', 'Join the community')}</Link>
+            </div>
             <form className="hero-search" onSubmit={submit} role="search">
               <Icon name="search" size={18} className="hero-search-ico" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('hero.search')} aria-label={t('hero.search')} />
-              <button className="btn btn-dark" type="submit">{t('hero.searchBtn')}</button>
+              <button className="btn btn-sm btn-outline" type="submit">{t('hero.searchBtn')}</button>
             </form>
-            <div className="hero-links">
-              <Link className="btn-text" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('কমিউনিটিতে যোগ দিন', 'Join the community')} <Icon name="arrow" size={15} className="arr" /></Link>
-              <Link className="btn-text quiet" to="/heritage">{pick('ঐতিহ্য ঘুরে দেখুন', 'Explore heritage')}</Link>
-            </div>
+          </div>
+          <div className="hero-media">
+            <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-640.webp 640w, /images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 58vw, 100vw" width="1672" height="941" alt={pick('সূর্যাস্তের নদী, মসজিদ ও একজন বাউল শিল্পী', 'A river at sunset, a mosque and a Baul musician')} fetchpriority="high" />
           </div>
         </div>
-      </section>
-
-      {/* ---------- real numbers, quietly ---------- */}
-      <section className="wrap stats-strip" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
-        <dl>
-          {[
-            ['students', s?.students, 'শিক্ষার্থী', 'Students'],
-            ['upazilas', s?.upazilas, 'উপজেলা', 'Upazilas'],
-            ['unions', unionCount || undefined, 'ইউনিয়ন পরিষদ', 'Union parishads'],
-            ['places', s?.places, 'ঐতিহাসিক স্থান', 'Historical places'],
-          ].map(([k, v, bn, en]) => (
-            <div key={k}><dt>{pick(bn, en)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
-          ))}
-        </dl>
-      </section>
-
-      {/* ---------- themes of the district ---------- */}
-      <section className="section wrap" aria-labelledby="themes-h">
-        <Reveal className="section-head">
-          <div>
-            <p className="kicker">{pick('ঐতিহ্যের সূচি', 'A heritage index')}</p>
-            <h2 id="themes-h">{pick('জেলাকে চিনুন বিষয় ধরে', 'Discover the district by theme')}</h2>
-          </div>
-          <Link className="link-arrow" to="/heritage">{t('common.viewAll')} <Icon name="arrow" size={15} className="arr" /></Link>
-        </Reveal>
-        <div className="themes">
-          {THEMES.map((th, i) => (
-            <Reveal key={th.id} delay={i * 60} className={`theme t${i + 1}`}>
-              <Link className="theme-card" to={th.to}>
-                <Photo id={th.id} sizes={i < 2 ? '(min-width: 900px) 55vw, 82vw' : '(min-width: 900px) 33vw, 82vw'} alt="" />
-                <span className="theme-copy"><span>{pick(th.bn, th.en)}</span><Icon name="arrow" size={16} className="arr" /></span>
-              </Link>
-            </Reveal>
-          ))}
+        <div className="wrap hero-foot">
+          <dl className="stats-strip-inline" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
+            {[
+              ['students', s?.students, 'users', 'শিক্ষার্থী', 'Students'],
+              ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas'],
+              ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads'],
+              ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places'],
+            ].map(([k, v, ic, bn, en]) => (
+              <div key={k}><span className="stat-ico" aria-hidden="true"><Icon name={ic} size={20} /></span><dt>{pick(bn, en)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
+            ))}
+          </dl>
+          <ul className="culture">
+            {CULTURE.map((c) => (
+              <li key={c.img}>
+                <Link to={c.to} className="culture-card">
+                  <img src={`/images/bswa/${c.img}.webp`} alt="" loading="lazy" decoding="async" width={c.w} height={c.h} />
+                  <span className="culture-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.sbn, c.sen)}</small></span>
+                  <Icon name="arrow" size={16} className="arr culture-arr" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -165,8 +154,8 @@ export default function Home() {
           <Link className="btn btn-dark" to="/about">{t('collage.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
         </Reveal>
         <div className="story-media">
-          <Reveal className="story-main"><Photo id="alinagar-fair" sizes="(min-width: 900px) 42vw, 92vw" /></Reveal>
-          <Reveal className="story-side" delay={120}><Photo id="titas-boat" sizes="(min-width: 900px) 22vw, 50vw" /></Reveal>
+          <Reveal className="story-main"><div className="photo shape-r"><img src="/images/bswa/river.webp" alt={pick('নদীর তীরে সূর্যাস্ত', 'Sunset on the river')} width="740" height="421" loading="lazy" decoding="async" /></div></Reveal>
+          <Reveal className="story-side" delay={120}><div className="photo shape-r"><img src="/images/bswa/mosque.webp" alt={pick('মসজিদ ও গাছপালা', 'A mosque among the trees')} width="530" height="500" loading="lazy" decoding="async" /></div></Reveal>
           <p className="story-caption">{t('collage.script')}</p>
         </div>
       </section>
