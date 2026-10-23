@@ -3,18 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
-import UpazilaMap from '../components/UpazilaMap.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
-import { Avatar } from '../components/ui.jsx'
+import { Avatar, Photo } from '../components/ui.jsx'
+import { Sprig, SketchArt } from '../components/Decor.jsx'
 import { PlaceCard, PostCard } from '../components/cards.jsx'
 
-const QUICK = [
-  ['/students', 'quick.students', 'quick.studentsD', 'users'],
-  ['/directory', 'quick.directory', 'quick.directoryD', 'pin'],
-  ['/heritage', 'quick.heritage', 'quick.heritageD', 'landmark'],
-  ['/blog', 'quick.blog', 'quick.blogD', 'book'],
-  ['/gallery', 'quick.gallery', 'quick.galleryD', 'image'],
+// The three discovery cards of "Explore Brahmanbaria", each opening the page that holds it.
+const DISCOVER = [
+  { to: '/heritage', img: '/images/bariura-bridge-640.webp', bn: 'ঐতিহ্য ও নিদর্শন', en: 'Heritage & Landmarks', dbn: 'ঐতিহাসিক স্থান ও সাংস্কৃতিক নিদর্শন ঘুরে দেখুন।', den: 'Explore historic places and cultural landmarks.' },
+  { to: '/heritage?category=mosque', img: '/images/bswa/mosque.webp', bn: 'ইসলামী সংস্কৃতি ও ঐতিহ্য', en: 'Islamic Culture & Traditions', dbn: 'বিশ্বাস, উৎসব ও স্থানীয় ঐতিহ্য জানুন।', den: 'Discover faith, festivals and local traditions.' },
+  { to: '/heritage?category=river', img: '/images/bswa/river.webp', bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', dbn: 'শান্ত নদী, প্রকৃতি ও মনোরম দৃশ্য।', den: 'Experience serene rivers, natural beauty and scenic landscapes.' },
 ]
 
 // The cultural pillars of the district, each opening the page that really holds it.
@@ -25,33 +24,16 @@ const CULTURE = [
   { img: 'river', w: 740, h: 421, bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', sbn: 'তিতাস, মেঘনা ও আরও', sen: 'The Titas, the Meghna and more', to: '/heritage?category=river' },
 ]
 
-function MapPanel({ u }) {
-  const { t, n, pick } = useApp()
-  if (!u) return null
-  return (
-    <div className="map-panel">
-      <h3>{pick(u.nameBn, u.nameEn)}</h3>
-      <dl className="mini-stats">
-        <div><dt>{t('dir.members')}</dt><dd className="num">{n(u.members)}</dd></div>
-        <div><dt>{t('dir.unions')}</dt><dd className="num">{n(u.unions.length)}</dd></div>
-        <div><dt>{t('dir.places')}</dt><dd className="num">{n(u.places)}</dd></div>
-      </dl>
-      <Link className="btn btn-outline btn-sm" to={`/directory/${u.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>
-    </div>
-  )
-}
-
 export default function Home() {
   const { t, n, pick } = useApp()
   const { user } = useAuth()
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const [sel, setSel] = useState('sadar')
   const stats = useApi('/stats')
   const ups = useApi('/upazilas')
   const places = useApi('/heritage')
   const posts = useApi('/blog')
-  const students = useApi('/students?limit=5')
+  const students = useApi('/students?limit=6')
   const upazilas = ups.data?.items || []
   const placeList = places.data?.items || []
   const s = stats.data
@@ -83,8 +65,12 @@ export default function Home() {
               <button className="btn btn-sm btn-outline" type="submit">{t('hero.searchBtn')}</button>
             </form>
           </div>
-          <div className="hero-media">
+          <div className="hero-media-wrap">
+          <div className="hero-media blob-a">
             <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-640.webp 640w, /images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 58vw, 100vw" width="1672" height="941" alt={pick('সূর্যাস্তের নদী, মসজিদ ও একজন বাউল শিল্পী', 'A river at sunset, a mosque and a Baul musician')} fetchpriority="high" />
+          </div>
+            <Sprig src="vine-tl" className="sprig-hero-tr" />
+            <Sprig src="leaves-bl" className="sprig-hero-bl" />
           </div>
         </div>
         <div className="wrap hero-foot">
@@ -112,51 +98,46 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- explore the site ---------- */}
-      <section className="section wrap" aria-labelledby="quick-h">
-        <Reveal className="section-head">
-          <div><h2 id="quick-h">{t('quick.title')}</h2><p className="muted">{t('quick.lede')}</p></div>
-        </Reveal>
-        <Reveal className="quick">
-          {QUICK.map(([to, k, d, ic]) => (
-            <Link key={to} to={to} className="quick-item">
-              <span className="quick-ico"><Icon name={ic} size={18} /></span>
-              <b>{t(k)}</b>
-              <small>{t(d)}</small>
-              <Icon name="arrow" size={15} className="arr quick-arr" />
-            </Link>
-          ))}
-        </Reveal>
-      </section>
-
-      {/* ---------- interactive map ---------- */}
-      <section className="section-tint">
-        <div className="section wrap explore">
-          <Reveal className="explore-copy">
-            <p className="kicker">{t('explore.kicker')}</p>
-            <h2>{t('explore.title')}</h2>
-            <p className="lede">{t('explore.lede')}</p>
-            <MapPanel u={upazilas.find((u) => u.slug === sel)} />
-            <Link className="link-arrow" to="/directory">{t('explore.cta')} <Icon name="arrow" size={15} className="arr" /></Link>
+      {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
+      <section className="explore2" aria-labelledby="explore-h">
+        <SketchArt src="river" className="ex-river" />
+        <div className="wrap explore2-grid">
+          <Reveal className="ex-media">
+            <div className="ex-img blob-b">
+              <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 46vw, 100vw" width="1672" height="941" alt={pick('তিতাসের তীরে সূর্যাস্ত ও মসজিদ', 'Sunset over the river with a mosque on the bank')} loading="lazy" decoding="async" />
+              <span className="ex-shade" aria-hidden="true" />
+              <p className="ex-script" aria-hidden="true"><span>{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span><small>{pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</small><small>{pick('আরও উজ্জ্বল আগামী', 'A brighter tomorrow')}</small></p>
+            </div>
+            <Sprig src="sprig" className="sprig-ex-tr" />
+            <Sprig src="leaves-bl" className="sprig-ex-br" />
           </Reveal>
-          <Reveal delay={80}>
-            <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(p) => nav(`/heritage/${p.slug}`)} />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ---------- history, culture and people ---------- */}
-      <section className="section wrap story">
-        <Reveal className="story-copy">
-          <p className="kicker">{t('collage.kicker')}</p>
-          <h2>{t('collage.title')}</h2>
-          <p className="lede">{t('collage.body')}</p>
-          <Link className="btn btn-dark" to="/about">{t('collage.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
-        </Reveal>
-        <div className="story-media">
-          <Reveal className="story-main"><div className="photo shape-r"><img src="/images/bswa/river.webp" alt={pick('নদীর তীরে সূর্যাস্ত', 'Sunset on the river')} width="740" height="421" loading="lazy" decoding="async" /></div></Reveal>
-          <Reveal className="story-side" delay={120}><div className="photo shape-r"><img src="/images/bswa/mosque.webp" alt={pick('মসজিদ ও গাছপালা', 'A mosque among the trees')} width="530" height="500" loading="lazy" decoding="async" /></div></Reveal>
-          <p className="story-caption">{t('collage.script')}</p>
+          <div className="ex-copy">
+            <Reveal>
+              <p className="eyebrow">{pick('অনেক গল্পের একটি জেলা', 'A district of many stories')}</p>
+              <h2 id="explore-h" className="ex-title">{pick('ঘুরে দেখুন ', 'Explore ')}<span className="hl">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span></h2>
+              <p className="lede">{pick('সমৃদ্ধ ইতিহাস, প্রাণবন্ত সংস্কৃতি, শান্ত নদী আর অনুপ্রেরণাদায়ী মানুষের জেলা। নয়টি উপজেলা জুড়ে এর ঐতিহ্য, প্রথা ও মানুষকে জানুন।', 'A land of rich history, vibrant culture, serene rivers and inspiring people. Discover its heritage, traditions and communities across nine upazilas.')}</p>
+            </Reveal>
+            <div className="ex-cards">
+              {DISCOVER.map((c, i) => (
+                <Reveal key={c.to} delay={i * 70}>
+                  <Link to={c.to} className="ex-card">
+                    <span className="ex-thumb blob-c"><img src={c.img} alt="" loading="lazy" decoding="async" /></span>
+                    <span className="ex-card-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.dbn, c.den)}</small></span>
+                    <span className="ex-arr" aria-hidden="true"><Icon name="arrow" size={14} /></span>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
+            <Reveal className="ex-ups">
+              <p className="ex-label">{pick('নয়টি উপজেলা', 'The nine upazilas')}</p>
+              <ul>
+                {upazilas.map((u) => (
+                  <li key={u.slug}><Link to={`/directory/${u.slug}`}><Icon name="pin" size={15} /><span>{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</span><Icon name="arrow" size={13} className="arr" /></Link></li>
+                ))}
+              </ul>
+              <Link className="btn btn-dark ex-all" to="/directory">{pick('সব উপজেলা দেখুন', 'Explore all upazilas')} <Icon name="arrow" size={16} className="arr" /></Link>
+            </Reveal>
+          </div>
         </div>
       </section>
 
@@ -171,22 +152,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- student community ---------- */}
-      <section className="section wrap">
-        <Reveal className="community">
-          <div className="community-copy">
-            <h2>{t('community.title')}</h2>
-            <p className="lede">{t('community.body')}</p>
-            <div className="avatar-row">
-              {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={40} />)}
+      {/* ---------- student community: real community photograph beside an evergreen panel ---------- */}
+      <section className="cband" aria-labelledby="cband-h">
+        <div className="cband-photo">
+          <Photo id="boat-race" sizes="(min-width: 1000px) 50vw, 100vw" alt={pick('নৌকাবাইচ দেখতে নদীর তীরে মানুষের ভিড়', 'People gathered on the riverbank for a boat race')} />
+          <p className="cband-script" aria-hidden="true">{pick('ভিন্ন পথ, একসাথে আগামী', 'Different journeys, a stronger tomorrow')}</p>
+        </div>
+        <div className="cband-copy">
+          <SketchArt src="heritage" className="cb-heritage" />
+          <SketchArt src="students" className="cb-students" />
+          <Reveal>
+            <p className="eyebrow eyebrow-line">{pick('শিক্ষার্থী কমিউনিটি', 'Student community')}</p>
+            <h2 id="cband-h">{pick('যারা গড়ছে আগামী', 'The people shaping tomorrow')}</h2>
+            <p className="cband-lede">{t('community.body')}</p>
+            {(students.data?.items || []).length > 0 && (
+              <div className="cband-avatars">
+                {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={42} />)}
+                <Link to="/students" className="cband-more" aria-label={t('community.cta')}>+</Link>
+              </div>
+            )}
+            <div className="cband-actions">
+              <Link className="btn btn-dark" to="/students">{t('community.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
+              <Link className="btn btn-on-dark" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('BSWA-তে যোগ দিন', 'Join BSWA')}</Link>
             </div>
-            <Link className="btn btn-dark" to="/students">{t('community.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
-          </div>
-          <figure className="community-quote">
-            <blockquote>{t('community.quote')}</blockquote>
-            <img src="/art/students.webp" alt="" loading="lazy" />
-          </figure>
-        </Reveal>
+            <p className="cband-sign" aria-hidden="true">{pick('একই শিকড়, উজ্জ্বল পথ', 'Same roots, brighter paths')}</p>
+          </Reveal>
+        </div>
       </section>
 
       {/* ---------- stories (only real, published articles; placeholders are never public) ---------- */}
@@ -202,16 +193,6 @@ export default function Home() {
       </section>
       )}
 
-      <section className="wrap section">
-        <Reveal className="join-band">
-          <div>
-            <h2>{t('join.title')}</h2>
-            <p>{t('join.body')}</p>
-          </div>
-          <Link className="btn btn-light" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('join.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
-          <span className="visually-hidden">{pick('শুধু ব্রাহ্মণবাড়িয়ার শিক্ষার্থী', 'Brahmanbaria students only')}</span>
-        </Reveal>
-      </section>
     </>
   )
 }

@@ -4,7 +4,7 @@ import { useApp } from '../lib/app.jsx'
 import { api, useApi } from '../lib/api.js'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { toApiError } from '../lib/authErrors.js'
-import { Logo } from '../components/Sketch.jsx'
+import { LeafMark } from '../components/Decor.jsx'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
 import { googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
@@ -151,7 +151,7 @@ export default function Auth({ mode }) {
   return (
     <AuthShell variant={mode === 'register' ? 'register' : mode === 'login' ? 'login' : 'plain'} wide={mode === 'register'}>
       <div className="auth-card">
-        <Logo size={44} />
+        <LeafMark size={46} />
         <h1>{t(cfg.title)}</h1>
         <p className="muted">{t(cfg.sub)}</p>
         {blocked && (
@@ -263,7 +263,7 @@ export function Verify() {
   return (
     <AuthShell>
       <div className="auth-card center">
-        <Logo size={44} />
+        <LeafMark size={46} />
         <h1>{t('auth.verify')}</h1>
         {state === 'checking' && <p className="muted" role="status">{t('auth.verifying')}</p>}
         {state === 'ok' && (

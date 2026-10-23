@@ -47,7 +47,7 @@ export default function Students() {
 
   return (
     <>
-      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} src="/images/bswa/river.webp">
+      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')}>
         <div className="banner-search" role="search">
           <Icon name="search" size={18} className="hero-search-ico" />
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
@@ -202,6 +202,7 @@ export function StudentDetail() {
               </div>
               <aside className="sp-side">
                 <div className="sp-place">
+                  <div className="sp-place-img"><img src="/images/bswa/river.webp" alt="" width="740" height="421" loading="lazy" decoding="async" /></div>
                   <p className="kicker">{t('students.from')}</p>
                   <h3>{upName || '—'}</h3>
                   {up && <Link className="link-arrow" to={`/directory/${up.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>}

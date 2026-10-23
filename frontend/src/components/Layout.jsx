@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
-import { Logo } from './Sketch.jsx'
+import { LeafMark, SketchArt } from './Decor.jsx'
 import Icon from './Icon.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
@@ -51,8 +51,8 @@ function Header() {
       <a className="skip" href="#main">{t('nav.skip')}</a>
       <div className="nav-bar">
         <Link to="/" className="brand" aria-label={t('brand')}>
-          <Logo size={36} />
-          <span><b>{t('brand')}</b><small>{t('brandSub')}</small></span>
+          <LeafMark size={38} />
+          <span><b>{t('brand')}</b><small>{t('brandFull')}</small></span>
         </Link>
         <nav className="nav-links" aria-label="Main">
           {BAR.map(([to, k]) => <NavLink key={to} to={to}>{t(k)}</NavLink>)}
@@ -93,35 +93,43 @@ function Header() {
 
 function Footer() {
   const { t } = useApp()
+  const { user } = useAuth()
   return (
     <footer className="site-footer">
+      <SketchArt src="vine-tl" className="ft-vine" />
+      <SketchArt src="river" className="ft-river" />
+      <SketchArt src="heritage" className="ft-heritage" />
       <div className="footer-grid">
-        <div>
-          <Link to="/" className="brand brand-light"><Logo /><span><b>{t('brand')}</b><small>{t('brandSub')}</small></span></Link>
-          <p>{t('footer.desc')}</p>
+        <div className="ft-brand">
+          <Link to="/" className="brand brand-light"><LeafMark size={46} /><span><b>{t('brand')}</b><small>{t('brandFull')}</small></span></Link>
+          <p>{t('footer.tagline')}</p>
         </div>
-        <div>
+        <nav aria-label={t('footer.explore')}>
           <h2>{t('footer.explore')}</h2>
-          <Link to="/about">{t('footer.about')}</Link>
+          <Link to="/about">{t('nav.about')}</Link>
+          <Link to="/students">{t('nav.students')}</Link>
           <Link to="/events">{t('nav.events')}</Link>
           <Link to="/alumni">{t('nav.alumni')}</Link>
-          <Link to="/gallery">{t('nav.gallery')}</Link>
-        </div>
-        <div>
-          <h2>{t('footer.members')}</h2>
-          <Link to="/membership">{t('nav.membership')}</Link>
           <Link to="/committee">{t('nav.committee')}</Link>
-          <Link to="/students">{t('nav.students')}</Link>
+        </nav>
+        <nav aria-label={t('footer.discover')}>
+          <h2>{t('footer.discover')}</h2>
+          <Link to="/heritage">{t('nav.heritage')}</Link>
+          <Link to="/directory">{t('footer.upazilas')}</Link>
+          <Link to="/gallery">{t('nav.gallery')}</Link>
+          <Link to="/blog">{t('nav.blog')}</Link>
           <Link to="/faq">{t('nav.faq')}</Link>
-        </div>
+        </nav>
         <div>
-          <h2>{t('footer.contact')}</h2>
-          <span className="footer-line">{t('footer.campus')}</span>
+          <h2>{t('footer.touch')}</h2>
           <Link to="/contact">{t('footer.send')}</Link>
+          <span className="footer-line">{t('footer.campus')}</span>
+          <Link className="btn btn-sm ft-cta" to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('footer.join')} <Icon name="arrow" size={15} className="arr" /></Link>
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 {t('brand')}</span>
+        <span>© 2026 {t('brand')} · {t('brandFull')}</span>
+        <span className="ft-motto"><i aria-hidden="true" />{t('footer.motto')}</span>
         <span>{t('footer.photos')}</span>
       </div>
     </footer>

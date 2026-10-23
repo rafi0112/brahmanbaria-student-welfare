@@ -29,3 +29,10 @@ Headings: DM Serif Display (single weight). Interface: Manrope. Bengali falls ba
 - **Students:** monogram cards (the application stores no portraits), a sidebar with the join card, real counts per upazila and quick links, and a profile page with a cover, an overlapping monogram, anchored sections and the role-based details from the API.
 - **Account pages:** `AuthShell` with a crop of the same artwork.
 - **Motion:** 180-320ms transitions, scroll reveals through `Reveal`, hero entrance; all off under `prefers-reduced-motion`.
+
+## Organic edges, sprigs and sketches
+
+- **Image outlines:** photographs sit in hand-drawn outlines, applied as CSS masks. `.blob-a` is the home hero, `.blob-b` covers page heroes and the Explore image, and `.blob-c` covers cards, thumbnails, student monograms and place/post photos. The community band photo has a wavy right edge, and the profile cover has a wavy bottom edge.
+- **Sprigs and line-art:** botanical sprigs and pencil sketches from `public/art` are placed through `components/Decor.jsx` (`Sprig`, `SketchArt`). On the evergreen band and footer the sketches are inverted to faint white lines.
+- **Brand mark:** the leaf mark (`LeafMark`) is the brand in the public header, footer and account pages. The admin panel keeps the original emblem.
+- **Home order:** hero → Explore Brahmanbaria (three discovery cards and the nine upazilas from the API) → featured places → student community band (evergreen `#073C30`) → stories (only when real articles exist) → footer (evergreen).

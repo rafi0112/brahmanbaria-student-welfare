@@ -5,7 +5,7 @@ import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { readUrlAuthError } from '../lib/authErrors.js'
 import { supabase, supabaseConfigured } from '../lib/supabase.js'
-import { Logo } from '../components/Sketch.jsx'
+import { LeafMark } from '../components/Decor.jsx'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
 
@@ -105,7 +105,7 @@ export default function Activate() {
   return (
     <AuthShell wide>
       <div className="auth-card">
-        <Logo size={44} />
+        <LeafMark size={46} />
         <h1>{t('ad.act2.title')}</h1>
         {step === 'checking' && <p className="muted" role="status">{t('auth.verifying')}</p>}
         {step === 'unavailable' && <p className="notice bad" role="alert">{t('ad.act2.unavailable')}</p>}

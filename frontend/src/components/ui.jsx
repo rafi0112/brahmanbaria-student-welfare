@@ -131,7 +131,7 @@ export function Crumbs({ items }) {
 
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
-export function PageHero({ kicker, title, lede, image, imageUrl, src, children }) {
+export function PageHero({ kicker, title, lede, image, imageUrl, src, script, children }) {
   let head = title, last = ''
   if (typeof title === 'string' && title.includes(' ')) {
     const i = title.lastIndexOf(' ')
@@ -150,6 +150,7 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, children }
         <div className="phero-media">
           {src ? <img className="phero-img" src={src} alt="" width="700" height="460" fetchpriority="high" /> : <MediaPhoto id={image} url={imageUrl} eager sizes="(min-width: 1000px) 48vw, 100vw" alt="" />}
         </div>
+        {script && <p className="phero-script" aria-hidden="true">{script}</p>}
       </div>
     </header>
   )
