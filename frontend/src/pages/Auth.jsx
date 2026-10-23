@@ -243,13 +243,24 @@ export function Verify() {
   const [state, setState] = useState(supabaseConfigured ? (urlAuthError ? 'bad' : 'checking') : (token ? 'checking' : 'wait'))
   const [notice, setNotice] = useState(null)
   const [address, setAddress] = useState(email)
+  const auth = useAuth()
+  const nav = useNavigate()
 
   useEffect(() => {
     if (!supabaseConfigured || urlAuthError) return undefined
     let live = true
     const confirmed = (session) => Boolean(session?.user?.email_confirmed_at)
-    supabase.auth.getSession().then(({ data }) => { if (live) setState(confirmed(data.session) ? 'ok' : 'wait') })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { if (live && confirmed(session)) setState('ok') })
+    // The link has already signed the person in (the session is in it): load their account, then go straight home.
+    let going = false
+    const enter = async () => {
+      if (going) return
+      going = true
+      setState('ok')
+      await auth.refresh()
+      if (live) nav('/', { replace: true })
+    }
+    supabase.auth.getSession().then(({ data }) => { if (!live) return; if (confirmed(data.session)) enter(); else setState('wait') })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { if (live && confirmed(session)) enter() })
     return () => { live = false; sub.subscription.unsubscribe() }
   }, [])
 
