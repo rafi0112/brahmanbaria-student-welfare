@@ -3,18 +3,35 @@ import { supabase } from './supabase.js'
 
 const BASE = import.meta.env.VITE_API_BASE || ''
 
+// Failure kinds callers can tell apart (err.code):
+//   network     the API could not be reached (offline, wrong address, CORS refused)
+//   no_api      something answered, but not the API: usually a static host serving index.html because
+//               VITE_API_BASE was empty when the site was built
+//   bad_response the API answered 2xx with a body that is not JSON
+// HTTP errors keep err.status and the server's error code as the message.
+const fail = (code, status, message) => Object.assign(new Error(message || code), { code, status })
+
 export async function api(path, opts) {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   const headers = { ...(opts?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(opts?.headers || {}) }
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
-  const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', ...opts, headers })
+  let res
+  try { res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', ...opts, headers }) }
+  catch { throw fail('network', 0) }
+  const text = await res.text().catch(() => '')
   let body = null
-  try { body = await res.json() } catch { /* empty body */ }
+  let json = false
+  if (text) { try { body = JSON.parse(text); json = true } catch { /* not JSON */ } }
   if (!res.ok) {
     const err = new Error(body?.error || `HTTP ${res.status}`)
     err.status = res.status
     err.fields = body?.fields
     throw err
+  }
+  if (!json) {
+    // every API endpoint answers JSON; an HTML page here means the request never reached the API
+    if (/^\s*</.test(text) || (res.headers.get('content-type') || '').includes('text/html')) throw fail('no_api', res.status)
+    if (text) throw fail('bad_response', res.status)
   }
   return body
 }

@@ -108,8 +108,10 @@ export function ErrorState({ error, retry }) {
   return (
     <div className="state state-error" role="alert">
       <strong>{t('state.error')}</strong>
-      <span>{error?.message}</span>
-      <span className="muted">{t('state.offlineHint')}</span>
+      {error?.code === 'no_api' || error?.code === 'bad_response' ? <span>{t('state.noApi')}</span>
+        : error?.code === 'network' ? <span>{t('state.network')}</span>
+        : <span>{error?.message}</span>}
+      {import.meta.env.DEV && <span className="muted">{t('state.offlineHint')}</span>}
       {retry && <button className="btn btn-ghost" onClick={retry}>{t('state.retry')}</button>}
     </div>
   )
@@ -119,6 +121,8 @@ export function Data({ q, children, skeleton = 'block', count }) {
   const { t } = useApp()
   if (q.loading) return <div role="status" aria-live="polite" className="sk-wrap"><span className="sr-only">{t('state.loading')}</span><Skeleton kind={skeleton} count={count} /></div>
   if (q.error) return <ErrorState error={q.error} retry={q.retry} />
+  // pages read fields of the answer; an empty answer is a broken response, not an empty list
+  if (q.data == null || typeof q.data !== 'object') return <ErrorState error={{ code: 'bad_response' }} retry={q.retry} />
   return children(q.data)
 }
 

@@ -84,7 +84,7 @@ function Header() {
           </button>
         </div>
       </div>
-      <div className="drawer" id="drawer" aria-hidden={!open} inert={open ? undefined : ''}>
+      <div className="drawer" id="drawer" inert={open ? undefined : ''}>
         <nav aria-label="Mobile">
           {NAV.map(([to, k], i) => <NavLink key={to} to={to} end={to === '/'} style={{ '--i': i }}>{t(k)}<Icon name="arrow" size={16} /></NavLink>)}
         </nav>
