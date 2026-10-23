@@ -7,7 +7,7 @@ import { toApiError } from '../lib/authErrors.js'
 import { LeafMark } from '../components/Decor.jsx'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
-import { googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
+import { arrivedByEmailLink, googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
 const origin = () => window.location.origin
@@ -261,8 +261,8 @@ export function Verify() {
       if (me) nav('/', { replace: true })
       else setState('nosession') // the email is confirmed but the site could not sign this browser in
     }
-    supabase.auth.getSession().then(({ data }) => { if (!live) return; if (confirmed(data.session)) enter(); else setState('wait') })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { if (live && confirmed(session)) enter() })
+    supabase.auth.getSession().then(({ data }) => { if (!live) return; if (arrivedByEmailLink && confirmed(data.session)) enter(); else setState('wait') })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { if (live && arrivedByEmailLink && confirmed(session)) enter() })
     return () => { live = false; sub.subscription.unsubscribe() }
   }, [])
 
