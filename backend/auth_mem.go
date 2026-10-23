@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,24 +24,24 @@ type memSession struct {
 
 // memStore keeps everything in RAM. Used by tests and by AUTH_DEV_MEMORY=true; data is lost on restart.
 type memStore struct {
-	mu       sync.Mutex
-	seq      int
-	users    map[string]*User
-	byEmail  map[string]string
-	profiles map[string]*Profile
-	tokens   map[string]*memToken
-	sessions map[string]*memSession
-	roleLog  []RoleChange
-	cm       committeeMem
-	cms      cmsMem
-	contacts []*memContact
-	reviews  map[string]memReview
-	manual   []*ManualImported
-	invites  map[string]*memInvite
+	mu        sync.Mutex
+	seq       int
+	users     map[string]*User
+	byEmail   map[string]string
+	profiles  map[string]*Profile
+	tokens    map[string]*memToken
+	sessions  map[string]*memSession
+	roleLog   []RoleChange
+	cm        committeeMem
+	cms       cmsMem
+	contacts  []*memContact
+	reviews   map[string]memReview
+	manual    []*ManualImported
+	invites   map[string]*memInvite
 	inviteLog []time.Time
-	changes  map[string]*ProfileChange
-	edits    map[string]ManualImportedInput
-	photos   map[string]memPhoto
+	changes   map[string]*ProfileChange
+	edits     map[string]ManualImportedInput
+	photos    map[string]memPhoto
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).
@@ -348,18 +349,19 @@ func (m *memStore) SearchUsers(_ context.Context, q UserQuery) ([]UserRow, int, 
 	needle := strings.ToLower(strings.TrimSpace(q.Q))
 	all := []UserRow{}
 	for id, u := range m.users {
-		name, status, created := "", "", ""
+		name, status, created, dept, batch, hay := "", "", "", "", 0, u.Email
 		if p, ok := m.profiles[id]; ok {
-			name, status, created = p.Name, p.Status, p.CreatedAt
+			name, status, created, dept, batch = p.Name, p.Status, p.CreatedAt, p.Department, p.Batch
+			hay = strings.Join([]string{u.Email, p.Name, p.Phone, p.Department, strconv.Itoa(p.Batch), p.Session, p.Upazila, p.Union}, " ")
 		}
 		if (q.Role != "" && u.Role != q.Role) || (q.Verified == "yes" && !u.EmailVerified) || (q.Verified == "no" && u.EmailVerified) ||
 			(q.Account == "active" && u.Disabled) || (q.Account == "deactivated" && !u.Disabled) {
 			continue
 		}
-		if needle != "" && !strings.Contains(strings.ToLower(u.Email), needle) && !strings.Contains(strings.ToLower(name), needle) {
+		if needle != "" && !strings.Contains(strings.ToLower(hay), needle) {
 			continue
 		}
-		all = append(all, UserRow{ID: id, Email: u.Email, Name: name, Role: u.Role, EmailVerified: u.EmailVerified, MemberStatus: status, CreatedAt: created, Disabled: u.Disabled})
+		all = append(all, UserRow{ID: id, Email: u.Email, Name: name, Role: u.Role, EmailVerified: u.EmailVerified, MemberStatus: status, CreatedAt: created, Disabled: u.Disabled, Department: dept, Batch: batch})
 	}
 	label := func(r UserRow) string {
 		if r.Name != "" {

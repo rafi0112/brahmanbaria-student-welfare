@@ -306,6 +306,14 @@ test('admin management lists only administrators and explains who cannot be prom
   const row = dlg.locator('.pm-row').first()
   await expect(row).toBeDisabled() // an administrator is listed, with the reason
   await expect(row).toContainText('Already an administrator')
+  // any profile detail finds the person: here the mobile number of the admin's own member profile
+  const made = await page.request.post('/api/v1/me/profile', { data: { name: 'Test Admin Person', batch: 16, department: 'Finance', session: '2019-20', upazila: 'kasba', union: 'Kuti', phone: '01755501234' } })
+  expect([201, 409]).toContain(made.status())
+  const phone = (await (await page.request.get('/api/v1/auth/me')).json()).profile.phone
+  await dlg.getByRole('textbox').fill('')
+  await dlg.getByRole('textbox').pressSequentially(phone, { delay: 5 })
+  await expect(dlg.locator('.pm-row').first()).toContainText(E2E.email)
+  await expect(dlg.locator('.pm-row').first()).toContainText('Finance')
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
 })

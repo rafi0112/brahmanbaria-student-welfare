@@ -305,6 +305,13 @@ func cmsStoreSuite(t *testing.T, s AuthStore) {
 	if rows, total, _ := s.SearchUsers(ctx, UserQuery{Q: "cms-", Sort: "name", Limit: 1, Offset: 1}); total < 2 || len(rows) != 1 {
 		t.Fatalf("paging: %+v %d", rows, total)
 	}
+	// any profile detail finds the person (admins search members to promote by phone, department, batch and so on)
+	if rows, _, _ := s.SearchUsers(ctx, UserQuery{Q: "01898765432", Limit: 10}); len(rows) != 1 || rows[0].ID != m1.ID || rows[0].Department == "" || rows[0].Batch == 0 {
+		t.Fatalf("search by phone: %+v", rows)
+	}
+	if _, total, _ := s.SearchUsers(ctx, UserQuery{Q: "finance", Role: RoleMember, Limit: 10}); total < 2 {
+		t.Fatalf("search by department: %d", total)
+	}
 	// member list sorts
 	if rows, _, _ := s.ListMembersAdmin(ctx, MemberQuery{Q: "cms-m", Sort: "batch", Limit: 10}); len(rows) != 2 || rows[0].Batch < rows[1].Batch {
 		t.Fatalf("batch sort: %+v", rows)

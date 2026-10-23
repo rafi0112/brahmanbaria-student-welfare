@@ -144,7 +144,7 @@ function ineligible(u, t) {
 
 // Promote a member: search real accounts, check eligibility, confirm, then let the backend make the change.
 function PromoteDialog({ onClose, onDone, explain }) {
-  const { t } = useApp()
+  const { t, n } = useApp()
   const [q, setQ] = useState('')
   const [term, setTerm] = useState('')
   const [picked, setPicked] = useState(null)
@@ -175,7 +175,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
     <Modal title={t('ad.pm.button')} onClose={onClose}>
       <p className="muted small">{t('ad.pm.rule')}</p>
       <label className="field compact"><span>{t('ad.pm.search')}</span>
-        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.roles.search')} /></label>
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ad.pm.searchPh')} /></label>
       <div aria-live="polite" className="pm-results">
         {term.length < 2 && <p className="muted small">{t('ad.pm.type')}</p>}
         {res.loading && term.length >= 2 && <p className="muted small">{t('state.loading')}</p>}
@@ -189,7 +189,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
                 <li key={u.id}>
                   <button type="button" className="pm-row" disabled={!!why} onClick={() => setPicked(u)}>
                     <Avatar name={u.name || u.email} size={32} />
-                    <span className="pm-id"><strong>{u.name || u.email}</strong><small className="muted">{u.email}</small></span>
+                    <span className="pm-id"><strong>{u.name || u.email}</strong><small className="muted">{u.email}</small>{u.department || u.batch ? <small className="muted">{[u.department, u.batch ? `${t('auth.batch')} ${n(u.batch)}` : ''].filter(Boolean).join(' · ')}</small> : null}</span>
                     <span className="pm-state">{u.memberStatus ? <StatusBadge status={u.memberStatus} /> : <small className="muted">{t('ad.pm.noProfile')}</small>}
                       <small className={u.emailVerified ? 'muted' : 'is-warn'}>{u.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')}</small></span>
                     {why && <small className="pm-why">{why}</small>}

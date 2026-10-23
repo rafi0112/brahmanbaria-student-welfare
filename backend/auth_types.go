@@ -69,6 +69,8 @@ type UserRow struct {
 	MemberStatus  string `json:"memberStatus"`
 	CreatedAt     string `json:"createdAt"`
 	Disabled      bool   `json:"disabled"`
+	Department    string `json:"department,omitempty"` // from the member profile, to tell people with similar names apart
+	Batch         int    `json:"batch,omitempty"`
 }
 
 // UserQuery filters and orders the admin user list; every field is optional.

@@ -170,7 +170,11 @@ func (s *pgStore) EnsureExternalUser(ctx context.Context, id, email string, veri
 	if err != nil {
 		if isUnique(err) {
 			// The address may still sit on a leftover row whose Supabase account was deleted; free it once, then retry.
-			if freed, ferr := s.releaseOrphanEmail(ctx, id, email); ferr == nil && freed {
+			freed, ferr := s.releaseOrphanEmail(ctx, id, email)
+			if ferr != nil {
+				log.Printf("release leftover email for %s: %v", id, ferr)
+			}
+			if freed {
 				return s.EnsureExternalUser(ctx, id, email, verified)
 			}
 			return User{}, ErrEmailTaken
@@ -200,8 +204,17 @@ func (s *pgStore) releaseOrphanEmail(ctx context.Context, newID, email string) (
 	}
 	if tag.RowsAffected() > 0 {
 		log.Printf("released the email of a leftover account so Supabase user %s can sign in", newID)
+		return true, nil
 	}
-	return tag.RowsAffected() > 0, nil
+	// say why the address stays taken (no email in the log)
+	var oldID, role string
+	var pw, inAuth, prof, newInAuth bool
+	_ = s.db.QueryRow(ctx, `SELECT u.id::text, u.role, u.password_hash <> '',
+		EXISTS (SELECT 1 FROM auth.users a WHERE a.id = u.id), EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id),
+		EXISTS (SELECT 1 FROM auth.users a WHERE a.id = $1::uuid AND lower(a.email) = lower($2))
+		FROM users u WHERE lower(u.email) = lower($2) AND u.id <> $1::uuid LIMIT 1`, newID, email).Scan(&oldID, &role, &pw, &inAuth, &prof, &newInAuth)
+	log.Printf("email of Supabase user %s stays on account %s: role=%s password=%v stillInSupabase=%v hasProfile=%v newUserMatches=%v", newID, oldID, role, pw, inAuth, prof, newInAuth)
+	return false, nil
 }
 
 func (s *pgStore) SetEmailVerified(ctx context.Context, id string) error {
@@ -403,7 +416,8 @@ func (s *pgStore) ListUsers(ctx context.Context, q, role string, limit, offset i
 func (s *pgStore) SearchUsers(ctx context.Context, q UserQuery) ([]UserRow, int, error) {
 	b := &condBuilder{}
 	if q.Q != "" {
-		b.add("(position(lower(?) in lower(u.email)) > 0 OR position(lower(?) in lower(COALESCE(p.name, ''))) > 0)", q.Q)
+		// name, email or any profile detail: phone, department, batch, session, upazila, union
+		b.add(`position(lower(?) in lower(concat_ws(' ', u.email, p.name, p.phone, p.department, p.batch::text, p.session, p.upazila, p.union_name))) > 0`, q.Q)
 	}
 	if q.Role != "" {
 		b.add("u.role = ?", q.Role)
@@ -432,7 +446,8 @@ func (s *pgStore) SearchUsers(ctx context.Context, q UserQuery) ([]UserRow, int,
 	}
 	args := append(append([]any{}, b.args...), q.Limit, q.Offset)
 	rows, err := s.db.Query(ctx, `SELECT u.id::text, u.email, COALESCE(p.name, ''), u.role, u.email_verified_at IS NOT NULL, COALESCE(p.status, ''),
-		to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), u.disabled_at IS NOT NULL`+from+b.where()+` ORDER BY `+order+`, u.id LIMIT $`+fmt.Sprint(len(args)-1)+` OFFSET $`+fmt.Sprint(len(args)), args...)
+		to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), u.disabled_at IS NOT NULL,
+		COALESCE(p.department, ''), COALESCE(p.batch, 0)`+from+b.where()+` ORDER BY `+order+`, u.id LIMIT $`+fmt.Sprint(len(args)-1)+` OFFSET $`+fmt.Sprint(len(args)), args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -440,7 +455,7 @@ func (s *pgStore) SearchUsers(ctx context.Context, q UserQuery) ([]UserRow, int,
 	out := []UserRow{}
 	for rows.Next() {
 		var r UserRow
-		if err := rows.Scan(&r.ID, &r.Email, &r.Name, &r.Role, &r.EmailVerified, &r.MemberStatus, &r.CreatedAt, &r.Disabled); err != nil {
+		if err := rows.Scan(&r.ID, &r.Email, &r.Name, &r.Role, &r.EmailVerified, &r.MemberStatus, &r.CreatedAt, &r.Disabled, &r.Department, &r.Batch); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, r)
