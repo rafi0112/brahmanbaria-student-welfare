@@ -41,7 +41,8 @@ type Person struct {
 	ShowPhone  string
 	ShowEmail  string
 	ShowBlood  string
-	PhotoVer   string // set when the member has a photo
+	PhotoVer   string            // set when the member has a photo
+	Extra      map[string]string // directory records: the original form's private columns (admins only)
 	// AccountVerified: an approved member whose email is confirmed. Shown to everyone as the verified mark.
 	AccountVerified bool
 }
@@ -76,6 +77,8 @@ type personDetails struct {
 	Status     string `json:"status,omitempty"`   // admins only
 	Verified   *bool  `json:"verified,omitempty"` // admins only, directory records
 	PhotoURL   string `json:"photoUrl,omitempty"`
+	// Record: admins only, directory records: the remaining columns of the original form (addresses, school, Facebook, photo link, note)
+	Record map[string]string `json:"record,omitempty"`
 }
 
 type personView struct {
@@ -144,6 +147,14 @@ func (p Person) view(v viewer) personView {
 		if p.Source == "directory" {
 			ver := p.Verified
 			d.Verified = &ver
+			if len(p.Extra) > 0 {
+				d.Record = map[string]string{}
+				for k, v := range p.Extra {
+					if v != "" && k != "phone" && k != "email" && k != "bloodGroup" {
+						d.Record[k] = v
+					}
+				}
+			}
 		}
 	}
 	out.Details = d
@@ -197,6 +208,18 @@ func (a *App) directoryPeople(ctx context.Context) []Person {
 		}
 		if iv, ok := invites[s.ID]; ok {
 			p.Email = iv.Email
+		}
+		if pv := a.Store.Private[s.ID]; pv != nil { // the original form's contact columns, admins only (see personView)
+			if p.Phone == "" {
+				p.Phone = pv["phone"]
+			}
+			if p.Email == "" {
+				p.Email = pv["email"]
+			}
+			if p.BloodGroup == "" {
+				p.BloodGroup = pv["bloodGroup"]
+			}
+			p.Extra = pv
 		}
 		_, p.Verified = reviews[s.ID]
 		people = append(people, p)

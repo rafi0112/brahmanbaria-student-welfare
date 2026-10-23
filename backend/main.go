@@ -22,15 +22,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("load data: %v", err)
 	}
-	// The real member files are git-ignored, so a fresh checkout falls back to the synthetic *.sample.json data. That is
-	// fine for development; in production it would publish invented people, so refuse to start instead.
-	if env("APP_ENV", "development") == "production" {
-		for _, f := range []string{"students.json", "alumni.json"} {
-			if _, err := os.Stat(filepath.Join(dataDir, f)); err != nil {
-				log.Fatalf("APP_ENV=production but %s is missing: upload the real member data to DATA_DIR (%s); sample data is never served in production", f, dataDir)
-			}
-		}
-	}
 	app := &App{
 		Store:      store,
 		Origin:     env("CORS_ORIGIN", "http://localhost:5173"),
@@ -55,6 +46,12 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "seed-committee" { // creates a committee from a JSON file (preview unless --apply)
 		if err := seedCommittee(authStore, os.Args[2:]); err != nil {
 			log.Fatalf("seed-committee: %v", err)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "import-directory" { // copies the directory records into Supabase (preview unless --apply)
+		if err := importDirectory(authStore, os.Args[2:]); err != nil {
+			log.Fatalf("import-directory: %v", err)
 		}
 		return
 	}
@@ -117,6 +114,28 @@ func main() {
 		}
 	} else {
 		log.Printf("auth disabled: set DATABASE_URL (or AUTH_DEV_MEMORY=true for local testing)")
+	}
+
+	// The directory comes from the database once it has been imported; the git-ignored files are only a fallback.
+	if authStore != nil {
+		n, err := useDirectoryFromDB(context.Background(), store, authStore)
+		switch {
+		case err != nil:
+			log.Printf("directory records: %v (using the files in %s)", err, dataDir)
+		case n > 0:
+			log.Printf("directory: %d student and alumni records from the database", n)
+		default:
+			log.Printf("directory: no records in the database yet; using the files in %s (run import-directory)", dataDir)
+		}
+	}
+	// A fresh checkout falls back to the synthetic *.sample.json data. Fine for development; in production it would
+	// publish invented people, so refuse to start unless the records come from the database or the real files exist.
+	if env("APP_ENV", "development") == "production" && !store.FromDB {
+		for _, f := range []string{"students.json", "alumni.json"} {
+			if _, err := os.Stat(filepath.Join(dataDir, f)); err != nil {
+				log.Fatalf("APP_ENV=production but the directory is not in the database and %s is missing in %s; run import-directory, sample data is never served in production", f, dataDir)
+			}
+		}
 	}
 
 	srv := &http.Server{

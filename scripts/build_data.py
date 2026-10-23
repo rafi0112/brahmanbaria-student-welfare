@@ -1,6 +1,8 @@
 """Turn the Google Form exports in Data/ into public-safe JSON for the Go API.
 
 Outputs (real data, git-ignored):  backend/data/students.json, alumni.json
+Output  (everything, git-ignored): backend/data/records_full.json: every record with the private columns and the
+                                   original form rows, for `go run . import-directory` (Supabase is then the source)
 Output  (synthetic, committed):    backend/data/students.sample.json, alumni.sample.json
 Output  (aggregates, git-ignored): backend/data/stats.json
 
@@ -16,7 +18,7 @@ import openpyxl
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "Data")
-OUT = os.path.join(ROOT, "backend", "data")
+OUT = os.environ.get("BSWA_OUT") or os.path.join(ROOT, "backend", "data")
 
 UPAZILAS = {
     "akhaura": ["akhaura", "আখাউড়া"],
@@ -172,12 +174,40 @@ def pdf_records(path):
     return recs
 
 
+def raw_row(r):
+    """The original form row as header -> text, empty cells left out."""
+    return {clean(k) or f"column {i + 1}": clean(v) for i, (k, v) in enumerate(r.items()) if clean(v)}
+
+
+def private_from_row(r):
+    pick = lambda *keys: clean(get(r, *keys))
+    return {
+        "phone": pick("mobile"), "email": pick("email"), "bloodGroup": blood_group(get(r, "blood")),
+        "permanentAddress": pick("permanent address", "upazila and village", "village"), "presentAddress": pick("present address"),
+        "school": pick("school"), "college": pick("college"), "facebook": pick("facebook"),
+        "photoLink": pick("picture", "photo"), "note": pick("you may inform", "column 10"),
+    }
+
+
+def private_from_pdf(r):
+    return {"phone": clean(r.get("mobile")), "bloodGroup": blood_group(r.get("blood")), "permanentAddress": clean(r.get("address"))}
+
+
+def remember(full, rec, kind, src, private, raw):
+    """Keep the private columns and every source row of one record; later sources only fill blanks."""
+    e = full.setdefault(rec["id"], {"kind": kind, "private": {}, "sources": []})
+    for k, v in private.items():
+        if v and not e["private"].get(k):
+            e["private"][k] = v
+    e["sources"].append({"file": src, "row": raw})
+
+
 def batch_from_session(sess):
     m = re.match(r"(\d{4})-", sess or "")
     return int(m.group(1)) - 2004 if m else None
 
 
-def add_pdf_people(students, alumni, blood, seen_s, seen_a):
+def add_pdf_people(students, alumni, blood, seen_s, seen_a, full=None):
     """Merge the batch PDFs: add people missing from the sheets and fill blank fields of known ones.
 
     Returns (new students, new alumni, filled field count, (batch==session-2004 agreements, checked)).
@@ -210,22 +240,29 @@ def add_pdf_people(students, alumni, blood, seen_s, seen_a):
                     if k in known and v and (known[k] in ("", None, "Other")):
                         known[k] = v
                         filled += 1
+                if full is not None:
+                    remember(full, known, kind, fname, private_from_pdf(r), {k: clean(v) for k, v in r.items() if clean(v)})
                 continue
             if kind == "alumni":
                 rec = {"id": sid("a", name, len(alumni)), "name": name, **{k: new[k] for k in ("batch", "department", "occupation", "workplace", "designation", "upazila")}}
                 alumni.append(rec); by_a[key] = rec; seen_a.add(key); na += 1
+                if full is not None:
+                    remember(full, rec, kind, fname, private_from_pdf(r), {k: clean(v) for k, v in r.items() if clean(v)})
             else:
                 rec = {"id": sid("s", name, len(students)), "name": name, **{k: new[k] for k in ("batch", "department", "session", "upazila")}}
                 students.append(rec); by_s[key] = rec; seen_s.add(key); ns += 1
+                if full is not None:
+                    remember(full, rec, kind, fname, private_from_pdf(r), {k: clean(v) for k, v in r.items() if clean(v)})
             bg = blood_group(r.get("blood"))
             if bg:
                 blood[bg] += 1
     return ns, na, filled, (agree, checked)
 
 
-def build_real():
+def build_real(full=None):
     students, alumni, blood = [], [], Counter()
     seen_s, seen_a = set(), set()
+    by_name_s, by_name_a = {}, {}
     for f in sorted(glob.glob(os.path.join(DATA, "*.xlsx"))):
         is21 = "21 batch" in os.path.basename(f)
         for block in blocks(f):
@@ -234,8 +271,11 @@ def build_real():
                 if len(name) < 4 or name.lower() in ("name", "name (english )"):
                     continue
                 bg = blood_group(get(r, "blood group"))
+                src = os.path.basename(f)
                 if "occupation" in r:  # alumni layout
                     if norm_name(name) in seen_a:
+                        if full is not None and norm_name(name) in by_name_a:
+                            remember(full, by_name_a[norm_name(name)], "alumni", src, private_from_row(r), raw_row(r))
                         continue
                     seen_a.add(norm_name(name))
                     alumni.append({
@@ -244,8 +284,13 @@ def build_real():
                         "workplace": job(get(r, "work place")), "designation": job(get(r, "designation")),
                         "upazila": upazila(get(r, "village")),
                     })
+                    by_name_a[norm_name(name)] = alumni[-1]
+                    if full is not None:
+                        remember(full, alumni[-1], "alumni", src, private_from_row(r), raw_row(r))
                 else:  # student layouts
                     if norm_name(name) in seen_s:
+                        if full is not None and norm_name(name) in by_name_s:
+                            remember(full, by_name_s[norm_name(name)], "student", src, private_from_row(r), raw_row(r))
                         continue
                     seen_s.add(norm_name(name))
                     b = 21 if is21 else batch_no(get(r, "batch"))
@@ -254,9 +299,12 @@ def build_real():
                         "department": dept(get(r, "department")), "session": session(get(r, "academic session")),
                         "upazila": upazila(get(r, "permanent address", "upazila and village")),
                     })
+                    by_name_s[norm_name(name)] = students[-1]
+                    if full is not None:
+                        remember(full, students[-1], "student", src, private_from_row(r), raw_row(r))
                 if bg:
                     blood[bg] += 1
-    ns, na, filled, agree = add_pdf_people(students, alumni, blood, seen_s, seen_a)
+    ns, na, filled, agree = add_pdf_people(students, alumni, blood, seen_s, seen_a, full)
     print(f"from PDFs: +{ns} students, +{na} alumni, {filled} blank fields filled; batch==session-2004 on {agree[0]}/{agree[1]} records that list both")
     return students, alumni, blood
 
@@ -289,9 +337,14 @@ def dump(name, obj):
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    s, a, blood = build_real()
+    full = {}
+    s, a, blood = build_real(full)
     dump("students.json", s)
     dump("alumni.json", a)
+    dump("records_full.json", {
+        "students": [{**x, **full.get(x["id"], {"private": {}, "sources": []})} for x in s],
+        "alumni": [{**x, **full.get(x["id"], {"private": {}, "sources": []})} for x in a],
+    })
     dump("stats.json", {"blood": dict(blood)})
     ss, sa = build_sample()
     dump("students.sample.json", ss)

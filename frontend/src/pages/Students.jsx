@@ -178,6 +178,7 @@ export function StudentDetail() {
               <a href="#overview">{t('students.overview')}</a>
               <a href="#academics">{t('students.academics')}</a>
               {d && <a href="#contact">{t('students.contactH')}</a>}
+              {d?.record && Object.keys(d.record).length > 0 && <a href="#record">{t('students.recordH')}</a>}
             </nav>
 
             <div className="wrap sp-body">
@@ -208,6 +209,18 @@ export function StudentDetail() {
                     {d.status && <p className="muted small">{t('students.accountStatus')}: <Badge tone={d.status === 'approved' ? 'leaf' : 'gold'}>{t(`admin.${d.status}`)}</Badge></p>}
                   </section>
                 ) : null}
+                {d?.record && Object.keys(d.record).length > 0 && (
+                  <section id="record" className="sp-sec sp-record">
+                    <h2>{t('students.recordH')}</h2>
+                    <p className="muted small"><Icon name="lock" size={14} /> {t('students.recordNote')}</p>
+                    <dl className="sp-facts">
+                      {['permanentAddress', 'presentAddress', 'school', 'college', 'facebook', 'photoLink', 'note'].filter((k) => d.record[k]).map((k) => (
+                        <div key={k}><dt>{t(`students.rec.${k}`)}</dt>
+                          <dd>{/^https?:\/\//.test(d.record[k]) ? <a href={d.record[k]} target="_blank" rel="noreferrer noopener">{k === 'photoLink' ? t('students.rec.openPhoto') : d.record[k]}</a> : d.record[k]}</dd></div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
               </div>
               <aside className="sp-side">
                 <div className="sp-place">

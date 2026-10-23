@@ -3,6 +3,7 @@
 backend/data/students.json
 backend/data/alumni.json
 backend/data/stats.json
+backend/data/records_full.json
 backend/data/contact_messages.jsonl
 
 # Private environment variables and secrets

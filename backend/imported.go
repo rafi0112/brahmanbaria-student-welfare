@@ -111,19 +111,20 @@ func (a *App) importedRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, 
 
 type importedView struct {
 	Student
-	Source     string         `json:"source"` // file (the existing directory) | manual (added by an admin) | member (registered without a record)
-	Phone      string         `json:"phone,omitempty"`
-	Union      string         `json:"union"`
-	Gender     string         `json:"gender"`
-	BloodGroup string         `json:"bloodGroup"`
-	Note       string         `json:"note,omitempty"`
-	AddedAt    string         `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
-	Verified   bool           `json:"verified"`
-	Edited     bool           `json:"edited,omitempty"`
-	Auto       bool           `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
-	VerifiedAt string         `json:"verifiedAt,omitempty"`
-	VerifiedBy string         `json:"verifiedBy,omitempty"`
-	Invite     map[string]any `json:"invite,omitempty"` // saved email and the real outcome of inviting it (admin view only)
+	Source     string            `json:"source"` // file (the existing directory) | manual (added by an admin) | member (registered without a record)
+	Phone      string            `json:"phone,omitempty"`
+	Union      string            `json:"union"`
+	Gender     string            `json:"gender"`
+	BloodGroup string            `json:"bloodGroup"`
+	Note       string            `json:"note,omitempty"`
+	AddedAt    string            `json:"addedAt,omitempty"` // only hand-added records carry a real date; the original directory stores none
+	Verified   bool              `json:"verified"`
+	Edited     bool              `json:"edited,omitempty"`
+	Auto       bool              `json:"autoVerified,omitempty"` // verified because the person activated an invitation and was approved as a member
+	VerifiedAt string            `json:"verifiedAt,omitempty"`
+	VerifiedBy string            `json:"verifiedBy,omitempty"`
+	Invite     map[string]any    `json:"invite,omitempty"`  // saved email and the real outcome of inviting it (admin view only)
+	Private    map[string]string `json:"private,omitempty"` // the original form's contact columns (admin view only)
 }
 
 func (a *App) importedVerify(w http.ResponseWriter, r *http.Request, u User) {
@@ -273,6 +274,15 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 			continue
 		}
 		iv := importedView{Student: s, Source: r0.src, Phone: r0.phone, Union: r0.union, Gender: r0.gender, BloodGroup: r0.blood, Note: r0.note, AddedAt: r0.added, Verified: verified}
+		if pv := a.Store.Private[s.ID]; pv != nil && r0.src == "file" {
+			iv.Private = pv
+			if iv.Phone == "" {
+				iv.Phone = pv["phone"]
+			}
+			if iv.BloodGroup == "" {
+				iv.BloodGroup = pv["bloodGroup"]
+			}
+		}
 		if reviewed {
 			iv.VerifiedAt, iv.VerifiedBy = rv.VerifiedAt, rv.VerifiedBy
 		} else if verified && r0.src != "member" {
