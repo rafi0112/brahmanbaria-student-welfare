@@ -111,7 +111,7 @@ export default function Home() {
         <div className="explore2-grid">
           <Reveal className="ex-media ex-exact">
             {/* the supplied artwork as designed: photograph, brushed edge, sprigs and the lettering are one picture */}
-            <img data-parallax="0.06" src="/images/bswa/explore-mockup.webp" width="737" height="464" loading="lazy" decoding="async"
+            <img data-parallax="0.06" src="/images/bswa/explore-mockup.webp" width="1878" height="1196" loading="lazy" decoding="async"
               alt={pick('তিতাসের তীরে সূর্যাস্ত, মসজিদ ও নৌকা — নদী, ঐতিহ্য, মানুষ', 'Sunset on the river with a mosque and boats — rivers, heritage, people')} />
           </Reveal>
           <div className="ex-copy">
