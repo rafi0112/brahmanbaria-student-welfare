@@ -7,6 +7,8 @@ import { toApiError } from '../lib/authErrors.js'
 import { LeafMark } from '../components/Decor.jsx'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
+import PasswordHelp, { ConfirmHint } from '../components/PasswordHelp.jsx'
+import { checkPassword } from '../lib/password.js'
 import { arrivedByEmailLink, googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
@@ -66,7 +68,10 @@ export default function Auth({ mode }) {
     if (cfg.fields.includes('session') && !/^\d{4}-\d{2}$/.test(v.session.trim())) e.session = t('auth.sessionHint')
     if (cfg.fields.includes('phone') && !/^01\d{9}$/.test(v.phone.trim())) e.phone = t('auth.e.phone')
     if (cfg.fields.includes('email') && !emailOk(v.email)) e.email = t('auth.e.email')
-    if (cfg.fields.includes('password') && v.password.length < (mode === 'login' ? 1 : 8)) e.password = t('auth.e.pass')
+    if (cfg.fields.includes('password')) {
+      if (mode === 'login') { if (!v.password) e.password = t('auth.e.passEmpty') }
+      else if (!checkPassword(v.password, { email: v.email, name: v.name }).ok) e.password = t('pw.e.rules')
+    }
     if (cfg.fields.includes('confirm') && v.confirm !== v.password) e.confirm = t('auth.e.match')
     if (cfg.fields.includes('photoLink') && v.photoLink.trim() && !/^https:\/\/\S+$/.test(v.photoLink.trim())) e.photoLink = t('photo.e.link')
     if (cfg.fields.includes('terms') && !v.terms) e.terms = t('auth.e.terms')
@@ -129,7 +134,7 @@ export default function Auth({ mode }) {
     } catch (err) {
       if (err.fields) setErrs(err.fields)
       if (err.code === 'user_already_exists' || err.code === 'email_exists') { setErrs({ email: t('auth.e.exists') }); setNotice({ tone: 'bad', key: 'auth.e.existsNote' }) }
-      else if (err.code === 'weak_password') setErrs({ password: t('auth.e.pass') })
+      else if (err.code === 'weak_password') setErrs({ password: t('pw.e.rules') })
       else if (err.code === 'same_password') setErrs({ password: t('auth.e.samePass') })
       else if (err.message === 'email_not_verified' || err.status === 403) { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
       else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
@@ -192,13 +197,15 @@ export default function Auth({ mode }) {
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             ) : (
-              <label key={f} className={`field${f === 'name' || f === 'photoLink' ? ' span-2' : ''}`}>
+              <label key={f} className={`field${f === 'name' || f === 'photoLink' || (f === 'password' && mode === 'register') ? ' span-2' : ''}`}>
                 <span>{t(label[f])}</span>
                 {(() => {
                   const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'off' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
                   return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'url' : 'text'} inputMode={f === 'phone' ? 'numeric' : f === 'photoLink' ? 'url' : undefined} maxLength={f === 'phone' ? 11 : undefined} placeholder={f === 'session' ? '2020-21' : f === 'phone' ? '01XXXXXXXXX' : f === 'photoLink' ? 'https://drive.google.com/…' : undefined} {...props} />
                 })()}
                 {f === 'photoLink' && !errs[f] && <small className="muted">{t('photo.linkHint')}</small>}
+                {f === 'password' && mode !== 'login' && <PasswordHelp value={v.password} who={{ email: v.email, name: v.name }} onSuggest={(pw) => setV((x) => ({ ...x, password: pw, confirm: pw }))} />}
+                {f === 'confirm' && <ConfirmHint password={v.password} confirm={v.confirm} />}
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}
               </label>
             )))}

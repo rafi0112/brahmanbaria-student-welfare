@@ -1119,3 +1119,24 @@ html[data-theme='dark'] .phero-deco { mix-blend-mode: screen; opacity: .5; }
   .state-actions .btn, .cta-band-actions .btn { flex: 1 1 100%; justify-content: center; }
 }
 @media (max-width: 360px) { .ex-ups ul { grid-template-columns: 1fr; } }
+
+/* ---------- new-password help: meter, rules, suggestion, Caps Lock ---------- */
+.pw { position: relative; display: block; }
+.pw-caps { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 8px; border-radius: 999px; font-size: .78rem; font-weight: 600; color: #8a5a00; background: #fff1cc; }
+.pw-caps::before { content: '⇪'; }
+.pwh { display: grid; gap: 8px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--card) 85%, transparent); }
+.pwh-meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.pwh-meter i { height: 6px; border-radius: 99px; background: var(--line-2, #e5ddd2); transition: background-color .3s var(--ease); }
+.pwh-meter.is-weak i.on { background: #e5484d; } .pwh-meter.is-fair i.on { background: #f59e0b; }
+.pwh-meter.is-good i.on { background: #22a06b; } .pwh-meter.is-strong i.on { background: var(--teal, #0b4d3c); }
+.pwh-level { margin: 0; font-size: .84rem; color: var(--ink-2); }
+.pwh-rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 14px; }
+.pwh-rules li { display: flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--muted); transition: color .2s; }
+.pwh-rules li.ok { color: var(--ink); }
+.pwh-dot { display: grid; place-items: center; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-2, #d9cfc2); font-size: .66rem; line-height: 1; color: #fff; transition: background-color .2s, border-color .2s; }
+.pwh-rules li.ok .pwh-dot { background: #22a06b; border-color: #22a06b; }
+.pwh-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pwh-code { padding: 4px 10px; border-radius: 8px; background: var(--paper-2); font: 600 .9rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .04em; color: var(--ink); user-select: all; word-break: break-all; }
+.pwh-note { margin: 0; font-size: .8rem; color: var(--muted); }
+.pwh-match { display: block; margin-top: 6px; font-size: .8rem; color: #b4452e; } .pwh-match.ok { color: #1f8a5a; }
+.pwh-match::before { content: '✕ '; } .pwh-match.ok::before { content: '✓ '; }

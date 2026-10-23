@@ -278,8 +278,8 @@ func (a *App) validateRegister(q *registerReq) map[string]string {
 	if !emailRx.MatchString(q.Email) || len(q.Email) > 254 {
 		errs["email"] = "Enter a valid email address."
 	}
-	if n := utf8.RuneCountInString(q.Password); n < 8 || n > 128 {
-		errs["password"] = "Password must be 8-128 characters."
+	if msg := passwordProblem(q.Password, q.Email, q.Name); msg != "" {
+		errs["password"] = msg
 	}
 	return errs
 }
@@ -431,8 +431,8 @@ func (a *App) resetPassword(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &q) {
 		return
 	}
-	if n := utf8.RuneCountInString(q.Password); n < 8 || n > 128 {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": map[string]string{"password": "Password must be 8-128 characters."}})
+	if msg := passwordProblem(q.Password, "", ""); msg != "" {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": map[string]string{"password": msg}})
 		return
 	}
 	id, err := a.Auth.Store.ConsumeToken(r.Context(), PurposeReset, tokenDigest(q.Token))

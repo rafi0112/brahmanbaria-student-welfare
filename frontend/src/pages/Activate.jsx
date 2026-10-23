@@ -6,6 +6,8 @@ import { errorKey, useAuth } from '../lib/auth.jsx'
 import { readUrlAuthError } from '../lib/authErrors.js'
 import { supabase, supabaseConfigured } from '../lib/supabase.js'
 import { LeafMark } from '../components/Decor.jsx'
+import PasswordHelp, { ConfirmHint } from '../components/PasswordHelp.jsx'
+import { checkPassword } from '../lib/password.js'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
 
@@ -56,7 +58,7 @@ export default function Activate() {
   const setPassword = async (e) => {
     e.preventDefault()
     if (busy) return
-    if (pw.password.length < 8) { setPwErr(t('auth.e.pass')); return }
+    if (!checkPassword(pw.password, { email: auth.user?.email }).ok) { setPwErr(t('pw.e.rules')); return }
     if (pw.password !== pw.confirm) { setPwErr(t('auth.e.match')); return }
     setBusy(true); setPwErr('')
     try {
@@ -64,7 +66,7 @@ export default function Activate() {
       if (error) throw error
       await loadProfile()
     } catch (err) {
-      setPwErr(err?.code === 'weak_password' ? t('auth.e.pass') : t('ad.act2.passFailed'))
+      setPwErr(err?.code === 'weak_password' ? t('pw.e.rules') : err?.code === 'same_password' ? t('auth.e.samePass') : t('ad.act2.passFailed'))
     } finally { setBusy(false) }
   }
 
@@ -121,8 +123,10 @@ export default function Activate() {
           <form onSubmit={setPassword} noValidate>
             <p className="notice ok" role="status">{t('ad.act2.emailOk')}</p>
             <p className="muted">{t('ad.act2.passIntro')}</p>
-            <label className="field"><span>{t('auth.password')}</span><PasswordInput value={pw.password} onChange={(e) => setPw({ ...pw, password: e.target.value })} autoComplete="new-password" aria-invalid={!!pwErr} /></label>
-            <label className="field"><span>{t('auth.confirm')}</span><PasswordInput value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" aria-invalid={!!pwErr} /></label>
+            <label className="field"><span>{t('auth.password')}</span><PasswordInput value={pw.password} onChange={(e) => setPw({ ...pw, password: e.target.value })} autoComplete="new-password" aria-invalid={!!pwErr} />
+              <PasswordHelp value={pw.password} who={{ email: auth.user?.email }} onSuggest={(p) => setPw({ password: p, confirm: p })} /></label>
+            <label className="field"><span>{t('auth.confirm')}</span><PasswordInput value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" aria-invalid={!!pwErr} />
+              <ConfirmHint password={pw.password} confirm={pw.confirm} /></label>
             {pwErr && <small className="err" role="alert">{pwErr}</small>}
             <button className="btn btn-dark btn-block" disabled={busy}>{busy ? t('state.loading') : t('ad.act2.continue')}</button>
           </form>

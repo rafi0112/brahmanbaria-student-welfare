@@ -61,13 +61,17 @@ export function Credit({ id }) {
 }
 
 // Password box with its own show/hide switch (each field toggles independently).
-export function PasswordInput({ id, ...props }) {
+export function PasswordInput({ id, onKeyUp, onKeyDown, onBlur, ...props }) {
   const { t } = useApp()
   const [shown, setShown] = useState(false)
+  const [caps, setCaps] = useState(false)
   const label = t(shown ? 'auth.hidePassword' : 'auth.showPassword')
+  const readCaps = (e) => { if (e.getModifierState) setCaps(e.getModifierState('CapsLock')) }
   return (
+    <>
     <span className="pw">
-      <input id={id} {...props} type={shown ? 'text' : 'password'} />
+      <input id={id} {...props} type={shown ? 'text' : 'password'} spellCheck={false} autoCapitalize="off"
+        onKeyUp={(e) => { readCaps(e); onKeyUp?.(e) }} onKeyDown={(e) => { readCaps(e); onKeyDown?.(e) }} onBlur={(e) => { setCaps(false); onBlur?.(e) }} />
       <button type="button" className="pw-toggle" onClick={() => setShown((s) => !s)} aria-pressed={shown} aria-label={label} title={label}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
@@ -76,6 +80,8 @@ export function PasswordInput({ id, ...props }) {
         </svg>
       </button>
     </span>
+    {caps && <small className="pw-caps" role="status">{t('pw.caps')}</small>}
+    </>
   )
 }
 

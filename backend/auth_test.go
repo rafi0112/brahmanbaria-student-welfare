@@ -101,7 +101,7 @@ func sessionCookie(rec *httptest.ResponseRecorder) *http.Cookie {
 }
 
 func validReg(email string) map[string]any {
-	return map[string]any{"name": "Test Student", "email": email, "password": "correct horse 1", "batch": 18,
+	return map[string]any{"name": "Test Student", "email": email, "password": "Correct#Horse91", "batch": 18,
 		"department": "Finance", "upazila": "nabinagar", "union": "Barail", "session": "2020-21", "phone": "01712345678"}
 }
 
@@ -115,7 +115,7 @@ func (e *env2) member(t *testing.T, email string) *http.Cookie {
 	if rec := e.do("POST", "/api/v1/auth/verify-email", map[string]string{"token": tok}, nil); rec.Code != 200 {
 		t.Fatalf("verify: %d", rec.Code)
 	}
-	rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": email, "password": "correct horse 1"}, nil)
+	rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": email, "password": "Correct#Horse91"}, nil)
 	c := sessionCookie(rec)
 	if rec.Code != 200 || c == nil {
 		t.Fatalf("login: %d %s", rec.Code, rec.Body)
@@ -125,11 +125,11 @@ func (e *env2) member(t *testing.T, email string) *http.Cookie {
 
 func (e *env2) admin(t *testing.T) *http.Cookie {
 	t.Helper()
-	h, _ := hashPassword("admin password 123")
+	h, _ := hashPassword("Chief#Keeper92")
 	if _, err := e.mem.CreateUser(context.Background(), NewUser{Email: "admin@example.com", PasswordHash: h, Role: RoleAdmin, Verified: true}); err != nil {
 		t.Fatal(err)
 	}
-	rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "admin@example.com", "password": "admin password 123"}, nil)
+	rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "admin@example.com", "password": "Chief#Keeper92"}, nil)
 	c := sessionCookie(rec)
 	if c == nil {
 		t.Fatalf("admin login failed: %d", rec.Code)
@@ -180,7 +180,7 @@ func TestRegisterVerifyLoginLogout(t *testing.T) {
 	if e.mail.count() != 1 || e.mail.last().to != "nusrat@example.com" {
 		t.Fatalf("verification mail missing: %+v", e.mail.msgs)
 	}
-	body := map[string]string{"email": "nusrat@example.com", "password": "correct horse 1"}
+	body := map[string]string{"email": "nusrat@example.com", "password": "Correct#Horse91"}
 	if rec := e.do("POST", "/api/v1/auth/login", body, nil); rec.Code != 403 || !strings.Contains(rec.Body.String(), "email_not_verified") {
 		t.Fatalf("unverified login should be 403, got %d %s", rec.Code, rec.Body)
 	}
@@ -220,7 +220,7 @@ func TestNoAccountEnumeration(t *testing.T) {
 	if first.Code != fresh.Code || first.Body.String() != fresh.Body.String() {
 		t.Fatalf("duplicate registration must look identical: %d %q vs %d %q", first.Code, first.Body, fresh.Code, fresh.Body)
 	}
-	unknown := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "ghost@example.com", "password": "whatever123"}, nil)
+	unknown := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "ghost@example.com", "password": "Whatever#72Q"}, nil)
 	wrong := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "a@example.com", "password": "wrong password"}, nil)
 	if unknown.Code != 401 || wrong.Code != 401 || unknown.Body.String() != wrong.Body.String() {
 		t.Fatalf("login failures must be identical: %d %q vs %d %q", unknown.Code, unknown.Body, wrong.Code, wrong.Body)
@@ -242,19 +242,19 @@ func TestPasswordReset(t *testing.T) {
 	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "tiny"}, nil); rec.Code != 422 {
 		t.Fatalf("weak password should be 422, got %d", rec.Code)
 	}
-	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "brand new password"}, nil); rec.Code != 200 {
+	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "Brand#New9Words"}, nil); rec.Code != 200 {
 		t.Fatalf("reset: %d %s", rec.Code, rec.Body)
 	}
-	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "another password!"}, nil); rec.Code != 400 {
+	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "Another#Phrase9"}, nil); rec.Code != 400 {
 		t.Fatalf("reset token must be single use, got %d", rec.Code)
 	}
 	if rec := e.do("GET", "/api/v1/auth/me", nil, c); rec.Code != 401 {
 		t.Fatalf("old sessions must end after a reset, got %d", rec.Code)
 	}
-	if rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "r@example.com", "password": "correct horse 1"}, nil); rec.Code != 401 {
+	if rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "r@example.com", "password": "Correct#Horse91"}, nil); rec.Code != 401 {
 		t.Fatal("old password must stop working")
 	}
-	if rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "r@example.com", "password": "brand new password"}, nil); rec.Code != 200 {
+	if rec := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "r@example.com", "password": "Brand#New9Words"}, nil); rec.Code != 200 {
 		t.Fatalf("new password should work, got %d", rec.Code)
 	}
 }
@@ -265,13 +265,13 @@ func TestExpiredTokenRejected(t *testing.T) {
 	u, _ := e.mem.UserByEmail(context.Background(), "x@example.com")
 	raw, digest, _ := newToken()
 	_ = e.mem.SaveToken(context.Background(), u.ID, PurposeReset, digest, time.Now().Add(-time.Minute))
-	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": raw, "password": "brand new password"}, nil); rec.Code != 400 {
+	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": raw, "password": "Brand#New9Words"}, nil); rec.Code != 400 {
 		t.Fatalf("expired token should be rejected, got %d", rec.Code)
 	}
 	// a verify token cannot be used for a reset
 	raw2, d2, _ := newToken()
 	_ = e.mem.SaveToken(context.Background(), u.ID, PurposeVerify, d2, time.Now().Add(time.Hour))
-	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": raw2, "password": "brand new password"}, nil); rec.Code != 400 {
+	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": raw2, "password": "Brand#New9Words"}, nil); rec.Code != 400 {
 		t.Fatalf("token purposes must not mix, got %d", rec.Code)
 	}
 }

@@ -195,12 +195,12 @@ func TestInvitedPersonSeesPrefilledProfileOnlyWhenVerifiedAndCompletesOnce(t *te
 		t.Fatalf("send: %d", r.Code)
 	}
 	ctx := context.Background()
-	hash, _ := hashPassword("their own password 1")
+	hash, _ := hashPassword("Their#Own9Words")
 	login := func(verified bool, email string) *http.Cookie {
 		if _, err := e.mem.CreateUser(ctx, NewUser{Email: email, PasswordHash: hash, Role: RoleMember, Verified: verified}); err != nil {
 			t.Fatal(err)
 		}
-		lr := e.do("POST", "/api/v1/auth/login", map[string]string{"email": email, "password": "their own password 1"}, nil)
+		lr := e.do("POST", "/api/v1/auth/login", map[string]string{"email": email, "password": "Their#Own9Words"}, nil)
 		if c := sessionCookie(lr); c != nil {
 			return c
 		}
@@ -214,7 +214,7 @@ func TestInvitedPersonSeesPrefilledProfileOnlyWhenVerifiedAndCompletesOnce(t *te
 	}
 	u, _ := e.mem.UserByEmail(ctx, "invited@example.org")
 	_ = e.mem.SetEmailVerified(ctx, u.ID) // what Supabase's confirmation does
-	lr := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "invited@example.org", "password": "their own password 1"}, nil)
+	lr := e.do("POST", "/api/v1/auth/login", map[string]string{"email": "invited@example.org", "password": "Their#Own9Words"}, nil)
 	c := sessionCookie(lr)
 	if c == nil {
 		t.Fatalf("login: %d %s", lr.Code, lr.Body)
