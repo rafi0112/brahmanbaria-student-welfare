@@ -53,8 +53,9 @@ export default function Auth({ mode }) {
   useEffect(() => {
     if (mode !== 'reset' || !supabaseConfigured || urlAuthError) return undefined
     let live = true
+    // Only the session that the emailed recovery link creates may set a new password here; an ordinary sign-in may not.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => { if (live && event === 'PASSWORD_RECOVERY') setRecovery('ready') })
-    supabase.auth.getSession().then(({ data }) => { if (live) setRecovery(data.session ? 'ready' : 'missing') })
+    supabase.auth.getSession().then(({ data }) => { if (live) setRecovery((prev) => (prev === 'ready' ? prev : data.session && arrivedByEmailLink ? 'ready' : 'missing')) })
     return () => { live = false; sub.subscription.unsubscribe() }
   }, [mode])
 
@@ -115,8 +116,13 @@ export default function Auth({ mode }) {
         if (supabaseConfigured) {
           const { error } = await supabase.auth.updateUser({ password: v.password })
           if (error) throw toApiError(error)
-          await supabase.auth.signOut() // finish on the login page with the new password
-        } else await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password: v.password }) })
+          // a reset usually means the old password may be known to someone: end every other session, keep this one
+          try { await supabase.auth.signOut({ scope: 'others' }) } catch { /* this device stays signed in either way */ }
+          await auth.refresh()
+          nav('/', { replace: true, state: { flash: 'auth.resetSignedIn' } })
+          return
+        }
+        await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password: v.password }) })
         setDone(true)
         setNotice({ tone: 'ok', key: 'auth.resetDone' })
       }
@@ -124,6 +130,7 @@ export default function Auth({ mode }) {
       if (err.fields) setErrs(err.fields)
       if (err.code === 'user_already_exists' || err.code === 'email_exists') { setErrs({ email: t('auth.e.exists') }); setNotice({ tone: 'bad', key: 'auth.e.existsNote' }) }
       else if (err.code === 'weak_password') setErrs({ password: t('auth.e.pass') })
+      else if (err.code === 'same_password') setErrs({ password: t('auth.e.samePass') })
       else if (err.message === 'email_not_verified' || err.status === 403) { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
       else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
       else if (err.status === 429) setNotice({ tone: 'bad', key: 'auth.rateLimited' })

@@ -87,15 +87,32 @@ Self-registration relies on Supabase's own **Confirm sign up** email; the app se
 3. *Authentication → URL Configuration*: the Site URL is the public site address, and `<site>/verify-email` is among the redirect URLs.
 4. Alternatively publish it from here with `cd backend && go run . apply-email-template --template=confirm` (preview) and `--apply` (needs `SUPABASE_ACCESS_TOKEN`, the same as for invitations; add `--template=invite` for the invitation email, which is the default).
 
-The template uses only `{{ .ConfirmationURL }}` plus `{{ .SiteURL }}` for the logo (`frontend/public/email/logo.png`, so the logo shows once the site is public).
+The template uses only `{{ .ConfirmationURL }}` plus `{{ .SiteURL }}` for the logo (`frontend/public/email/logo.png`, so the logo shows once the site is public). It shows the same public photograph of Jagannath University as the invitation.
 
 **What happens, end to end**
 | Step | Result |
 | --- | --- |
 | Visitor registers | Supabase creates the account (unconfirmed) and emails the link. They cannot sign in yet; the sign-in page offers to resend it. |
-| Visitor clicks the link | The email is **verified**, they land on `/verify-email` signed in, and their membership profile is created as **pending** from the details they entered. |
+| Visitor clicks the link | The email is **verified**, the link signs them in, their membership profile is created as **pending** from the details they entered, and they land on the home page with their account menu in the header. |
 | Verified, not yet approved | They can sign in and see **all of their own details**, and other people's **public** details only (name, batch, department, upazila). |
 | Admin approves (Membership Requests) | They become a member: they appear in Registered members and can see every shared member detail; the verified badge appears. |
+
+## Password reset email (forgot password)
+
+Supabase sends the **Reset password** email; the app never sees or emails a password.
+
+**One-time setup in Supabase**
+1. *Authentication → Email Templates → Reset password*: Subject `Reset your BSWA password`; paste `docs/email-templates/supabase_reset_password_template.html` into the body. Or publish it with `cd backend && go run . apply-email-template --template=recovery` (preview) and `--apply` (needs `SUPABASE_ACCESS_TOKEN`).
+2. *Authentication → URL Configuration*: `<site>/reset-password` is among the redirect URLs (and `http://localhost:5173/reset-password` for development).
+3. *Authentication → Email → Email OTP expiration*: the template says the link expires after one hour, which is the Supabase default (3600 seconds). Change the sentence if you change the setting.
+4. Leave *Secure password change* off: the reset link is the proof of ownership, and that setting would ask for a second code.
+
+**What happens, end to end**
+| Step | Result |
+| --- | --- |
+| Someone asks for a reset on `/forgot-password` | The page always says "if an account exists, a link was sent", so it cannot be used to find out who is registered. Too many requests show the rate-limit message. |
+| They open the link | Supabase checks the single-use link and opens `/reset-password` with a recovery session. An expired or used link shows "This link is wrong or has expired" and a way to ask for a new one. Opening `/reset-password` without the link (even while signed in) shows the same, so a password can only be changed through the email. |
+| They save a new password | It must have 8 characters or more and differ from the old one (both checked by Supabase too). Every other session of that account is signed out, this browser stays signed in, and they land on the home page with a confirmation message. |
 
 ## Profile photos
 

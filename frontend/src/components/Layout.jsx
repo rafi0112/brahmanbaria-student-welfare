@@ -31,6 +31,14 @@ function Header() {
   const loc = useLocation()
   const onHero = loc.pathname === '/'
   useEffect(() => setOpen(false), [loc.pathname])
+  const [flash, setFlash] = useState('')
+  useEffect(() => {
+    if (!loc.state?.flash) return undefined
+    setFlash(loc.state.flash)
+    nav(loc.pathname + loc.search, { replace: true, state: null })
+    const id = setTimeout(() => setFlash(''), 6000)
+    return () => clearTimeout(id)
+  }, [loc, nav])
   useEffect(() => {
     if (!loc.state?.openProfile || !user) return
     setProfileOpen(true)
@@ -90,6 +98,7 @@ function Header() {
       </div>
       <button type="button" className="drawer-scrim" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} />
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
+      {flash && <div className="flash" role="status"><Icon name="check" size={16} /> {t(flash)}<button type="button" aria-label={t('nav.close')} onClick={() => setFlash('')}>×</button></div>}
     </header>
   )
 }

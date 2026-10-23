@@ -17,7 +17,9 @@
       .header-pad { padding: 18px 18px !important; }
       .header-tagline { display: none !important; }
       .mobile-title { font-size: 19px !important; }
-      .hero-copy { padding: 26px 22px 20px !important; }
+      .hero-copy { padding: 26px 22px 12px !important; }
+      .hero-art { padding: 6px 22px 24px !important; }
+      .hero-image { max-width: 100% !important; border-radius: 0 0 0 56px !important; }
       .hero-title { font-size: 34px !important; line-height: 1.06 !important; }
       .hero-btn { width: 100% !important; }
       .hero-btn a { display: block !important; text-align: center !important; }
@@ -60,21 +62,36 @@
             </td>
           </tr>
 
-          <!-- Hero: one clear message and one button -->
+          <!-- Hero: two fluid columns, the same as the invitation. Side by side on wide screens, stacked on narrow ones. -->
           <tr>
-            <td class="hero-copy" style="padding:38px 32px 30px;font-size:14px;line-height:1.5;text-align:left;">
-              <div style="font-size:11px;line-height:1.4;letter-spacing:3px;font-weight:700;color:#4b4b4b;text-transform:uppercase;margin-bottom:14px;">Welcome to BSWA</div>
-              <h1 class="hero-title" style="font-family:Arial,Helvetica,sans-serif;font-size:38px;line-height:1.05;letter-spacing:-1.2px;font-weight:750;color:#090909;margin:0 0 22px;">Confirm your<br>email address</h1>
-              <p style="font-size:14px;line-height:1.65;color:#555555;margin:0 0 10px;">Hello,</p>
-              <p style="font-size:14px;line-height:1.65;color:#555555;margin:0 0 22px;max-width:460px;">Thank you for creating a BSWA account. Please confirm your email address to finish signing up. After that you can sign in, see your own details and browse the public member directory.</p>
-              <table role="presentation" class="hero-btn" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
-                <tr>
-                  <td align="center" bgcolor="#111111" style="background:#111111;border-radius:7px;">
-                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:16px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.2;font-weight:700;color:#ffffff;text-decoration:none;border-radius:7px;">Confirm email&nbsp; &rarr;</a>
-                  </td>
-                </tr>
-              </table>
-              <p style="font-size:11px;line-height:1.55;color:#777777;margin:0;">This is a secure, single-use link. If the button does not work, copy and paste this address into your browser:<br><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#555555;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+            <td style="padding:0;font-size:0;line-height:0;" align="center">
+              <!--[if mso]><table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0"><tr><td width="340" valign="middle"><![endif]-->
+              <div class="hero-cell hero-copy" style="display:inline-block;width:100%;max-width:340px;vertical-align:middle;font-size:14px;line-height:1.5;text-align:left;box-sizing:border-box;padding:34px 12px 28px 32px;">
+                <div style="font-size:11px;line-height:1.4;letter-spacing:3px;font-weight:700;color:#4b4b4b;text-transform:uppercase;margin-bottom:14px;">Welcome to BSWA</div>
+                    <h1 class="hero-title" style="font-family:Arial,Helvetica,sans-serif;font-size:38px;line-height:1.05;letter-spacing:-1.2px;font-weight:750;color:#090909;margin:0 0 22px;">Confirm your<br>email address</h1>
+                    <p style="font-size:14px;line-height:1.65;color:#555555;margin:0 0 10px;">Hello,</p>
+                    <p style="font-size:14px;line-height:1.65;color:#555555;margin:0 0 20px;">Thank you for creating a BSWA account. Please confirm your email address to finish signing up. The link also signs you in, so you land straight on the site.</p>
+                    <table role="presentation" class="hero-btn" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
+                      <tr>
+                        <td align="center" bgcolor="#111111" style="background:#111111;border-radius:7px;">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:16px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.2;font-weight:700;color:#ffffff;text-decoration:none;border-radius:7px;">Confirm email&nbsp; &rarr;</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:11px;line-height:1.55;color:#777777;margin:0;">This is a secure, single-use link that confirms your email and signs you in.</p>
+              </div>
+              <!--[if mso]></td><td width="300" valign="middle"><![endif]-->
+              <div class="hero-cell hero-art" style="display:inline-block;width:100%;max-width:296px;vertical-align:middle;font-size:0;line-height:0;text-align:center;box-sizing:border-box;padding:0 0 0 10px;">
+                <img class="hero-image" src="https://lh3.googleusercontent.com/gps-cs-s/ANWiy9Qat_mWu2P0Kt-XmXLJmcVJMpIfL8L9MQiRIhqiDGe1ApyHtXRUVDxFpar20qPzSaRKdlE1VmZmk-c3rMbc_cUa0x9nxSrTfteA20t-zrYcWmWQChvkaofJStqwh1JEdeNr8t5zZw=s1360-w1360-h1020-rw" alt="Jagannath University, Bangladesh" width="286" style="display:block;width:100%;max-width:286px;height:auto;margin:0 auto;border-radius:0 0 0 72px;">
+              </div>
+              <!--[if mso]></td></tr></table><![endif]-->
+            </td>
+          </tr>
+
+          <!-- The link as text, for clients that block buttons -->
+          <tr>
+            <td class="section-pad" style="padding:0 32px 22px;">
+              <p style="font-size:11px;line-height:1.55;color:#777777;margin:0;">If the button does not work, copy and paste this address into your browser:<br><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#555555;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
             </td>
           </tr>
 

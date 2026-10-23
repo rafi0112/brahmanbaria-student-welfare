@@ -15,14 +15,15 @@ import (
 	"time"
 )
 
-// apply-email-template publishes docs/email-templates/supabase_invite_template.html as the "Invite user" email of the Supabase project, using the
+// apply-email-template publishes one of the files in docs/email-templates (--template=invite, confirm or recovery) as that Supabase Auth email, using the
 // Supabase Management API. The Auth admin keys cannot do this: changing email templates needs a personal access token
 // (SUPABASE_ACCESS_TOKEN, created at supabase.com/dashboard/account/tokens). Without --apply it only compares and reports.
 // The token stays in this process: it is never printed or logged.
 
 const (
-	defaultInviteSubject  = "Activate your BSWA account"
-	defaultConfirmSubject = "Confirm your BSWA email"
+	defaultInviteSubject   = "Activate your BSWA account"
+	defaultConfirmSubject  = "Confirm your BSWA email"
+	defaultRecoverySubject = "Reset your BSWA password"
 )
 
 // authTemplate names one of the Supabase Auth emails this command can publish.
@@ -31,8 +32,9 @@ type authTemplate struct {
 }
 
 var authTemplates = map[string]authTemplate{
-	"invite":  {"invite", "Invite user", "../docs/email-templates/supabase_invite_template.html", defaultInviteSubject, "mailer_subjects_invite", "mailer_templates_invite_content"},
-	"confirm": {"confirm", "Confirm signup", "../docs/email-templates/supabase_confirm_signup_template.html", defaultConfirmSubject, "mailer_subjects_confirmation", "mailer_templates_confirmation_content"},
+	"invite":   {"invite", "Invite user", "../docs/email-templates/supabase_invite_template.html", defaultInviteSubject, "mailer_subjects_invite", "mailer_templates_invite_content"},
+	"confirm":  {"confirm", "Confirm signup", "../docs/email-templates/supabase_confirm_signup_template.html", defaultConfirmSubject, "mailer_subjects_confirmation", "mailer_templates_confirmation_content"},
+	"recovery": {"recovery", "Reset password", "../docs/email-templates/supabase_reset_password_template.html", defaultRecoverySubject, "mailer_subjects_recovery", "mailer_templates_recovery_content"},
 }
 
 func projectRef(supabaseURL string) string {
@@ -132,7 +134,7 @@ func runApplyEmailTemplate(args []string) error {
 		case strings.HasPrefix(a, "--template="):
 			k, ok := authTemplates[strings.TrimPrefix(a, "--template=")]
 			if !ok {
-				return fmt.Errorf("unknown template %q: use invite or confirm", strings.TrimPrefix(a, "--template="))
+				return fmt.Errorf("unknown template %q: use invite, confirm or recovery", strings.TrimPrefix(a, "--template="))
 			}
 			kind = k
 		}

@@ -606,7 +606,11 @@ func TestConfirmSignupTemplateTouchesOnlyItsOwnFields(t *testing.T) {
 	if err != nil || len(patched) != 2 || patched["mailer_templates_confirmation_content"] != html || patched["mailer_subjects_confirmation"] != defaultConfirmSubject || !strings.Contains(rep, "Confirm signup") {
 		t.Fatalf("confirm publish: %v %v %q", err, patched, rep)
 	}
-	for name, file := range map[string]string{"confirm": authTemplates["confirm"].file, "invite": authTemplates["invite"].file} {
+	if k := authTemplates["recovery"]; k.subjectKey != "mailer_subjects_recovery" || k.contentKey != "mailer_templates_recovery_content" || k.subject != defaultRecoverySubject {
+		t.Fatalf("recovery template keys: %+v", k)
+	}
+	photo := ""
+	for name, file := range map[string]string{"confirm": authTemplates["confirm"].file, "invite": authTemplates["invite"].file, "recovery": authTemplates["recovery"].file} {
 		raw, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatalf("%s template: %v", name, err)
@@ -614,6 +618,18 @@ func TestConfirmSignupTemplateTouchesOnlyItsOwnFields(t *testing.T) {
 		s := string(raw)
 		if !strings.Contains(s, "{{ .ConfirmationURL }}") || strings.Contains(s, "Jela") || strings.Contains(s, "{{ .Token }}") || strings.Contains(s, "{{ .Email }}") {
 			t.Fatalf("%s template must carry the link and only the link variable, under the BSWA name", name)
+		}
+		// every email shows the same public photograph of the university
+		i := strings.Index(s, `class="hero-image" src="`)
+		if i < 0 {
+			t.Fatalf("%s template has no university photograph", name)
+		}
+		src := s[i+len(`class="hero-image" src="`):]
+		src = src[:strings.Index(src, `"`)]
+		if photo == "" {
+			photo = src
+		} else if src != photo || !strings.HasPrefix(src, "https://") {
+			t.Fatalf("%s template uses another photograph: %s", name, src)
 		}
 	}
 }

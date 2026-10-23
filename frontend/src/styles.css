@@ -852,3 +852,11 @@ html[lang='bn'] .member-card h3 { font-family: 'Noto Serif Bengali', serif; font
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* a one-off confirmation after a redirect (for example after a password reset) */
+.flash { position: fixed; left: 50%; bottom: 24px; z-index: 80; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px);
+  padding: 12px 14px 12px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); box-shadow: 0 12px 32px rgba(0, 0, 0, .22); font-size: .92rem; animation: flash-in .3s ease both; }
+.flash button { margin-left: 6px; border: 0; background: transparent; color: inherit; font-size: 1.2rem; line-height: 1; cursor: pointer; opacity: .7; }
+.flash button:hover { opacity: 1; }
+@keyframes flash-in { from { opacity: 0; transform: translate(-50%, 10px); } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
