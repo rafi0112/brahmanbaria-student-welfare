@@ -860,3 +860,21 @@ html[lang='bn'] .member-card h3 { font-family: 'Noto Serif Bengali', serif; font
 .flash button:hover { opacity: 1; }
 @keyframes flash-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 @media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+
+/* ---------- home hero: the supplied artwork, full width, untouched ---------- */
+.hero-exact { padding-top: 0; }
+.hx { position: relative; width: 100%; line-height: 0; background: #fdf1e3; }
+.hx-img { display: block; width: 100%; height: auto; aspect-ratio: 1436 / 654; }
+.hero-exact .hero-foot { margin-top: clamp(18px, 2.4vw, 32px); }
+/* real links laid exactly over the drawn buttons (positions measured on the artwork) */
+.hx-hit { position: absolute; top: 56.12%; height: 6.42%; border-radius: 999px; transition: box-shadow var(--dur) var(--ease), background-color var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.hx-explore { left: 28.48%; width: 14.07%; }
+.hx-meet { left: 44.22%; width: 11.49%; }
+.hx-hit:hover { background: rgba(255, 255, 255, .14); box-shadow: 0 10px 24px -10px rgba(233, 79, 32, .7); transform: translateY(-1px); }
+.hx-hit:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.hx-actions { display: none; }
+@media (max-width: 760px) {
+  .hx-hit { display: none; }
+  .hx-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 18px; }
+  .hx-actions .btn { flex: 1 1 200px; justify-content: center; }
+}

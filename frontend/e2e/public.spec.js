@@ -23,13 +23,22 @@ test('desktop navigation: links, active state and the bar settling on scroll', a
   await expect(header).not.toHaveClass(/on-hero/)
 })
 
-test('hero search goes to the student directory with the query', async ({ page }) => {
+test('hero: the artwork with a real heading and working buttons; search lives in the header', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: /Our Heritage\. Our People\. Our Tomorrow\./ })).toBeVisible()
-  const search = page.getByRole('search')
-  await search.getByRole('textbox').fill('Finance')
-  await search.getByRole('button', { name: 'Search' }).click()
-  await expect(page).toHaveURL(/\/students\?q=Finance/)
+  await expect(page.getByRole('heading', { level: 1, name: /Our Heritage\. Our People\. Our Tomorrow\./ })).toBeAttached()
+  await expect(page.locator('.hx-img')).toBeVisible()
+  await page.getByRole('link', { name: 'Meet Our Students' }).first().click()
+  await expect(page).toHaveURL(/\/students$/)
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Explore Brahmanbaria' }).first().click()
+  await expect(page).toHaveURL(/\/heritage$/)
+  await page.locator('.nav-tools').getByRole('link', { name: 'Search' }).click()
+  await expect(page).toHaveURL(/\/students$/)
+  // on a phone the buttons sit under the picture, full size
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.locator('.hx-actions').getByRole('link', { name: 'Meet Our Students' })).toBeVisible()
 })
 
 test('mobile drawer opens, closes with Escape, and closes after navigating', async ({ page }) => {

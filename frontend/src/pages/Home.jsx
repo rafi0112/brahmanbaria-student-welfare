@@ -45,7 +45,7 @@ export default function Home() {
   const { t, n, pick } = useApp()
   const { user } = useAuth()
   const nav = useNavigate()
-  const [q, setQ] = useState('')
+  const joinTo = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'
   const [sel, setSel] = useState('sadar')
   const stats = useApi('/stats')
   const ups = useApi('/upazilas')
@@ -57,38 +57,22 @@ export default function Home() {
   const s = stats.data
   const unionCount = upazilas.reduce((sum, u) => sum + u.unions.length, 0)
 
-  const submit = (e) => { e.preventDefault(); nav(`/students?q=${encodeURIComponent(q.trim())}`) }
-  const joinTo = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'
 
   return (
     <>
-      {/* ---------- hero: copy on the cream canvas, the river-and-mosque artwork beside it ---------- */}
-      <section className="hero hero-full" aria-labelledby="hero-title">
-        <div className="hero-top">
-        <div className="hero-bg" aria-hidden="true">
-          <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-640.webp 640w, /images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" width="1672" height="941" alt="" fetchpriority="high" />
+      {/* ---------- hero: the supplied artwork exactly as designed. Its lettering and buttons are part of the picture, so the
+           heading is given to screen readers and real links sit exactly over the drawn buttons (below it on phones). ---------- */}
+      <section className="hero hero-full hero-exact" aria-labelledby="hero-title">
+        <div className="hx">
+          <img className="hx-img" src="/images/bswa/hero-mockup-1436.webp" srcSet="/images/bswa/hero-mockup-720.webp 720w, /images/bswa/hero-mockup-1436.webp 1436w" sizes="100vw"
+            width="1436" height="654" alt="" fetchpriority="high" decoding="async" />
+          <h1 id="hero-title" className="sr-only">{pick('ব্রাহ্মণবাড়িয়া — আমাদের ঐতিহ্য, আমাদের মানুষ, আমাদের আগামী। ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে।', 'Brahmanbaria — Our Heritage. Our People. Our Tomorrow.')}</h1>
+          <Link className="hx-hit hx-explore" to="/heritage" aria-label={pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} />
+          <Link className="hx-hit hx-meet" to="/students" aria-label={pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')} />
         </div>
-        <Vine className="vine-hero-l" />
-        <div className="wrap hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow">{pick('ব্রাহ্মণবাড়িয়া · বাংলাদেশ', 'Brahmanbaria · Bangladesh')}</p>
-            <h1 id="hero-title">
-              <span>{pick('আমাদের ঐতিহ্য।', 'Our Heritage.')}</span>{' '}
-              <span>{pick('আমাদের মানুষ।', 'Our People.')}</span>{' '}
-              <span className="hl">{pick('আমাদের আগামী।', 'Our Tomorrow.')}</span>
-            </h1>
-            <p className="hero-lede">{pick('ব্রাহ্মণবাড়িয়ার শিক্ষার্থীদের একটি কমিউনিটি, যারা জেলার ইসলামী ঐতিহ্য, বাউল সংগীত, পুতুল নাচ ও নদীর সৌন্দর্যকে ধরে রাখে এবং একসাথে সুযোগ গড়ে তোলে।', 'A community of Brahmanbaria’s students, preserving the district’s Islamic heritage, Baul music, Putul Nach and river landscapes, and building opportunities together.')}</p>
-            <div className="hero-actions">
-              <Link className="btn btn-dark" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
-              <Link className="btn btn-outline" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('কমিউনিটিতে যোগ দিন', 'Join the community')}</Link>
-            </div>
-            <form className="hero-search" onSubmit={submit} role="search">
-              <Icon name="search" size={18} className="hero-search-ico" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('hero.search')} aria-label={t('hero.search')} />
-              <button className="btn btn-sm btn-outline" type="submit">{t('hero.searchBtn')}</button>
-            </form>
-          </div>
-        </div>
+        <div className="wrap hx-actions">
+          <Link className="btn btn-dark" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
+          <Link className="btn btn-outline" to="/students">{pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')}</Link>
         </div>
         <div className="wrap hero-foot">
           <dl className="stats-strip-inline" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
