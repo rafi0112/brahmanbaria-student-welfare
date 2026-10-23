@@ -12,9 +12,9 @@ import (
 
 // replyCapture records mail including the Reply-To, and can be told to fail.
 type replyCapture struct {
-	mu   sync.Mutex
-	sent []struct{ to, replyTo, subject, body string }
-	fail bool
+	mu    sync.Mutex
+	sent  []struct{ to, replyTo, subject, body string }
+	fail  bool
 	inner *captureMailer // account e-mails (verification links) still go to the usual capture
 }
 
@@ -71,7 +71,7 @@ func TestContactSavedNotifiedAndAdminOnly(t *testing.T) {
 		if c != nil {
 			want = 403
 		}
-		for _, call := range [][2]string{{"GET", "/api/v1/admin/contact"}, {"GET", "/api/v1/admin/contact/x"}, {"POST", "/api/v1/admin/contact/x/reply"}, {"POST", "/api/v1/admin/contact/x/status"}, {"POST", "/api/v1/admin/contact/x/delete"}} {
+		for _, call := range [][2]string{{"GET", "/api/v1/admin/contact"}, {"GET", "/api/v1/admin/contact/x"}, {"POST", "/api/v1/admin/contact/x/status"}, {"POST", "/api/v1/admin/contact/x/delete"}} {
 			if rec := e.do(call[0], call[1], map[string]string{"body": "hi there", "status": "read"}, c); rec.Code != want {
 				t.Errorf("%s %s as %v: want %d got %d", call[0], call[1], c != nil, want, rec.Code)
 			}
@@ -150,46 +150,20 @@ func TestContactNoRecipientConfigured(t *testing.T) {
 	}
 }
 
-func TestContactReplyGoesOnlyToStoredSender(t *testing.T) {
+func TestContactHasNoReplyFromThePanel(t *testing.T) {
 	t.Setenv("CONTACT_RECIPIENT_EMAIL", "inbox@bswa.example")
 	e, mail := contactEnv(t)
 	admin := e.admin(t)
 	e.do("POST", "/api/v1/contact", goodContact, nil)
 	id := listContact(t, e, admin, "")["items"].([]any)[0].(map[string]any)["id"].(string)
-
-	// validation
-	if rec := e.do("POST", "/api/v1/admin/contact/"+id+"/reply", map[string]string{"body": " "}, admin); rec.Code != 422 {
-		t.Fatalf("empty reply: %d", rec.Code)
+	sent := len(mail.sent)
+	if rec := e.do("POST", "/api/v1/admin/contact/"+id+"/reply", map[string]string{"body": "Come on Friday at 5pm."}, admin); rec.Code != 404 && rec.Code != 405 {
+		t.Fatalf("replying is not offered: %d %s", rec.Code, rec.Body)
 	}
-	// the browser cannot pick a recipient: extra fields are ignored and the stored address is used
-	rec := e.do("POST", "/api/v1/admin/contact/"+id+"/reply", map[string]string{"body": "Come on Friday at 5pm.", "to": "attacker@evil.example", "email": "attacker@evil.example"}, admin)
-	if rec.Code != 200 {
-		t.Fatalf("reply: %d %s", rec.Code, rec.Body)
+	if len(mail.sent) != sent {
+		t.Fatal("no email may leave through the inbox")
 	}
-	last := mail.sent[len(mail.sent)-1]
-	if last.to != "rina@example.org" || last.replyTo != "inbox@bswa.example" || !strings.HasPrefix(last.subject, "Re: ") {
-		t.Fatalf("reply mail wrong: %+v", last)
-	}
-	for _, s := range mail.sent {
-		if s.to == "attacker@evil.example" {
-			t.Fatal("open relay")
-		}
-	}
-	got := e.do("GET", "/api/v1/admin/contact/"+id, nil, admin)
-	if !strings.Contains(got.Body.String(), `"status":"replied"`) || !strings.Contains(got.Body.String(), "Come on Friday") {
-		t.Fatalf("detail: %s", got.Body)
-	}
-	// a failed send is recorded as failed and does NOT mark the message replied
-	e.do("POST", "/api/v1/admin/contact/"+id+"/status", map[string]string{"status": "new"}, admin)
-	mail.fail = true
-	rec = e.do("POST", "/api/v1/admin/contact/"+id+"/reply", map[string]string{"body": "Second answer that fails."}, admin)
-	if rec.Code != 502 || strings.Contains(rec.Body.String(), "smtp") {
-		t.Fatalf("failed reply: %d %s", rec.Code, rec.Body)
-	}
-	if st := listContact(t, e, admin, "?status=all")["items"].([]any)[0].(map[string]any)["status"]; st != "new" {
-		t.Fatalf("a failed reply must not mark the message replied, got %v", st)
-	}
-	// "replied" cannot be set by hand
+	// "replied" cannot be set by hand either
 	if rec := e.do("POST", "/api/v1/admin/contact/"+id+"/status", map[string]string{"status": "replied"}, admin); rec.Code != 422 {
 		t.Fatalf("manual replied: %d", rec.Code)
 	}
@@ -211,7 +185,7 @@ func TestContactStatusViewsSearchAndDelete(t *testing.T) {
 	e.do("POST", "/api/v1/admin/contact/"+ids[0]+"/status", map[string]string{"status": "read"}, admin)
 	e.do("POST", "/api/v1/admin/contact/"+ids[1]+"/status", map[string]string{"status": "archived"}, admin)
 	count := func(q string) int { return len(listContact(t, e, admin, q)["items"].([]any)) }
-	if count("") != 2 || count("?status=all") != 3 || count("?status=archived") != 1 || count("?status=read") != 1 || count("?status=new") != 1 {
+	if count("") != 3 || count("?status=all") != 3 || count("?status=archived") != 1 || count("?status=read") != 1 || count("?status=new") != 1 {
 		t.Fatalf("views wrong: inbox %d all %d archived %d read %d new %d", count(""), count("?status=all"), count("?status=archived"), count("?status=read"), count("?status=new"))
 	}
 	if count("?q=aaa") != 1 || count("?q=nobody") != 0 {

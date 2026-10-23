@@ -36,17 +36,17 @@ var (
 )
 
 type DirectoryInvite struct {
-	ImportedID  string `json:"importedId"`
-	Email       string `json:"email"`
-	Status      string `json:"status"` // saved | sent | failed | completed
-	AuthUserID  string `json:"-"`
-	LastSentAt  string `json:"lastSentAt,omitempty"`
-	SendCount   int    `json:"sendCount"`
-	LastError   string `json:"lastError,omitempty"`
-	CompletedAt string `json:"completedAt,omitempty"`
+	ImportedID    string `json:"importedId"`
+	Email         string `json:"email"`
+	Status        string `json:"status"` // saved | sent | failed | completed
+	AuthUserID    string `json:"-"`
+	LastSentAt    string `json:"lastSentAt,omitempty"`
+	SendCount     int    `json:"sendCount"`
+	LastError     string `json:"lastError,omitempty"`
+	CompletedAt   string `json:"completedAt,omitempty"`
 	EmailVerified bool   `json:"emailVerified"` // an admin confirmed this address when verifying the record
-	CompletedUser string `json:"-"` // the account that activated through this record
-	ReplacesUser  string `json:"-"` // the member's earlier account while a move to a new email awaits approval
+	CompletedUser string `json:"-"`             // the account that activated through this record
+	ReplacesUser  string `json:"-"`             // the member's earlier account while a move to a new email awaits approval
 }
 
 type InviteStore interface {
@@ -223,7 +223,7 @@ var (
 )
 
 func setKeyState(state, kind string) { keyMu.Lock(); keyState, keyKind = state, kind; keyMu.Unlock() }
-func getKeyState() (string, string) { keyMu.Lock(); defer keyMu.Unlock(); return keyState, keyKind }
+func getKeyState() (string, string)  { keyMu.Lock(); defer keyMu.Unlock(); return keyState, keyKind }
 
 // verifyAdminKey runs the harmless check once and logs a clear diagnostic. It is called at startup and again before a send when
 // the last result was inconclusive.
@@ -839,4 +839,26 @@ func (s *pgStore) CompleteInvite(ctx context.Context, importedID, userID string)
 		return ErrNotFound
 	}
 	return nil
+}
+
+// DeleteUser removes a Supabase Auth account. A user that is already gone counts as removed.
+func (s *supabaseAdmin) DeleteUser(ctx context.Context, id string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, s.baseURL+"/auth/v1/admin/users/"+url.PathEscape(id), nil)
+	if err != nil {
+		return err
+	}
+	s.setAuth(req)
+	res, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("could not reach Supabase Auth")
+	}
+	defer res.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10))
+	switch {
+	case res.StatusCode >= 200 && res.StatusCode < 300, res.StatusCode == http.StatusNotFound:
+		return nil
+	case res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden:
+		return ErrInviteNotAllowed
+	}
+	return fmt.Errorf("Supabase Auth answered HTTP %d to the delete", res.StatusCode)
 }

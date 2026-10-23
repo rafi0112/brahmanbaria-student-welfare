@@ -52,9 +52,7 @@ func (s *pgStore) ListContacts(ctx context.Context, q ContactQuery) ([]ContactMe
 	args := []any{}
 	add := func(cond string, v any) { args = append(args, v); where = append(where, fmt.Sprintf(cond, len(args))) }
 	switch q.Status {
-	case "":
-		where = append(where, "c.status <> 'archived'")
-	case "all":
+	case "", "all": // every message; archiving is no longer offered, so older archived ones stay visible
 	default:
 		add("c.status = $%d", q.Status)
 	}

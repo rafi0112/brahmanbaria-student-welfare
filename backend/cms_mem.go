@@ -16,9 +16,9 @@ type memEntry struct {
 }
 
 type memAudit struct {
-	at                                 time.Time
+	at                              time.Time
 	actor, action, entity, entityID string
-	detail                             map[string]any
+	detail                          map[string]any
 }
 
 type cmsMem struct {
@@ -551,5 +551,39 @@ func (m *memStore) SetAccountDisabled(_ context.Context, actorID, userID string,
 		action = "member.deactivate"
 	}
 	m.auditLocked(actorID, action, "user", userID, nil)
+	return nil
+}
+
+func (m *memStore) RemoveMember(ctx context.Context, actorID, userID string, external func(context.Context) error) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	if actorID == userID {
+		return ErrSelfDisable
+	}
+	if u.Role == RoleAdmin {
+		return ErrAdminProtected
+	}
+	if external != nil {
+		if err := external(ctx); err != nil {
+			return err
+		}
+	}
+	name := ""
+	if p, ok := m.profiles[userID]; ok {
+		name = p.Name
+	}
+	for tok, s := range m.sessions {
+		if s.userID == userID {
+			delete(m.sessions, tok)
+		}
+	}
+	delete(m.byEmail, normEmail(u.Email))
+	delete(m.profiles, userID)
+	delete(m.users, userID)
+	m.auditLocked(actorID, "member.remove", "user", userID, map[string]any{"title": name, "email": u.Email})
 	return nil
 }

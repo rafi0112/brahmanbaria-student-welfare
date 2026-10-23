@@ -156,7 +156,6 @@ func (a *App) contactRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *
 	m.HandleFunc("GET /api/v1/admin/contact", adm(a.listContact))
 	m.HandleFunc("GET /api/v1/admin/contact/{id}", adm(a.contactOne))
 	m.HandleFunc("POST /api/v1/admin/contact/{id}/status", adm(a.contactStatus))
-	m.HandleFunc("POST /api/v1/admin/contact/{id}/reply", adm(a.contactReply))
 	m.HandleFunc("POST /api/v1/admin/contact/{id}/notify", adm(a.contactRenotify))
 	m.HandleFunc("POST /api/v1/admin/contact/{id}/delete", adm(a.contactDelete))
 }
@@ -220,52 +219,6 @@ func (a *App) contactStatus(w http.ResponseWriter, r *http.Request, u User) {
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "contact.status", "contact", id, map[string]any{"status": q.Status})
 	m, _ := a.Auth.Store.GetContact(r.Context(), id)
 	writeJSON(w, 200, map[string]any{"item": m})
-}
-
-func (a *App) contactReply(w http.ResponseWriter, r *http.Request, u User) {
-	var q struct {
-		Body string `json:"body"`
-	}
-	if !decode(w, r, &q) {
-		return
-	}
-	body := strings.TrimSpace(q.Body)
-	if n := utf8.RuneCountInString(body); n < 2 || n > 5000 {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": map[string]string{"body": "Write a reply of 2-5000 characters."}})
-		return
-	}
-	if !a.Auth.replyUser.Allow(u.ID) {
-		apiError(w, http.StatusTooManyRequests, "rate_limited")
-		return
-	}
-	id := r.PathValue("id")
-	m, err := a.Auth.Store.GetContact(r.Context(), id)
-	if err != nil {
-		a.contactFail(w, err)
-		return
-	}
-	// the recipient is always the address stored with the message; the request cannot choose one
-	subject := "Re: " + oneLine(strings.TrimPrefix(m.Subject, "Re: "), 110)
-	cctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-	defer cancel()
-	sendErr := sendMail(cctx, a.Auth.Mailer, m.Email, a.contactRecipient(), subject, body+"\n\n--\nIn reply to your message \""+oneLine(m.Subject, 120)+"\" sent on "+m.CreatedAt+".")
-	status, note := "sent", ""
-	if sendErr != nil {
-		log.Printf("contact %s: reply failed: %v", id, sendErr)
-		status, note = "failed", "delivery failed"
-	}
-	if err := a.Auth.Store.AddContactReply(r.Context(), id, u.ID, body, status, note); err != nil {
-		a.contactFail(w, err)
-		return
-	}
-	_ = a.Auth.Store.Audit(r.Context(), u.ID, "contact.reply", "contact", id, map[string]any{"status": status}) // never the text itself
-	fresh, _ := a.Auth.Store.GetContact(r.Context(), id)
-	code := http.StatusOK
-	if sendErr != nil {
-		code = http.StatusBadGateway
-	}
-	writeJSON(w, code, map[string]any{"ok": sendErr == nil, "delivered": sendErr == nil && !simulated(a.Auth.Mailer), "simulated": simulated(a.Auth.Mailer), "item": fresh,
-		"error": map[bool]string{true: "", false: "mail_failed"}[sendErr == nil]})
 }
 
 func (a *App) contactRenotify(w http.ResponseWriter, r *http.Request, u User) {

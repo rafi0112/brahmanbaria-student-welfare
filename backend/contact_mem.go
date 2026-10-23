@@ -44,7 +44,7 @@ func (m *memStore) ListContacts(_ context.Context, q ContactQuery) ([]ContactMes
 	for _, c := range m.liveContacts() {
 		counts[c.Status]++
 		switch {
-		case q.Status == "" && c.Status == "archived", q.Status != "" && q.Status != "all" && c.Status != q.Status:
+		case q.Status != "" && q.Status != "all" && c.Status != q.Status:
 			continue
 		}
 		if needle != "" && !strings.Contains(strings.ToLower(c.Name+" "+c.Email+" "+c.Subject), needle) {

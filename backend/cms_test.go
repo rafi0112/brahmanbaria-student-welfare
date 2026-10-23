@@ -331,6 +331,32 @@ func cmsStoreSuite(t *testing.T, s AuthStore) {
 	if h, _ := s.RoleHistory(ctx, "", 10); len(h) < 1 {
 		t.Fatalf("role history without a target: %+v", h)
 	}
+
+	// removing a member: never an admin or oneself; a failing outside step keeps everything; otherwise the account is gone
+	if err := s.RemoveMember(ctx, admin.ID, m1.ID, nil); err != ErrAdminProtected {
+		t.Fatalf("an admin cannot be removed: %v", err)
+	}
+	if err := s.RemoveMember(ctx, m2.ID, m2.ID, nil); err != ErrSelfDisable {
+		t.Fatalf("nobody removes themselves: %v", err)
+	}
+	if err := s.RemoveMember(ctx, admin.ID, m2.ID, func(context.Context) error { return ErrInviteNotAllowed }); err != ErrInviteNotAllowed {
+		t.Fatalf("the outside step's error comes back: %v", err)
+	}
+	if _, err := s.UserByID(ctx, m2.ID); err != nil {
+		t.Fatalf("a failed removal keeps the account: %v", err)
+	}
+	if err := s.RemoveMember(ctx, admin.ID, m2.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UserByID(ctx, m2.ID); err != ErrNotFound {
+		t.Fatalf("removed account: %v", err)
+	}
+	if _, err := s.ProfileByUser(ctx, m2.ID); err == nil {
+		t.Fatal("the profile goes with the account")
+	}
+	if err := s.RemoveMember(ctx, admin.ID, m2.ID, nil); err != ErrNotFound {
+		t.Fatalf("removing twice: %v", err)
+	}
 }
 
 func TestMemCMSStoreSuite(t *testing.T) { cmsStoreSuite(t, newMemStore()) }

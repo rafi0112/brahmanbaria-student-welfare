@@ -630,3 +630,41 @@ func (s *pgStore) SetAccountDisabled(ctx context.Context, actorID, userID string
 	}
 	return tx.Commit(ctx)
 }
+
+func (s *pgStore) RemoveMember(ctx context.Context, actorID, userID string, external func(context.Context) error) error {
+	if !okID(userID) {
+		return ErrNotFound
+	}
+	if actorID == userID {
+		return ErrSelfDisable
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	var role, email, name string
+	err = tx.QueryRow(ctx, `SELECT u.role, u.email, COALESCE(p.name, '') FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+		WHERE u.id = $1::uuid FOR UPDATE OF u`, userID).Scan(&role, &email, &name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	if role == RoleAdmin {
+		return ErrAdminProtected
+	}
+	if err := auditAdmin(ctx, tx, actorID, "member.remove", "user", userID, map[string]any{"title": name, "email": email}); err != nil {
+		return err
+	}
+	// profile, photo, sessions and a pending change go with the account (ON DELETE CASCADE); other links are cleared
+	if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1::uuid`, userID); err != nil {
+		return err
+	}
+	if external != nil {
+		if err := external(ctx); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}

@@ -232,7 +232,7 @@ test('every text field in the admin editors accepts full typing', async ({ page 
   }
 })
 
-test('contact inbox: a public message arrives, can be opened, answered and archived', async ({ page }) => {
+test('contact inbox: a public message arrives, is read, marked unread and deleted; no reply from the panel', async ({ page }) => {
   await page.goto('/')
   const res = await page.evaluate(async () => {
     const r = await fetch('/api/v1/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'E2E Visitor', email: 'visitor@example.test', subject: 'Hello from the e2e suite', message: 'Please tell me about the next meetup.' }) })
@@ -244,21 +244,20 @@ test('contact inbox: a public message arrives, can be opened, answered and archi
   await kid(page, 'Messages', 'Inbox').click()
   await expect(page).toHaveURL(/\/admin\/contact$/)
   await expect(page.getByText('Hello from the e2e suite').first()).toBeVisible()
-  await expect(page.getByText(/emails are printed to its log/).first()).toBeVisible() // honest about the development mailer
   await page.getByRole('button', { name: 'Open', exact: true }).first().click()
   const dlg = page.getByRole('dialog', { name: 'Message' })
   await expect(dlg).toContainText('visitor@example.test')
-  await dlg.getByRole('button', { name: 'Reply', exact: true }).click()
-  await expect(dlg).toContainText('visitor@example.test') // the recipient is shown and fixed
-  await dlg.getByRole('textbox').pressSequentially('Thanks, see you on Friday.', { delay: 10 })
-  await expect(dlg.getByRole('textbox')).toHaveValue('Thanks, see you on Friday.')
-  await dlg.getByRole('button', { name: 'Send reply' }).click()
-  await expect(dlg).toContainText('Thanks, see you on Friday.')
-  await expect(dlg).toContainText('Replied')
-  await dlg.getByRole('button', { name: 'Archive' }).click()
+  await expect(dlg.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0)
+  await expect(dlg.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+  await expect(dlg.getByRole('button', { name: 'Mark as unread' })).toBeVisible() // opening it marked it read
+  await dlg.getByRole('button', { name: 'Mark as unread' }).click()
+  await expect(dlg.getByRole('button', { name: 'Mark as read' })).toBeVisible()
+  await dlg.getByRole('button', { name: 'Mark as read' }).click()
+  await expect(dlg.getByRole('button', { name: 'Mark as unread' })).toBeVisible()
+  await dlg.getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Delete' }).click()
   await expect(dlg).toBeHidden()
-  await kid(page, 'Messages', 'Archived').click()
-  await expect(page.getByText('Hello from the e2e suite').first()).toBeVisible()
+  await expect(page.getByText('Hello from the e2e suite')).toHaveCount(0)
 })
 
 test('member directory: verify a record, see the mark, and it persists', async ({ page }) => {

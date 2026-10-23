@@ -9,9 +9,7 @@ export const NAV = [
   { id: 'contact', to: '/admin/contact', icon: 'mail', label: 'ad.nav.contact', group: 'overview', watch: ['status'], children: [
     { id: 'inbox', label: 'ad.ct.inbox', query: {} },
     { id: 'new', label: 'ad.ct.new', query: { status: 'new' } },
-    { id: 'replied', label: 'ad.ct.replied', query: { status: 'replied' } },
-    { id: 'archived', label: 'ad.ct.archived', query: { status: 'archived' } },
-    { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
+    { id: 'read', label: 'ad.ct.read', query: { status: 'read' } },
   ] },
   // Students is a dropdown of two plain pages. Membership Requests is the pending queue (tabs: all, complete, incomplete profiles).
   // Membership Directory holds everyone: registered members (all / needs review / verified) and the original directory records

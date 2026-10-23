@@ -7,68 +7,93 @@ import Icon from './icons.jsx'
 import { PageHeader, SkeletonRows, useWhen } from './kit.jsx'
 
 
-// Horizontal bars for a ranked list (departments, upazilas). Bars are scaled to the largest value; numbers are always shown.
-function BarList({ rows, label, n }) {
+// The axis top: four equal whole-number steps of a round size that just cover the largest value, so ticks read 0, 10, 20…
+function niceMax(v) {
+  const raw = Math.max(1, v) / 4
+  const p = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((m) => m * p).find((x) => x >= raw && Number.isInteger(x)) || Math.ceil(raw)
+  return step * 4
+}
+
+// Ranked horizontal bars (departments, upazilas): rank, label, a gradient bar sized to the largest value, count and share.
+function BarList({ rows, label, n, total }) {
   const max = Math.max(1, ...rows.map((r) => r.count))
   return (
-    <ul className="ch-bars">
-      {rows.map((r) => (
-        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined}>
+    <ol className="ch-bars">
+      {rows.map((r, i) => (
+        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined} style={{ '--i': i }}>
+          <span className="ch-rank num" aria-hidden="true">{r.key === 'other' ? '·' : n(i + 1)}</span>
           <span className="ch-bar-label" title={label(r.key)}>{label(r.key)}</span>
-          <span className="ch-bar-track"><span className="ch-bar-fill" style={{ width: `${(r.count / max) * 100}%` }} /></span>
-          <span className="ch-bar-num num">{n(r.count)}</span>
+          <span className="ch-bar-track"><span className="ch-bar-fill" style={{ '--w': `${(r.count / max) * 100}%` }} /></span>
+          <span className="ch-bar-num num">{n(r.count)}<small>{total ? `${n(Math.round((r.count / total) * 100))}%` : ''}</small></span>
         </li>
       ))}
-    </ul>
+    </ol>
   )
 }
 
-// Vertical columns over a short ordered axis (months, batches). Each column has a tooltip and the value sits on top.
-function Columns({ rows, label, n, title }) {
-  const max = Math.max(1, ...rows.map((r) => r.count))
+// Columns on a real axis: gridlines with round tick values, a gradient column per point and a tooltip on hover or focus.
+function Columns({ rows, label, n, title, unit }) {
+  const top = niceMax(Math.max(0, ...rows.map((r) => r.count)))
+  const ticks = [top, top * 0.75, top / 2, top / 4, 0]
   return (
-    <div className="ch-cols" role="img" aria-label={`${title}: ${rows.map((r) => `${label(r.key)} ${r.count}`).join(', ')}`}>
-      {rows.map((r) => (
-        <div key={r.key} className="ch-col" title={`${label(r.key)}: ${n(r.count)}`}>
-          <span className="ch-col-num num">{r.count > 0 ? n(r.count) : ''}</span>
-          <span className="ch-col-bar" style={{ height: `${Math.max(r.count ? 4 : 0, (r.count / max) * 100)}%` }} />
-          <span className="ch-col-label">{label(r.key)}</span>
+    <div className="ch-plot" role="img" aria-label={`${title}: ${rows.map((r) => `${label(r.key)} ${r.count}`).join(', ')}`}>
+      <div className="ch-axis" aria-hidden="true">{ticks.map((v) => <span key={v}>{n(Math.round(v))}</span>)}</div>
+      <div className="ch-area">
+        <div className="ch-grid-lines" aria-hidden="true">{ticks.map((v) => <i key={v} />)}</div>
+        <div className="ch-cols">
+          {rows.map((r, i) => (
+            <div key={r.key} className="ch-col" tabIndex={0} style={{ '--i': i }}>
+              <span className="ch-col-bar" style={{ '--h': `${(r.count / top) * 100}%` }} data-zero={r.count === 0 || undefined}>
+                <span className="ch-tip" role="tooltip"><b className="num">{n(r.count)}</b> {unit}<small>{label(r.key)}</small></span>
+              </span>
+              <span className="ch-col-label">{label(r.key)}</span>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   )
 }
 
-// A donut for a few parts of one whole (membership status), with a legend that carries the numbers.
+// Membership status as a ring with rounded, separated segments; the legend carries counts and shares.
 function Donut({ parts, n, center }) {
   const total = parts.reduce((a, p) => a + p.value, 0)
-  const R = 42
+  const R = 40
   const C = 2 * Math.PI * R
+  const gap = total > 0 && parts.filter((p) => p.value > 0).length > 1 ? 3 : 0
   let at = 0
   return (
     <div className="ch-donut">
-      <svg viewBox="0 0 100 100" width="132" height="132" aria-hidden="true">
-        <circle cx="50" cy="50" r={R} fill="none" stroke="var(--a-line)" strokeWidth="12" />
+      <svg viewBox="0 0 100 100" width="148" height="148" aria-hidden="true">
+        <circle cx="50" cy="50" r={R} fill="none" stroke="var(--a-surface-2)" strokeWidth="11" />
         {total > 0 && parts.filter((p) => p.value > 0).map((p) => {
-          const len = (p.value / total) * C
-          const el = <circle key={p.key} cx="50" cy="50" r={R} fill="none" stroke={p.color} strokeWidth="12" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-at} transform="rotate(-90 50 50)" />
-          at += len
+          const len = Math.max(0, (p.value / total) * C - gap)
+          const el = <circle key={p.key} className="ch-seg" cx="50" cy="50" r={R} fill="none" stroke={p.color} strokeWidth="11" strokeLinecap={gap ? 'round' : 'butt'} strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-at} transform="rotate(-90 50 50)" />
+          at += len + gap
           return el
         })}
-        <text x="50" y="49" textAnchor="middle" className="ch-donut-num">{n(total)}</text>
-        <text x="50" y="62" textAnchor="middle" className="ch-donut-sub">{center}</text>
+        <text x="50" y="50" textAnchor="middle" className="ch-donut-num">{n(total)}</text>
+        <text x="50" y="63" textAnchor="middle" className="ch-donut-sub">{center}</text>
       </svg>
       <ul className="ch-legend">
-        {parts.map((p) => <li key={p.key}><i style={{ background: p.color }} aria-hidden="true" />{p.label}<b className="num">{n(p.value)}</b></li>)}
+        {parts.map((p) => (
+          <li key={p.key}><i style={{ background: p.color }} aria-hidden="true" /><span>{p.label}</span>
+            <b className="num">{n(p.value)}</b><small className="num">{total ? `${n(Math.round((p.value / total) * 100))}%` : '—'}</small></li>
+        ))}
       </ul>
     </div>
   )
 }
 
-function ChartCard({ title, sub, children, wide }) {
+function ChartCard({ title, sub, icon, kpi, kpiLabel, children, wide }) {
   return (
     <figure className={`ch-card${wide ? ' is-wide' : ''}`}>
-      <figcaption><h3>{title}</h3>{sub && <small>{sub}</small>}</figcaption>
+      <figcaption>
+        {icon && <span className="ch-ico" aria-hidden="true"><Icon name={icon} size={16} /></span>}
+        <span className="ch-head"><h3>{title}</h3>{sub && <small>{sub}</small>}</span>
+        {kpi != null && <span className="ch-kpi"><b className="num">{kpi}</b>{kpiLabel && <small>{kpiLabel}</small>}</span>}
+      </figcaption>
       {children}
     </figure>
   )
@@ -161,7 +186,7 @@ export default function Dashboard() {
               <h3 className="dash-h">{t('ad.dash.activity')} <Link className="dash-more" to="/admin/activity">{t('ad.dash.viewAll')}</Link></h3>
               {d.activity.length === 0 ? <p className="muted">{t('ad.dash.noActivity')}</p> : (
                 <ul className="dash-rows">
-                  {d.activity.slice(0, 6).map((a, i) => (
+                  {d.activity.slice(0, 3).map((a, i) => (
                     <li key={i}>
                       <span className="dash-row-main"><span>{actionText(a.action)}{a.detail?.title ? <> — <em>{a.detail.title}</em></> : null}</span><small>{a.actor || t('ad.dash.system')} · {when(a.at)}</small></span>
                     </li>
@@ -173,25 +198,26 @@ export default function Dashboard() {
 
           {ch && (
             <div className="ch-grid">
-              <ChartCard title={t('ad.ch.signups')} sub={t('ad.ch.signupsSub')} wide>
-                {ch.signups.every((m) => m.count === 0) && <p className="muted small">{t('ad.ch.noSignups')}</p>}
-                <Columns rows={ch.signups} label={monthName} n={n} title={t('ad.ch.signups')} />
+              <ChartCard wide icon="activity" title={t('ad.ch.signups')} sub={t('ad.ch.signupsSub')}
+                kpi={n(ch.signups.reduce((x, m) => x + m.count, 0))} kpiLabel={`${t('ad.ch.thisMonth')} ${n(ch.signups[ch.signups.length - 1]?.count || 0)}`}>
+                {ch.signups.every((m) => m.count === 0) && <p className="ch-empty">{t('ad.ch.noSignups')}</p>}
+                <Columns rows={ch.signups} label={monthName} n={n} title={t('ad.ch.signups')} unit={t('ad.ch.unitSignups')} />
               </ChartCard>
-              <ChartCard title={t('ad.ch.status')} sub={t('ad.ch.statusSub')}>
+              <ChartCard icon="users" title={t('ad.ch.status')} sub={t('ad.ch.statusSub')}>
                 <Donut n={n} center={t('ad.ch.members')} parts={[
                   { key: 'approved', label: t('ad.status.approved'), value: d.members.approved, color: 'var(--a-ok)' },
                   { key: 'pending', label: t('ad.status.pending'), value: d.members.pending, color: 'var(--a-warn)' },
                   { key: 'rejected', label: t('ad.status.rejected'), value: d.members.rejected, color: 'var(--a-bad)' },
                 ]} />
               </ChartCard>
-              <ChartCard title={t('ad.ch.dept')} sub={`${n(ch.students)} ${t('ad.ch.studentsAll')}`}>
-                {ch.byDepartment.length ? <BarList rows={ch.byDepartment} n={n} label={(k) => (k === 'other' ? t('ad.ch.other') : k)} /> : <p className="muted small">{t('ad.ch.none')}</p>}
+              <ChartCard icon="star" title={t('ad.ch.batch')} sub={t('ad.ch.batchSub')} kpi={n(ch.byBatch.length)} kpiLabel={t('ad.ch.batches')}>
+                {ch.byBatch.length ? <Columns rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} unit={t('ad.ch.unitStudents')} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
-              <ChartCard title={t('ad.ch.upazila')} sub={`${n(ch.students)} ${t('ad.ch.studentsAll')}`}>
-                {ch.byUpazila.length ? <BarList rows={ch.byUpazila} n={n} label={upName} /> : <p className="muted small">{t('ad.ch.none')}</p>}
+              <ChartCard icon="directory" title={t('ad.ch.dept')} sub={t('ad.ch.studentsAll')} kpi={n(ch.students)} kpiLabel={t('ad.ch.students')}>
+                {ch.byDepartment.length ? <BarList rows={ch.byDepartment} n={n} total={ch.students} label={(k) => (k === 'other' ? t('ad.ch.other') : k)} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
-              <ChartCard title={t('ad.ch.batch')} sub={t('ad.ch.batchSub')}>
-                {ch.byBatch.length ? <Columns rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} /> : <p className="muted small">{t('ad.ch.none')}</p>}
+              <ChartCard icon="landmark" title={t('ad.ch.upazila')} sub={t('ad.ch.studentsAll')} kpi={n(ch.byUpazila.length)} kpiLabel={t('ad.ch.upazilas')}>
+                {ch.byUpazila.length ? <BarList rows={ch.byUpazila} n={n} total={ch.students} label={upName} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
             </div>
           )}

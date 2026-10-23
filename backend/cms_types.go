@@ -9,11 +9,11 @@ import (
 )
 
 var (
-	ErrSlugTaken     = errors.New("that URL name is already used")
-	ErrParentInvalid = errors.New("the album does not exist")
+	ErrSlugTaken      = errors.New("that URL name is already used")
+	ErrParentInvalid  = errors.New("the album does not exist")
 	ErrAdminProtected = errors.New("demote the admin before deactivating the account")
-	ErrSelfDisable   = errors.New("you cannot deactivate your own account")
-	ErrStale         = errors.New("someone else changed this record after you opened it")
+	ErrSelfDisable    = errors.New("you cannot deactivate your own account")
+	ErrStale          = errors.New("someone else changed this record after you opened it")
 )
 
 const (
@@ -97,10 +97,10 @@ type RoleChangeRow struct {
 
 type MemberQuery struct {
 	Q, Status, Department, Verified, Complete, Disabled string
-	View                                               string // "" | review (needs an admin's attention) | verified (approved and email confirmed)
-	Batch                                              int
-	Page, Limit                                        int
-	Sort                                               string // newest (default), oldest, name, batch, status
+	View                                                string // "" | review (needs an admin's attention) | verified (approved and email confirmed)
+	Batch                                               int
+	Page, Limit                                         int
+	Sort                                                string // newest (default), oldest, name, batch, status
 }
 
 var memberSorts = map[string]bool{"": true, "newest": true, "oldest": true, "name": true, "batch": true, "status": true}
@@ -108,22 +108,22 @@ var userSorts = map[string]bool{"": true, "newest": true, "oldest": true, "name"
 
 // MemberAdminRow is the admin's view of a registered member (never returned on public routes).
 type MemberAdminRow struct {
-	ID              string `json:"id"`
-	Email           string `json:"email"`
-	Name            string `json:"name"`
-	Batch           int    `json:"batch"`
-	Department      string `json:"department"`
-	Upazila         string `json:"upazila"`
-	Union           string `json:"union"`
-	Phone           string `json:"phone"`
-	BloodGroup      string `json:"bloodGroup"`
-	Status          string `json:"status"`
-	ShowInDirectory bool   `json:"showInDirectory"`
-	Role            string `json:"role"`
-	EmailVerified   bool   `json:"emailVerified"`
-	Disabled        bool   `json:"disabled"`
-	Complete        bool   `json:"complete"`
-	CreatedAt       string `json:"createdAt"`
+	ID              string   `json:"id"`
+	Email           string   `json:"email"`
+	Name            string   `json:"name"`
+	Batch           int      `json:"batch"`
+	Department      string   `json:"department"`
+	Upazila         string   `json:"upazila"`
+	Union           string   `json:"union"`
+	Phone           string   `json:"phone"`
+	BloodGroup      string   `json:"bloodGroup"`
+	Status          string   `json:"status"`
+	ShowInDirectory bool     `json:"showInDirectory"`
+	Role            string   `json:"role"`
+	EmailVerified   bool     `json:"emailVerified"`
+	Disabled        bool     `json:"disabled"`
+	Complete        bool     `json:"complete"`
+	CreatedAt       string   `json:"createdAt"`
 	Session         string   `json:"session"`
 	Gender          string   `json:"gender"`
 	Missing         []string `json:"missing"` // required profile fields that are still empty
@@ -196,6 +196,10 @@ type CMSStore interface {
 	ReviewMember(ctx context.Context, actorID, userID, status string, note ...string) error
 	MemberHistory(ctx context.Context, userID string) ([]Activity, error)
 	SetAccountDisabled(ctx context.Context, actorID, userID string, disabled bool) error
+	// RemoveMember deletes a member's account with its profile, photo, sessions and pending change (not an admin, not
+	// oneself). external runs inside the change, before it is kept, so the sign-in account elsewhere goes with it or nothing
+	// does. The removal is written to the activity log.
+	RemoveMember(ctx context.Context, actorID, userID string, external func(context.Context) error) error
 }
 
 var slugRx = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)

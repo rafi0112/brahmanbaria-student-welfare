@@ -148,6 +148,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
   const [q, setQ] = useState('')
   const [term, setTerm] = useState('')
   const [picked, setPicked] = useState(null)
+  const [sure, setSure] = useState(false) // second confirmation: the admin has read what admin rights mean
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   useEffect(() => { const id = setTimeout(() => setTerm(q.trim()), 250); return () => clearTimeout(id) }, [q])
@@ -158,9 +159,27 @@ function PromoteDialog({ onClose, onDone, explain }) {
     setBusy(true); setErr('')
     try { await api(`/admin/users/${picked.id}/role`, { method: 'POST', body: JSON.stringify({ role: 'admin' }) }); onDone() } catch (e) { setErr(explain(e)) } finally { setBusy(false) }
   }
+  if (picked && sure) {
+    return (
+      <Modal title={t('ad.pm.sureTitle')} onClose={() => { setSure(false); setPicked(null); setErr('') }} busy={busy}>
+        <p className="ad-role-change"><Avatar name={picked.name || picked.email} size={30} /> <strong>{picked.name || picked.email}</strong> <span className="muted">{picked.email}</span></p>
+        <p>{t('ad.pm.sureText').replace('{who}', picked.name || picked.email)}</p>
+        <ul className="ad-sure-list">
+          <li>{t('ad.pm.sure1')}</li>
+          <li>{t('ad.pm.sure2')}</li>
+          <li>{t('ad.pm.sure3')}</li>
+        </ul>
+        {err && <p className="notice bad" role="alert">{err}</p>}
+        <div className="row">
+          <button type="button" className="btn btn-dark" disabled={busy} onClick={go}>{busy ? t('state.loading') : t('ad.pm.sureYes')}</button>
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => { setSure(false); setPicked(null); setErr('') }}>{t('admin.roles.cancel')}</button>
+        </div>
+      </Modal>
+    )
+  }
   if (picked) {
     return (
-      <Confirm title={t('ad.pm.confirmTitle')} busy={busy} label={t('admin.roles.makeAdmin')} onYes={go} onNo={() => { setPicked(null); setErr('') }}
+      <Confirm title={t('ad.pm.confirmTitle')} busy={busy} label={t('ad.rm.continue')} onYes={() => { setErr(''); setSure(true) }} onNo={() => { setPicked(null); setErr('') }}
         text={t('ad.pm.confirmText').replace('{who}', picked.name || picked.email)}
         detail={(
           <>

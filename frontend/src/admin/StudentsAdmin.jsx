@@ -4,7 +4,7 @@ import { api, downloadFile, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, TypeConfirm, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
@@ -187,7 +187,8 @@ function Members({ mode }) {
       ))}
 
       {edit && <MemberModal row={edit} me={me} depts={depts.data?.items || []} pick={pick}
-        onClose={() => setEdit(null)} onSaved={(r, text) => { setEdit(r); ok(text); list.retry(); counts.retry() }} />}
+        onClose={() => setEdit(null)} onSaved={(r, text) => { setEdit(r); ok(text); list.retry(); counts.retry() }}
+        onRemoved={(text) => { setEdit(null); ok(text); list.retry(); counts.retry() }} />}
       {!requests && audit.data && audit.data.unresolved > 0 && (
         <p className="muted small">{t('ad.mem.auditNote').replace('{n}', n(audit.data.unresolved))} <Link to="/admin/students?tab=imported">{t('ad.mem.auditLink')}</Link></p>
       )}
@@ -197,7 +198,7 @@ function Members({ mode }) {
   )
 }
 
-function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
+function MemberModal({ row, me, depts, pick, onClose, onSaved, onRemoved }) {
   const { t, n, lang } = useApp()
   const when = useWhen(lang)
   const errText = useErrText()
@@ -210,6 +211,8 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [confirm, setConfirm] = useState(null)
+  const [rmStep, setRmStep] = useState(0) // remove member: 1 = first confirmation, 2 = type the email
+  const [rmErr, setRmErr] = useState('')
   useEffect(() => { setV(snap(row)); hist.retry() }, [row]) // eslint-disable-line react-hooks/exhaustive-deps
   const unions = useMemo(() => (ups.data?.items || []).find((u) => u.slug === v.upazila)?.unions || [], [ups.data, v.upazila])
   const dirty = JSON.stringify(v) !== JSON.stringify(snap(row))
@@ -286,6 +289,20 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
             onClick={() => setConfirm({ text: t('ad.stu.confirmDeactivate').replace('{who}', row.name), label: t('ad.stu.act.deactivate') })}>{t('ad.stu.act.deactivate')}</button>}
       </div>
       {confirm && <Confirm tone="danger" text={confirm.text} label={confirm.label} busy={busy} onYes={() => action('deactivate', t('ad.stu.deactivatedDone'))} onNo={() => setConfirm(null)} />}
+      {!self && row.role !== 'admin' && (
+        <section className="danger-zone" aria-labelledby="rm-h">
+          <h4 id="rm-h">{t('ad.rm.title')}</h4>
+          <p className="muted small">{t('ad.rm.note')}</p>
+          <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => { setRmErr(''); setRmStep(1) }}>{t('ad.rm.button')}</button>
+        </section>
+      )}
+      {rmStep === 1 && <Confirm tone="danger" title={t('ad.rm.title')} text={t('ad.rm.step1').replace('{who}', `${row.name} (${row.email})`)} label={t('ad.rm.continue')} busy={busy} onYes={() => setRmStep(2)} onNo={() => setRmStep(0)} />}
+      {rmStep === 2 && <TypeConfirm title={t('ad.rm.step2Title')} text={t('ad.rm.step2').replace('{who}', row.name)} expect={row.email} prompt={t('ad.rm.typeEmail')} label={t('ad.rm.final')} busy={busy} error={rmErr}
+        onNo={() => setRmStep(0)} onYes={async () => {
+          setBusy(true); setRmErr('')
+          try { await api(`/admin/students/${row.id}/remove`, { method: 'POST', body: JSON.stringify({ confirm: row.email }) }); setRmStep(0); onRemoved(t('ad.rm.done').replace('{who}', row.name)) }
+          catch (err) { setRmErr(err.message === 'auth_admin_unavailable' ? t('ad.rm.authFail') : errText(err)) } finally { setBusy(false) }
+        }} />}
       {rejectOpen && <RejectDialog row={row} busy={busy} onNo={() => setRejectOpen(false)} onYes={async (reason) => { setBusy(true); setMsg(null); try { onSaved(await api(`/admin/students/${row.id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }), t('ad.stu.rejected')); setRejectOpen(false) } catch (err) { setMsg(errText(err)); setRejectOpen(false) } finally { setBusy(false) } }} />}
     </Modal>
   )

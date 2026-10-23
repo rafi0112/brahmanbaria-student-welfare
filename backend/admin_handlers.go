@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"log"
@@ -35,6 +36,8 @@ func (a *App) memberFail(w http.ResponseWriter, err error) {
 		apiError(w, http.StatusForbidden, "self_disable")
 	case errors.Is(err, ErrAdminProtected):
 		apiError(w, http.StatusConflict, "admin_protected")
+	case errors.Is(err, ErrInviteNotAllowed):
+		apiError(w, http.StatusServiceUnavailable, "auth_admin_unavailable")
 	default:
 		log.Printf("members: %v", err)
 		apiError(w, http.StatusInternalServerError, "could not save the change")
@@ -342,6 +345,9 @@ func (a *App) studentAction(w http.ResponseWriter, r *http.Request, u User) {
 		err = a.Auth.Store.SetAccountDisabled(r.Context(), u.ID, id, true)
 	case "activate":
 		err = a.Auth.Store.SetAccountDisabled(r.Context(), u.ID, id, false)
+	case "remove":
+		a.removeMember(w, r, u, id)
+		return
 	default:
 		apiError(w, http.StatusNotFound, "not_found")
 		return
@@ -528,4 +534,35 @@ func dashboardCharts(students []importedView, members []MemberRow, now time.Time
 		"signups":      months,
 		"gender":       ranked(gender, 0),
 	}
+}
+
+// removeMember deletes a member for good. The admin confirms twice in the panel; the second confirmation is typing the
+// member's email, which the server checks too, so a stray request cannot remove anyone. The Supabase sign-in account is
+// deleted in the same step (when this server manages one), so the address is free to register again.
+func (a *App) removeMember(w http.ResponseWriter, r *http.Request, actor User, id string) {
+	var body struct {
+		Confirm string `json:"confirm"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	target, err := a.Auth.Store.UserByID(r.Context(), id)
+	if err != nil {
+		a.memberFail(w, err)
+		return
+	}
+	if normEmail(body.Confirm) == "" || normEmail(body.Confirm) != normEmail(target.Email) {
+		apiError(w, http.StatusUnprocessableEntity, "confirm_mismatch")
+		return
+	}
+	var external func(context.Context) error
+	if adm, ok := a.Auth.Inviter.(*supabaseAdmin); ok && a.Auth.Verifier != nil {
+		external = func(ctx context.Context) error { return adm.DeleteUser(ctx, id) }
+	}
+	if err := a.Auth.Store.RemoveMember(r.Context(), actor.ID, id, external); err != nil {
+		a.memberFail(w, err)
+		return
+	}
+	_ = a.Auth.Store.DeleteProfilePhoto(r.Context(), id) // already gone with the account in Postgres; the memory store keeps photos apart
+	writeJSON(w, 200, map[string]any{"removed": id})
 }

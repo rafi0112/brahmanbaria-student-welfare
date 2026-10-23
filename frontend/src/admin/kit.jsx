@@ -295,6 +295,28 @@ export function Confirm({ title, text, detail, label, tone, busy, onYes, onNo })
   )
 }
 
+// The second, stronger confirmation for actions that cannot be undone: the admin types an exact phrase (an email address)
+// before the button works. The server checks the same phrase again.
+export function TypeConfirm({ title, text, detail, expect, prompt, label, busy, error, onYes, onNo }) {
+  const { t } = useApp()
+  const [v, setV] = useState('')
+  const okTyped = v.trim().toLowerCase() === String(expect).trim().toLowerCase()
+  return (
+    <Modal title={title} onClose={onNo} busy={busy}>
+      <p>{text}</p>
+      {detail}
+      <label className="field compact"><span>{prompt}</span>
+        <input value={v} onChange={(e) => setV(e.target.value)} autoFocus autoComplete="off" spellCheck={false} placeholder={expect} disabled={busy}
+          onKeyDown={(e) => { if (e.key === 'Enter' && okTyped && !busy) onYes() }} /></label>
+      {error && <p className="notice bad" role="alert">{error}</p>}
+      <div className="row">
+        <button type="button" className="btn btn-danger" disabled={busy || !okTyped} onClick={onYes}>{busy ? t('state.loading') : label}</button>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={onNo}>{t('admin.roles.cancel')}</button>
+      </div>
+    </Modal>
+  )
+}
+
 /* ---------------------------------------------------------------- images */
 
 const ACCEPT = ['image/jpeg', 'image/png']
