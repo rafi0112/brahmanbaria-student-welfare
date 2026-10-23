@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { Confirm, Modal, useErrText, useWhen } from './kit.jsx'
 
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
-const LEVELS = ['public', 'members', 'hidden']
+const LEVELS = ['members', 'hidden']
 const PHONE = /^01\d{9}$/
 
 export const initials = (name = '') => name.trim().split(/\s+/).slice(0, 2).map((w) => [...w][0] || '').join('').toUpperCase() || '?'
@@ -15,7 +15,7 @@ export function MonoAvatar({ name, size = 28 }) {
   return <span className="mono-avatar" style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }} aria-hidden="true">{initials(name)}</span>
 }
 
-const fromProfile = (p) => ({ phone: p?.phone || '', bloodGroup: p?.bloodGroup || '', showInDirectory: !!p?.showInDirectory, showPhone: p?.showPhone || 'members', showEmail: p?.showEmail || 'members', showBlood: p?.showBlood || 'members' })
+const fromProfile = (p) => ({ phone: p?.phone || '', bloodGroup: p?.bloodGroup || '', showInDirectory: !!p?.showInDirectory, showPhone: p?.showPhone === 'hidden' ? 'hidden' : 'members', showEmail: p?.showEmail === 'hidden' ? 'hidden' : 'members', showBlood: p?.showBlood === 'hidden' ? 'hidden' : 'members' })
 
 // "My profile": the signed-in person's own record. Only contact and visibility settings are editable here — the
 // server accepts nothing else on /me/profile, so role, name, batch and department cannot be changed from this form.
@@ -59,7 +59,7 @@ export default function ProfileModal({ onClose }) {
     } finally { setBusy(false) }
   }
   const cancel = () => { setForm(saved); setErrs({}); setMsg(null); setEditing(false) }
-  const lvl = (v) => t(v === 'public' ? 'dash.public' : v === 'members' ? 'dash.members' : 'dash.off')
+  const lvl = (v) => t(v === 'hidden' ? 'dash.show.hidden' : 'dash.show.members') // an older "public" value means the same as members now
   const row = (label, value) => <div><dt>{label}</dt><dd>{value || <span className="muted">{t('dash.notSet')}</span>}</dd></div>
   const name = profile?.name || user.email
 

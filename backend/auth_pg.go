@@ -245,8 +245,8 @@ func (s *pgStore) ProfileByUser(ctx context.Context, id string) (*Profile, error
 func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) error {
 	tag, err := s.db.Exec(ctx, `UPDATE profiles SET
 		phone = COALESCE($2, phone), blood_group = COALESCE($3, blood_group), show_in_directory = COALESCE($4, show_in_directory),
-		show_phone = COALESCE($5, show_phone), show_email = COALESCE($6, show_email), show_blood = COALESCE($7, show_blood)
-		WHERE user_id = $1::uuid`, id, c.Phone, c.BloodGroup, c.ShowInDirectory, c.ShowPhone, c.ShowEmail, c.ShowBlood)
+		show_phone = COALESCE($5, show_phone), show_email = COALESCE($6, show_email), show_blood = COALESCE($7, show_blood), gender = COALESCE($8, gender)
+		WHERE user_id = $1::uuid`, id, c.Phone, c.BloodGroup, c.ShowInDirectory, c.ShowPhone, c.ShowEmail, c.ShowBlood, c.Gender)
 	if err == nil && tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
@@ -258,10 +258,11 @@ func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error
 		(user_id, name, batch, department, upazila, union_name, phone, blood_group, status,
 		 show_in_directory, show_phone, show_email, show_blood, session, gender)
 		VALUES ($1::uuid, $2, $3, $4, $5, $6, COALESCE($7, ''), COALESCE($8, ''),
-			'pending', true, 'hidden', 'members', 'members', $9, $10)
+			'pending', true, 'members', 'members', 'members', $9, $10)
 		ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch,
 			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name,
 			session = COALESCE(NULLIF(EXCLUDED.session, ''), profiles.session), gender = COALESCE(NULLIF(EXCLUDED.gender, ''), profiles.gender),
+			phone = COALESCE(NULLIF(EXCLUDED.phone, ''), profiles.phone), blood_group = COALESCE(NULLIF(EXCLUDED.blood_group, ''), profiles.blood_group),
 			status = CASE WHEN profiles.status = 'rejected' THEN 'pending' ELSE profiles.status END`,
 		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.Session, p.Gender)
 	return err
@@ -295,6 +296,29 @@ func (s *pgStore) ReviewProfile(ctx context.Context, id, status string) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+func (s *pgStore) ApprovedPeople(ctx context.Context) ([]Person, error) {
+	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.session, p.upazila, p.union_name, p.gender, p.blood_group, p.phone,
+		p.show_phone, p.show_email, p.show_blood, u.email
+		FROM profiles p JOIN users u ON u.id = p.user_id
+		WHERE p.status = 'approved' AND p.show_in_directory AND u.disabled_at IS NULL ORDER BY p.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Person{}
+	for rows.Next() {
+		var x Person
+		var id string
+		var b int
+		if err := rows.Scan(&id, &x.Name, &b, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.ShowPhone, &x.ShowEmail, &x.ShowBlood, &x.Email); err != nil {
+			return nil, err
+		}
+		x.ID, x.Batch, x.Source, x.Status = "m-"+id, &b, "member", StatusApproved
+		out = append(out, x)
+	}
+	return out, rows.Err()
 }
 
 func (s *pgStore) ApprovedDirectory(ctx context.Context) ([]Student, error) {

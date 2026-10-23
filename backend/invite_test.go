@@ -226,7 +226,7 @@ func TestInvitedPersonSeesPrefilledProfileOnlyWhenVerifiedAndCompletesOnce(t *te
 		t.Fatal("must require sign-in")
 	}
 	// submitting the completed profile creates exactly one pending profile and completes the invitation
-	body := map[string]any{"name": rec.Name, "batch": *rec.Batch, "department": rec.Department, "session": "2020-21", "upazila": "kasba", "union": "Kuti"}
+	body := map[string]any{"name": rec.Name, "batch": *rec.Batch, "department": rec.Department, "session": "2020-21", "phone": "01712345678", "upazila": "kasba", "union": "Kuti"}
 	if r := e.do("POST", "/api/v1/me/profile", body, c); r.Code != 201 {
 		t.Fatalf("complete profile: %d %s", r.Code, r.Body)
 	}

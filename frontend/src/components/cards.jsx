@@ -57,6 +57,13 @@ export function StudentCard({ s, upazilas = [] }) {
         <p className="muted">
           {s.batch ? `${t('students.batch')} ${n(s.batch)}` : ''}{s.batch && up ? ' · ' : ''}{up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''}
         </p>
+        {s.details && (
+          <p className="student-extra">
+            {s.details.session && <span>{s.details.session}</span>}
+            {s.details.phone && <span className="num">{s.details.phone}</span>}
+            {s.details.bloodGroup && <span className="chip-mini">{s.details.bloodGroup}</span>}
+          </p>
+        )}
       </div>
       <span className="pill-btn">{t('students.view')}</span>
     </Link>

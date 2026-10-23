@@ -673,7 +673,9 @@ func (a *App) publishedPosts(r *http.Request) []postOut {
 	if a.Auth == nil {
 		out := make([]postOut, 0, len(a.Store.Posts))
 		for _, p := range a.Store.Posts {
-			out = append(out, postOut{Post: p})
+			if !p.Sample {
+				out = append(out, postOut{Post: p})
+			}
 		}
 		return out
 	}
@@ -684,7 +686,9 @@ func (a *App) publishedPosts(r *http.Request) []postOut {
 	}
 	out := make([]postOut, 0, len(items))
 	for _, e := range items {
-		out = append(out, a.postFromEntry(e))
+		if p := a.postFromEntry(e); !p.Sample { // placeholder articles stay in the admin list for replacing, never on the public site
+			out = append(out, p)
+		}
 	}
 	sortPostsByDate(out)
 	return out

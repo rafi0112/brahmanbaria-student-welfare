@@ -56,7 +56,12 @@ export default function Students() {
           </select>
           {(f.q || f.batch || f.department || f.upazila) && <button className="btn btn-ghost btn-sm" onClick={() => { setText(''); setSp({}, { replace: true }) }}>{t('common.clear')}</button>}
         </div>
-        <p className="privacy-note">🔒 {t('students.privacy')} {res.data?.sample && <Badge tone="gold">{t('students.sample')}</Badge>}</p>
+        <p className="privacy-note" role="status">
+          <Icon name={res.data?.view === 'public' ? 'lock' : 'users'} size={16} />
+          {t(res.data?.view === 'admin' ? 'students.viewAdmin' : res.data?.view === 'member' ? 'students.viewMember' : 'students.viewPublic')}
+          {res.data?.view === 'public' && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
+          {res.data?.sample && <Badge tone="gold">{t('students.sample')}</Badge>}
+        </p>
         <Data q={res}>
           {(d) => (
             <>
@@ -81,6 +86,7 @@ export function StudentDetail() {
     <section className="section wrap narrow">
       <Data q={res}>
         {(s) => {
+          const d = s.details
           const up = (ups.data?.items || []).find((u) => u.slug === s.upazila)
           return (
             <>
@@ -93,17 +99,21 @@ export function StudentDetail() {
                   <dl className="facts">
                     <div><dt>{t('students.dept')}</dt><dd>{s.department || '—'}</dd></div>
                     <div><dt>{t('students.batch')}</dt><dd>{s.batch ? n(s.batch) : '—'}</dd></div>
-                    <div><dt>{t('students.session')}</dt><dd>{s.session || '—'}</dd></div>
                     <div><dt>{t('students.from')}</dt><dd>{up ? <Link to={`/directory/${up.slug}`}>{pick(up.nameBn, up.nameEn)}</Link> : '—'}</dd></div>
-                    {s.contact?.union && <div><dt>{t('students.union')}</dt><dd>{s.contact.union}</dd></div>}
-                    {s.contact?.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${s.contact.email}`}>{s.contact.email}</a></dd></div>}
-                    {s.contact?.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${s.contact.phone}`}>{s.contact.phone}</a></dd></div>}
-                    {s.contact?.bloodGroup && <div><dt>{t('students.blood')}</dt><dd>{s.contact.bloodGroup}</dd></div>}
-                    {s.contact?.status && <div><dt>{t('students.accountStatus')}</dt><dd><Badge tone={s.contact.status === 'approved' ? 'leaf' : 'gold'}>{t(`admin.${s.contact.status}`)}</Badge></dd></div>}
+                    {d && <div><dt>{t('students.session')}</dt><dd>{d.session || '—'}</dd></div>}
+                    {d && <div><dt>{t('students.union')}</dt><dd>{d.union || '—'}</dd></div>}
+                    {d && <div><dt>{t('students.gender')}</dt><dd>{d.gender ? t(`ad.mem.${d.gender}`) : '—'}</dd></div>}
+                    {d?.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${d.phone}`}>{d.phone}</a></dd></div>}
+                    {d?.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${d.email}`}>{d.email}</a></dd></div>}
+                    {d?.bloodGroup && <div><dt>{t('students.blood')}</dt><dd>{d.bloodGroup}</dd></div>}
+                    {d && <div><dt>{t('students.accountStatus')}</dt><dd>{d.source === 'member' ? (d.status ? <Badge tone={d.status === 'approved' ? 'leaf' : 'gold'}>{t(`admin.${d.status}`)}</Badge> : t('students.registeredMember')) : <Badge tone={d.verified ? 'leaf' : 'muted'}>{t(d.verified ? 'students.verifiedRecord' : 'students.unverifiedRecord')}</Badge>}</dd></div>}
                   </dl>
-                  {s.view === 'admin'
-                    ? <p className="privacy-note">🔓 {t(s.id.startsWith('m-') ? 'students.adminSees' : 'students.adminImported')}</p>
-                    : <p className="privacy-note">🔒 {t(s.view === 'member' ? 'students.hiddenMember' : 'students.hidden')}</p>}
+                  <p className="privacy-note" role="status">
+                    <Icon name={s.view === 'public' ? 'lock' : 'users'} size={16} />
+                    {t(s.view === 'admin' ? 'students.viewAdmin' : s.view === 'member' ? 'students.viewMember' : 'students.viewPublic')}
+                    {s.view === 'public' && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
+                  </p>
+                  {d && d.source === 'directory' && s.view !== 'admin' && <p className="muted small">{t('students.noContactForRecord')}</p>}
                   <Link className="link-arrow" to={`${base}/students`}>← {t('students.back')}</Link>
                 </div>
                 <img className="profile-art" src="/art/students.webp" alt="" loading="lazy" />

@@ -93,6 +93,7 @@ type NewUser struct {
 
 // ProfilePatch holds optional changes; nil means "leave as is".
 type ProfilePatch struct {
+	Gender          *string
 	Phone           *string
 	BloodGroup      *string
 	ShowInDirectory *bool
@@ -134,6 +135,9 @@ type AuthStore interface {
 	ListMembers(ctx context.Context, status string) ([]MemberRow, error)
 	ReviewProfile(ctx context.Context, userID, status string) error
 	ApprovedDirectory(ctx context.Context) ([]Student, error)
+	// ApprovedPeople returns every approved, active member who is listed in the directory, with all the details the viewer rules
+	// in people.go decide what to show.
+	ApprovedPeople(ctx context.Context) ([]Person, error)
 	Counts(ctx context.Context) (map[string]int, error)
 
 	// Roles. SetRole enforces every rule itself (self-change, verification, last admin, actor must be an admin)

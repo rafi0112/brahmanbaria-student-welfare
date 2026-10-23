@@ -48,7 +48,7 @@ export default function Activate() {
     const d = await api('/me/invitation')
     if (d.invited) {
       setInvite(d)
-      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', upazila: d.profile.upazila || '', union: d.profile.union || '', gender: d.profile.gender || '', bloodGroup: d.profile.bloodGroup || '' })
+      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', upazila: d.profile.upazila || '', union: d.profile.union || '', gender: d.profile.gender || '', bloodGroup: d.profile.bloodGroup || '', phone: d.profile.phone || '' })
       setStep('profile')
     } else setStep(d.hasProfile ? 'has' : 'nothing')
   }
@@ -79,11 +79,12 @@ export default function Activate() {
     if (v.name.trim().length < 2) bad.name = t('auth.e.name')
     for (const k of ['batch', 'department', 'upazila', 'union']) if (!v[k]) bad[k] = t('auth.e.select')
     if (!/^\d{4}-\d{2}$/.test(v.session.trim())) bad.session = t('auth.sessionHint')
+    if (!/^01\d{9}$/.test((v.phone || '').trim())) bad.phone = t('auth.e.phone')
     setErrs(bad); setMsg('')
     if (Object.keys(bad).length) return
     setBusy(true)
     try {
-      auth.set(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, name: v.name.trim(), session: v.session.trim(), batch: Number(v.batch) }) }))
+      auth.set(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, name: v.name.trim(), session: v.session.trim(), phone: v.phone.trim(), batch: Number(v.batch) }) }))
       setStep('done')
     } catch (err) {
       if (err.fields) setErrs(err.fields)
@@ -137,6 +138,7 @@ export default function Activate() {
             {field('union', t('auth.union'), select('union', unions.map((x) => [x, x])))}
             {field('gender', t('auth.gender'), select('gender', [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]], true))}
             {field('bloodGroup', t('auth.blood'), select('bloodGroup', BLOOD.map((b) => [b, b]), true))}
+            {field('phone', t('auth.phone'), <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} value={v.phone} onChange={text('phone')} placeholder="01XXXXXXXXX" aria-invalid={!!errs.phone} />)}
             <p className="muted small">{t('ad.act2.pendingNote')}</p>
             {msg && <p className="notice bad" role="alert">{msg}</p>}
             <button className="btn btn-dark btn-block" disabled={busy}>{busy ? t('state.loading') : t('ad.act2.submit')}</button>

@@ -200,7 +200,8 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* ---------- stories ---------- */}
+      {/* ---------- stories (only real, published articles; placeholders are never public) ---------- */}
+      {(posts.data?.items || []).length > 0 && (
       <section className="section wrap" aria-labelledby="stories-h">
         <Reveal className="section-head">
           <div><h2 id="stories-h">{t('stories.title')}</h2><p className="muted">{t('stories.lede')}</p></div>
@@ -210,6 +211,7 @@ export default function Home() {
           {(posts.data?.items || []).slice(0, 3).map((p, i) => <Reveal key={p.slug} delay={i * 70}><PostCard p={p} /></Reveal>)}
         </div>
       </section>
+      )}
 
       <section className="wrap section">
         <Reveal className="join-band">

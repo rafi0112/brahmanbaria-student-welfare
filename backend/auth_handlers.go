@@ -204,6 +204,7 @@ func (a *App) sendLink(ctx context.Context, u User, purpose string) {
 }
 
 type registerReq struct {
+	Phone      string `json:"phone"`
 	Session    string `json:"session"`
 	Gender     string `json:"gender"`     // optional: female | male | other; empty means unspecified
 	BloodGroup string `json:"bloodGroup"` // optional
@@ -258,8 +259,20 @@ func (a *App) validateProfile(q *registerReq) map[string]string {
 	return errs
 }
 
+// validatePhone is required when a profile is first created (registration, activation); later edits may clear it.
+func validatePhone(q *registerReq) (string, bool) {
+	q.Phone = strings.TrimSpace(q.Phone)
+	if !phoneRx.MatchString(q.Phone) {
+		return "Enter your mobile number, 11 digits starting with 01.", false
+	}
+	return "", true
+}
+
 func (a *App) validateRegister(q *registerReq) map[string]string {
 	errs := a.validateProfile(q)
+	if msg, ok := validatePhone(q); !ok {
+		errs["phone"] = msg
+	}
 	if !emailRx.MatchString(q.Email) || len(q.Email) > 254 {
 		errs["email"] = "Enter a valid email address."
 	}
@@ -290,7 +303,7 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := a.Auth.Store.CreateUser(r.Context(), NewUser{Email: q.Email, PasswordHash: hash, Role: RoleMember,
 		Profile: &Profile{Name: q.Name, Batch: q.Batch, Department: q.Department, Upazila: q.Upazila, Union: q.Union,
-			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup}})
+			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone}})
 	switch err {
 	case nil:
 		a.sendLink(r.Context(), u, PurposeVerify)
@@ -454,6 +467,7 @@ var levels = map[string]bool{"public": true, "members": true, "hidden": true}
 func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 	var q struct {
 		Phone           *string `json:"phone"`
+		Gender          *string `json:"gender"`
 		BloodGroup      *string `json:"bloodGroup"`
 		ShowInDirectory *bool   `json:"showInDirectory"`
 		ShowPhone       *string `json:"showPhone"`
@@ -470,6 +484,9 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 	if q.BloodGroup != nil && *q.BloodGroup != "" && !bloodRx.MatchString(*q.BloodGroup) {
 		errs["bloodGroup"] = "Choose a valid blood group."
 	}
+	if q.Gender != nil && *q.Gender != "" && *q.Gender != "female" && *q.Gender != "male" && *q.Gender != "other" {
+		errs["gender"] = "Choose female, male or other, or leave it blank."
+	}
 	for k, v := range map[string]*string{"showPhone": q.ShowPhone, "showEmail": q.ShowEmail, "showBlood": q.ShowBlood} {
 		if v != nil && !levels[*v] {
 			errs[k] = "Choose public, members or hidden."
@@ -479,7 +496,7 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}
-	err := a.Auth.Store.UpdateProfile(r.Context(), u.ID, ProfilePatch{Phone: q.Phone, BloodGroup: q.BloodGroup,
+	err := a.Auth.Store.UpdateProfile(r.Context(), u.ID, ProfilePatch{Phone: q.Phone, Gender: q.Gender, BloodGroup: q.BloodGroup,
 		ShowInDirectory: q.ShowInDirectory, ShowPhone: q.ShowPhone, ShowEmail: q.ShowEmail, ShowBlood: q.ShowBlood})
 	if err == ErrNotFound {
 		apiError(w, http.StatusNotFound, "no member profile for this account")
@@ -498,7 +515,11 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	q.Name = strings.TrimSpace(q.Name)
-	if errs := a.validateProfile(&q); len(errs) > 0 {
+	errs := a.validateProfile(&q)
+	if msg, ok := validatePhone(&q); !ok {
+		errs["phone"] = msg
+	}
+	if len(errs) > 0 {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}
@@ -508,7 +529,7 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
 		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
-		Upazila: q.Upazila, Union: q.Union, Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup,
+		Upazila: q.Upazila, Union: q.Union, Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone,
 	}); err != nil {
 		log.Printf("profile upsert: %v", err)
 		apiError(w, http.StatusInternalServerError, "could not create profile")
@@ -554,19 +575,6 @@ func (a *App) review(status string) func(http.ResponseWriter, *http.Request, Use
 		}
 		writeJSON(w, 200, map[string]any{"ok": true, "status": status})
 	}
-}
-
-// directoryStudents returns imported students plus approved, directory-visible members.
-func (a *App) directoryStudents(ctx context.Context) []Student {
-	all := a.Store.Students
-	if a.Auth != nil {
-		if extra, err := a.Auth.Store.ApprovedDirectory(ctx); err == nil {
-			all = append(append([]Student{}, all...), extra...)
-		} else {
-			log.Printf("approved directory: %v", err)
-		}
-	}
-	return all
 }
 
 // originGuard rejects cross-site state-changing requests (CSRF defence for cookie sessions).

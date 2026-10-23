@@ -102,7 +102,7 @@ func sessionCookie(rec *httptest.ResponseRecorder) *http.Cookie {
 
 func validReg(email string) map[string]any {
 	return map[string]any{"name": "Test Student", "email": email, "password": "correct horse 1", "batch": 18,
-		"department": "Finance", "upazila": "nabinagar", "union": "Barail", "session": "2020-21"}
+		"department": "Finance", "upazila": "nabinagar", "union": "Barail", "session": "2020-21", "phone": "01712345678"}
 }
 
 // registerAndVerify creates a verified member and returns the session cookie.

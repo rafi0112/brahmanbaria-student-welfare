@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
         const md = (await supabase.auth.getSession()).data.session?.user?.user_metadata
         if (md?.name && md?.batch && md?.department && md?.upazila && md?.union) {
           try {
-            const r = await api('/me/profile', { method: 'POST', body: JSON.stringify({ name: md.name, batch: Number(md.batch), department: md.department, session: md.session || '', gender: md.gender || '', bloodGroup: md.bloodGroup || '', upazila: md.upazila, union: md.union }) })
+            const r = await api('/me/profile', { method: 'POST', body: JSON.stringify({ name: md.name, batch: Number(md.batch), department: md.department, session: md.session || '', gender: md.gender || '', bloodGroup: md.bloodGroup || '', phone: md.phone || '', upazila: md.upazila, union: md.union }) })
             profile = r.profile
           } catch { /* the dashboard offers a form to complete it by hand */ }
         }

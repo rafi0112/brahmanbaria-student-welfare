@@ -303,8 +303,15 @@ func TestLegacyContentSeedRunsOnceAndStaysEditable(t *testing.T) {
 	var places, posts struct{ Items []json.RawMessage }
 	decodeBody(t, jreq(e, "GET", "/api/v1/heritage", "", nil), &places)
 	decodeBody(t, jreq(e, "GET", "/api/v1/blog", "", nil), &posts)
-	if len(places.Items) != len(e.app.Store.Places) || len(posts.Items) != len(e.app.Store.Posts) {
-		t.Fatalf("seeded content should be public: %d places, %d posts", len(places.Items), len(posts.Items))
+	// placeholder articles (sample: true) are kept for admins to replace but never shown publicly
+	realPosts := 0
+	for _, p := range e.app.Store.Posts {
+		if !p.Sample {
+			realPosts++
+		}
+	}
+	if len(places.Items) != len(e.app.Store.Places) || len(posts.Items) != realPosts {
+		t.Fatalf("seeded content: %d places, %d public posts (want %d)", len(places.Items), len(posts.Items), realPosts)
 	}
 	if body := jreq(e, "GET", "/api/v1/gallery", "", nil).Body.String(); !strings.Contains(body, "titas-sunset") {
 		t.Fatalf("seeded gallery: %s", body)
@@ -330,7 +337,7 @@ func TestLegacyContentSeedRunsOnceAndStaysEditable(t *testing.T) {
 
 func approvedMember(t *testing.T, e *env2, tok, id, name string) {
 	t.Helper()
-	body := map[string]any{"name": name, "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}
+	body := map[string]any{"name": name, "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21", "phone": "01712345678"}
 	if rec := e.do("POST", "/api/v1/me/profile", body, nil, bearer(tok)...); rec.Code != 201 {
 		t.Fatalf("profile: %d %s", rec.Code, rec.Body)
 	}
@@ -342,7 +349,7 @@ func approvedMember(t *testing.T, e *env2, tok, id, name string) {
 func TestStudentsAdminListEditAndRoleProtection(t *testing.T) {
 	e := cmsApp(t)
 	approvedMember(t, e, "member-token", idMember, "Member One")
-	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Second Person", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}, nil, bearer("member2-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "Second Person", "batch": 17, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21", "phone": "01712345678"}, nil, bearer("member2-token")...)
 
 	var list struct {
 		Items []MemberAdminRow
@@ -443,7 +450,7 @@ func TestStudentsBulkReportsPartialFailure(t *testing.T) {
 
 func TestStudentsExportProtectsContactDetails(t *testing.T) {
 	e := cmsApp(t)
-	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "=HYPERLINK(\"http://evil\")", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21"}, nil, bearer("member-token")...)
+	e.do("POST", "/api/v1/me/profile", map[string]any{"name": "=HYPERLINK(\"http://evil\")", "batch": 18, "department": "Finance", "upazila": "kasba", "union": "Kuti", "session": "2020-21", "phone": "01712345678"}, nil, bearer("member-token")...)
 	plain := adminJSON(e, "GET", "/api/v1/admin/export/students", nil)
 	if plain.Code != 200 || !strings.HasPrefix(plain.Header().Get("Content-Type"), "text/csv") {
 		t.Fatalf("export: %d %s", plain.Code, plain.Header().Get("Content-Type"))

@@ -66,3 +66,13 @@ Approved members cannot edit name, batch, department, session or location direct
 ## Same person fields everywhere
 
 A directory record (hand-added or a completed bundled one) holds name, batch, department, session, upazila, union, gender, blood group, phone and the invitation email, the same set as a member profile (migration 015). The activation page is prefilled with all of them. Only administrators can add or change them (`tests: TestEveryAdminRouteIsRoleGuarded` reads every `/api/v1/admin` and `/api/v1/me` route table and fails if any route lacks its guard). A registered member's sign-in email is the Supabase account itself, so it is changed through the invitation move described above, not edited in place.
+
+## Who sees which person details
+
+| Viewer | Sees |
+| --- | --- |
+| Public (not signed in, unverified email, or not yet approved) | name, batch, department, upazila |
+| Approved member | the above, plus session, union and gender for everyone, and for registered members their phone, email and blood group unless that member chose "Only me and administrators" |
+| Administrator | everything, including details admins entered for directory records, each member's status and each record's verification |
+
+Rules enforced in one place (`backend/people.go`, tested in `supabase_auth_test.go` and `people_test.go`): contact details of people who have not registered stay admin-only (they never agreed to share them); a person never appears twice once their directory record is claimed by an approved account; the public site never serves placeholder articles (`sample: true`), which stay in the admin list to be replaced. Registration and activation require a real mobile number (`01XXXXXXXXX`); gender and blood group are optional. Phone, gender and blood group can be edited by the member at any time, academic details only through a change request once approved. New members' phone defaults to "approved members can see it" (migration 016; existing choices are untouched).

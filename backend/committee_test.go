@@ -242,6 +242,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	inviteStoreSuite(t, pg)
 	profileChangeStoreSuite(t, pg)
 	directoryEmailStoreSuite(t, pg)
+	peopleStoreSuite(t, pg)
 }
 
 // ---------------------------------------------------------------- HTTP layer

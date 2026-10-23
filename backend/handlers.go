@@ -123,131 +123,6 @@ func window(total, pg, limit int) (lo, hi, pages int) {
 	return
 }
 
-func (a *App) students(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	pg, limit := paging(r, 48)
-	batch, _ := strconv.Atoi(q.Get("batch"))
-	out := []Student{}
-	all := a.directoryStudents(r.Context())
-	for _, s := range all {
-		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
-			continue
-		}
-		if d := q.Get("department"); d != "" && s.Department != d {
-			continue
-		}
-		if u := q.Get("upazila"); u != "" && s.Upazila != u {
-			continue
-		}
-		if t := strings.TrimSpace(q.Get("q")); t != "" && !contains(s.Name, t) && !contains(s.Department, t) {
-			continue
-		}
-		out = append(out, s)
-	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	lo, hi, pages := window(len(out), pg, limit)
-	batches, depts := map[int]int{}, map[string]int{}
-	for _, s := range all {
-		if s.Batch != nil {
-			batches[*s.Batch]++
-		}
-		depts[s.Department]++
-	}
-	writeJSON(w, 200, map[string]any{
-		"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "sample": a.Store.Sample,
-		"facets": map[string]any{"batches": batches, "departments": depts},
-	})
-}
-
-// studentContact is shown on a member's profile only to viewers allowed by that member's own privacy choices.
-// Admins see everything; a signed-in verified member sees "members" and "public" fields; everyone else only "public".
-type studentContact struct {
-	Email      string `json:"email,omitempty"`
-	Phone      string `json:"phone,omitempty"`
-	BloodGroup string `json:"bloodGroup,omitempty"`
-	Union      string `json:"union,omitempty"`
-	Status     string `json:"status,omitempty"` // admins only
-}
-
-type studentView struct {
-	Student
-	View    string          `json:"view"` // "admin", "member" or "public": what this viewer is allowed to see
-	Contact *studentContact `json:"contact,omitempty"`
-}
-
-func (a *App) viewerKind(r *http.Request) string {
-	if a.Auth == nil {
-		return "public"
-	}
-	u, ok := a.currentUser(r)
-	if !ok || !u.EmailVerified {
-		return "public"
-	}
-	if u.Role == RoleAdmin {
-		return "admin"
-	}
-	if p, err := a.Auth.Store.ProfileByUser(r.Context(), u.ID); err == nil && p.Status == StatusApproved {
-		return "member"
-	}
-	return "public"
-}
-
-func levelAllows(level, viewer string) bool {
-	switch viewer {
-	case "admin":
-		return true
-	case "member":
-		return level == "public" || level == "members"
-	}
-	return level == "public"
-}
-
-func (a *App) studentOne(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	viewer := a.viewerKind(r)
-	out := func(st Student, c *studentContact) {
-		if c != nil && *c == (studentContact{}) {
-			c = nil
-		}
-		writeJSON(w, 200, studentView{Student: st, View: viewer, Contact: c})
-	}
-	// registered members: their own profile decides what each audience may see
-	if uid, ok := strings.CutPrefix(id, "m-"); ok && a.Auth != nil && uuidRx.MatchString(uid) {
-		p, err := a.Auth.Store.ProfileByUser(r.Context(), uid)
-		if err == nil && (viewer == "admin" || (p.Status == StatusApproved && p.ShowInDirectory)) {
-			st := Student{ID: id, Name: p.Name, Department: p.Department, Upazila: p.Upazila}
-			if p.Batch > 0 {
-				b := p.Batch
-				st.Batch = &b
-			}
-			c := &studentContact{}
-			if levelAllows(p.ShowEmail, viewer) {
-				if u, err := a.Auth.Store.UserByID(r.Context(), uid); err == nil {
-					c.Email = u.Email
-				}
-			}
-			if levelAllows(p.ShowPhone, viewer) {
-				c.Phone = p.Phone
-			}
-			if levelAllows(p.ShowBlood, viewer) {
-				c.BloodGroup = p.BloodGroup
-			}
-			if viewer == "admin" {
-				c.Union, c.Status = p.Union, p.Status
-			}
-			out(st, c)
-			return
-		}
-	}
-	for _, s := range a.directoryStudents(r.Context()) {
-		if s.ID == id {
-			out(s, nil)
-			return
-		}
-	}
-	apiError(w, 404, "student not found")
-}
-
 func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	pg, limit := paging(r, 48)
@@ -285,8 +160,13 @@ func (a *App) withPlaceCounts(r *http.Request) []Upazila {
 	for _, p := range a.publishedPlaces(r) {
 		counts[p.Upazila]++
 	}
+	members := map[string]int{}
+	for _, p := range a.directoryPeople(r.Context()) { // the same real list the directory shows, not the bundled file
+		members[p.Upazila]++
+	}
 	for i := range out {
 		out[i].Places = counts[out[i].Slug]
+		out[i].Members = members[out[i].Slug]
 	}
 	return out
 }
@@ -371,7 +251,7 @@ func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{
 		"students": len(students), "alumni": len(a.Store.Alumni), "batches": len(batches),
-		"upazilas": len(a.Store.Upazilas), "places": len(a.publishedPlaces(r)), "blood": a.Store.Blood, "sample": a.Store.Sample,
+		"upazilas": len(a.Store.Upazilas), "places": len(a.publishedPlaces(r)), "sample": a.Store.Sample,
 	})
 }
 

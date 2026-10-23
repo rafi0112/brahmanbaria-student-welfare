@@ -63,7 +63,7 @@ func (m *memStore) CreateUser(_ context.Context, n NewUser) (User, error) {
 	if n.Profile != nil {
 		p := *n.Profile
 		p.UserID, p.Status, p.ShowInDirectory = id, StatusPending, true
-		p.ShowPhone, p.ShowEmail, p.ShowBlood = "hidden", "members", "members"
+		p.ShowPhone, p.ShowEmail, p.ShowBlood = "members", "members", "members"
 		p.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 		m.profiles[id] = &p
 	}
@@ -193,6 +193,9 @@ func (m *memStore) UpdateProfile(_ context.Context, id string, c ProfilePatch) e
 	if !ok {
 		return ErrNotFound
 	}
+	if c.Gender != nil {
+		p.Gender = *c.Gender
+	}
 	if c.Phone != nil {
 		p.Phone = *c.Phone
 	}
@@ -225,13 +228,19 @@ func (m *memStore) UpsertProfile(_ context.Context, id string, p Profile) error 
 		if p.Gender != "" {
 			cur.Gender = p.Gender
 		}
+		if p.Phone != "" {
+			cur.Phone = p.Phone
+		}
+		if p.BloodGroup != "" {
+			cur.BloodGroup = p.BloodGroup
+		}
 		if cur.Status == StatusRejected {
 			cur.Status = StatusPending
 		}
 		return nil
 	}
 	p.UserID, p.Status, p.ShowInDirectory = id, StatusPending, true
-	p.ShowPhone, p.ShowEmail, p.ShowBlood = "hidden", "members", "members"
+	p.ShowPhone, p.ShowEmail, p.ShowBlood = "members", "members", "members"
 	p.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 	m.profiles[id] = &p
 	return nil
@@ -274,6 +283,20 @@ func (m *memStore) ApprovedDirectory(_ context.Context) ([]Student, error) {
 			b := p.Batch
 			out = append(out, Student{ID: "m-" + id, Name: p.Name, Batch: &b, Department: p.Department, Upazila: p.Upazila})
 		}
+	}
+	return out, nil
+}
+
+func (m *memStore) ApprovedPeople(_ context.Context) ([]Person, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []Person{}
+	for id, p := range m.profiles {
+		u := m.users[id]
+		if u == nil || u.Disabled || p.Status != StatusApproved || !p.ShowInDirectory {
+			continue
+		}
+		out = append(out, personFromProfile(p, u.Email))
 	}
 	return out, nil
 }
