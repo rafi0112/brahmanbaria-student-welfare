@@ -21,3 +21,18 @@ export function Sprig({ src = 'sprig', className = '' }) {
 export function SketchArt({ src, className = '' }) {
   return <img className={`sketch-art ${className}`} src={`/art/${src}.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
 }
+
+// The thin sage vine with small leaves that edges the mockup's photographs.
+export function Vine({ className = '', flip = false }) {
+  const leaves = [[18, 92, -40], [26, 78, 30], [30, 64, -35], [40, 52, 25], [44, 38, -30], [56, 30, 20], [62, 18, -25], [74, 12, 15]]
+  return (
+    <svg className={`vine ${className}`} viewBox="0 0 100 110" aria-hidden="true" focusable="false" style={flip ? { transform: 'scale(-1, -1)' } : undefined}>
+      <path d="M8 108C14 92 22 84 28 70S38 50 46 40 60 22 82 6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      {leaves.map(([x, y, r], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="7" ry="3.2" transform={`rotate(${r} ${x} ${y}) translate(${r < 0 ? -5 : 5} 0)`} fill="currentColor" opacity={i % 3 === 0 ? 0.55 : 0.85} />
+      ))}
+      <circle cx="84" cy="5" r="1.6" fill="#E94F20" opacity=".7" />
+      <circle cx="20" cy="99" r="1.3" fill="#E94F20" opacity=".55" />
+    </svg>
+  )
+}

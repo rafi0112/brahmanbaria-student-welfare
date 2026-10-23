@@ -47,15 +47,14 @@ export default function Students() {
 
   return (
     <>
-      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')}>
-        <div className="banner-search" role="search">
-          <Icon name="search" size={18} className="hero-search-ico" />
-          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
-        </div>
-      </PageHero>
-      <section className="section wrap dir">
-        <div className="dir-main">
-          <div className="filters filters-bar">
+      <PageHero kicker={t('students.kicker')} title={t('students.title')} lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
+      <div className="wrap">
+        <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
+          <label className="sbar-q">
+            <Icon name="search" size={18} />
+            <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
+          </label>
+          <div className="sbar-filters">
             <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>
               <option value="">{t('students.allBatches')}</option>
               {Object.keys(facets?.batches || {}).sort((a, b) => b - a).map((b) => <option key={b} value={b}>{t('students.batch')} {n(b)} ({n(facets.batches[b])})</option>)}
@@ -68,8 +67,13 @@ export default function Students() {
               <option value="">{t('students.allUpazilas')}</option>
               {upazilas.map((u) => <option key={u.slug} value={u.slug}>{pick(u.nameBn, u.nameEn)}</option>)}
             </select>
-            {(f.q || f.batch || f.department || f.upazila) && <button className="btn btn-outline btn-sm" onClick={() => { setText(''); setSp({}, { replace: true }) }}>{t('common.clear')}</button>}
+            {(f.q || f.batch || f.department || f.upazila) && <button type="button" className="btn btn-outline btn-sm" onClick={() => { setText(''); setSp({}, { replace: true }) }}>{t('common.clear')}</button>}
           </div>
+          <button className="btn btn-dark sbar-go" type="submit">{t('hero.searchBtn')} <Icon name="arrow" size={16} className="arr" /></button>
+        </form>
+      </div>
+      <section className="section wrap dir">
+        <div className="dir-main">
           <p className="privacy-note" role="status">
             <Icon name={res.data?.view === 'public' ? 'lock' : 'users'} size={16} />
             {note.text}

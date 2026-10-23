@@ -6,7 +6,8 @@ import { useAuth } from '../lib/auth.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { Avatar, Photo } from '../components/ui.jsx'
-import { Sprig, SketchArt } from '../components/Decor.jsx'
+import { SketchArt, Vine } from '../components/Decor.jsx'
+import UpazilaMap from '../components/UpazilaMap.jsx'
 import { PlaceCard, PostCard } from '../components/cards.jsx'
 
 // The three discovery cards of "Explore Brahmanbaria", each opening the page that holds it.
@@ -24,11 +25,28 @@ const CULTURE = [
   { img: 'river', w: 740, h: 421, bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', sbn: 'তিতাস, মেঘনা ও আরও', sen: 'The Titas, the Meghna and more', to: '/heritage?category=river' },
 ]
 
+function MapPanel({ u }) {
+  const { t, n, pick } = useApp()
+  if (!u) return null
+  return (
+    <div className="map-panel">
+      <h3>{pick(u.nameBn, u.nameEn)}</h3>
+      <dl className="mini-stats">
+        <div><dt>{t('dir.members')}</dt><dd className="num">{n(u.members)}</dd></div>
+        <div><dt>{t('dir.unions')}</dt><dd className="num">{n(u.unions.length)}</dd></div>
+        <div><dt>{t('dir.places')}</dt><dd className="num">{n(u.places)}</dd></div>
+      </dl>
+      <Link className="btn btn-outline btn-sm" to={`/directory/${u.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>
+    </div>
+  )
+}
+
 export default function Home() {
   const { t, n, pick } = useApp()
   const { user } = useAuth()
   const nav = useNavigate()
   const [q, setQ] = useState('')
+  const [sel, setSel] = useState('sadar')
   const stats = useApi('/stats')
   const ups = useApi('/upazilas')
   const places = useApi('/heritage')
@@ -45,7 +63,12 @@ export default function Home() {
   return (
     <>
       {/* ---------- hero: copy on the cream canvas, the river-and-mosque artwork beside it ---------- */}
-      <section className="hero" aria-labelledby="hero-title">
+      <section className="hero hero-full" aria-labelledby="hero-title">
+        <div className="hero-top">
+        <div className="hero-bg" aria-hidden="true">
+          <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-640.webp 640w, /images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" width="1672" height="941" alt="" fetchpriority="high" />
+        </div>
+        <Vine className="vine-hero-l" />
         <div className="wrap hero-grid">
           <div className="hero-copy">
             <p className="eyebrow">{pick('ব্রাহ্মণবাড়িয়া · বাংলাদেশ', 'Brahmanbaria · Bangladesh')}</p>
@@ -65,13 +88,7 @@ export default function Home() {
               <button className="btn btn-sm btn-outline" type="submit">{t('hero.searchBtn')}</button>
             </form>
           </div>
-          <div className="hero-media-wrap">
-          <div className="hero-media blob-a">
-            <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-640.webp 640w, /images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 58vw, 100vw" width="1672" height="941" alt={pick('সূর্যাস্তের নদী, মসজিদ ও একজন বাউল শিল্পী', 'A river at sunset, a mosque and a Baul musician')} fetchpriority="high" />
-          </div>
-            <Sprig src="vine-tl" className="sprig-hero-tr" />
-            <Sprig src="leaves-bl" className="sprig-hero-bl" />
-          </div>
+        </div>
         </div>
         <div className="wrap hero-foot">
           <dl className="stats-strip-inline" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
@@ -100,16 +117,15 @@ export default function Home() {
 
       {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
       <section className="explore2" aria-labelledby="explore-h">
-        <SketchArt src="river" className="ex-river" />
-        <div className="wrap explore2-grid">
+        <div className="explore2-grid">
           <Reveal className="ex-media">
             <div className="ex-img blob-b">
               <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="(min-width: 1000px) 46vw, 100vw" width="1672" height="941" alt={pick('তিতাসের তীরে সূর্যাস্ত ও মসজিদ', 'Sunset over the river with a mosque on the bank')} loading="lazy" decoding="async" />
               <span className="ex-shade" aria-hidden="true" />
               <p className="ex-script" aria-hidden="true"><span>{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span><small>{pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</small><small>{pick('আরও উজ্জ্বল আগামী', 'A brighter tomorrow')}</small></p>
             </div>
-            <Sprig src="sprig" className="sprig-ex-tr" />
-            <Sprig src="leaves-bl" className="sprig-ex-br" />
+            <Vine className="vine-ex-tr" />
+            <Vine className="vine-ex-br" flip />
           </Reveal>
           <div className="ex-copy">
             <Reveal>
@@ -130,14 +146,37 @@ export default function Home() {
             </div>
             <Reveal className="ex-ups">
               <p className="ex-label">{pick('নয়টি উপজেলা', 'The nine upazilas')}</p>
+              <div className="ex-ups-row">
               <ul>
-                {upazilas.map((u) => (
+                {[...upazilas].sort((x, y) => (x.slug === 'sadar' ? -1 : y.slug === 'sadar' ? 1 : 0)).map((u) => (
                   <li key={u.slug}><Link to={`/directory/${u.slug}`}><Icon name="pin" size={15} /><span>{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</span><Icon name="arrow" size={13} className="arr" /></Link></li>
                 ))}
               </ul>
-              <Link className="btn btn-dark ex-all" to="/directory">{pick('সব উপজেলা দেখুন', 'Explore all upazilas')} <Icon name="arrow" size={16} className="arr" /></Link>
+              <div className="ex-side">
+                <span className="ex-sun" aria-hidden="true" />
+                <SketchArt src="river" className="ex-sketch" />
+                <Link className="btn btn-dark ex-all" to="/directory">{pick('সব উপজেলা দেখুন', 'Explore all upazilas')} <Icon name="arrow" size={16} className="arr" /></Link>
+              </div>
+              </div>
             </Reveal>
           </div>
+        </div>
+      </section>
+
+      {/* ---------- interactive upazila map (real boundaries and counts) ---------- */}
+      <section className="section-tint map-sec">
+        <Vine className="vine-map" />
+        <div className="section wrap explore">
+          <Reveal className="explore-copy">
+            <p className="eyebrow">{t('explore.kicker')}</p>
+            <h2>{t('explore.title')}</h2>
+            <p className="lede">{t('explore.lede')}</p>
+            <MapPanel u={upazilas.find((u) => u.slug === sel)} />
+            <Link className="link-arrow" to="/directory">{t('explore.cta')} <Icon name="arrow" size={15} className="arr" /></Link>
+          </Reveal>
+          <Reveal delay={80}>
+            <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(pl) => nav(`/heritage/${pl.slug}`)} />
+          </Reveal>
         </div>
       </section>
 

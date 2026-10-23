@@ -8,9 +8,9 @@
   /* canvas, surfaces, ink */
   --paper: #fff5e9; --paper-2: #fbebd9; --card: #fffcf7; --ink: #1e2024; --ink-2: #3b3d43; --muted: #6b6863; --line: #e8ded3; --line-2: #dccfc0;
   /* orange: --accent for fills and large marks, --accent-btn behind white text (4.7:1), --accent-ink for small text on cream */
-  --accent: #e94f20; --accent-btn: #d4431a; --accent-btn-hover: #bb3a14; --accent-ink: #c43e16; --accent-soft: #fde3d3;
+  --accent: #e94f20; --accent-btn: #e94f20; --accent-btn-hover: #d4431a; --accent-ink: #c43e16; --accent-soft: #fde3d3;
   /* teal: the secondary accent */
-  --teal: #075c4c; --teal-2: #0a7360; --teal-soft: #d9ebe5; --on-teal: #fffcf7;
+  --teal: #0b4d3c; --teal-2: #10614c; --teal-soft: #e2efe8; --on-teal: #fffcf7;
   /* names kept for the older rules: forest/sage/gold now resolve to the teal/orange system */
   --forest: var(--teal); --forest-2: var(--teal-2); --on-forest: var(--on-teal); --sage: #cfe3dc; --peach: #f9d9be; --gold: var(--accent); --gold-ink: var(--accent-ink);
   --leaf: #cfe3dc; --ok: #1f7a4f; --bad: #b3361f; --accent-text: var(--teal); --hero-hi: #f9d9be;
@@ -564,12 +564,6 @@ html[lang='bn'] .auth-line { font-family: 'Noto Serif Bengali', serif; font-styl
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .sprig, :root:not([data-theme='light']) .sketch-art { mix-blend-mode: screen; opacity: .35; } }
 
 /* home hero: the image keeps its organic outline and gains two sprigs */
-.hero-media-wrap { position: relative; align-self: stretch; min-height: clamp(300px, 40vw, 600px); }
-.hero-media-wrap .hero-media { position: absolute; inset: 0; min-height: 0; border-radius: 0; -webkit-mask: none; mask: none; }
-.hero-media-wrap .hero-media.blob-a { -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M9 7C18 1 33 4 47 2S77 0 89 4C97 7 100 17 98 30C96 42 100 54 98 67C96 81 99 93 88 97C75 100 61 96 47 98C31 100 17 99 8 93C2 87 5 74 3 60C1 46 4 32 2 20C2 13 4 9 9 7Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M9 7C18 1 33 4 47 2S77 0 89 4C97 7 100 17 98 30C96 42 100 54 98 67C96 81 99 93 88 97C75 100 61 96 47 98C31 100 17 99 8 93C2 87 5 74 3 60C1 46 4 32 2 20C2 13 4 9 9 7Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat; }
-.sprig-hero-tr { width: clamp(120px, 13vw, 200px); top: -26px; right: -18px; transform: scaleX(-1) rotate(8deg); }
-.sprig-hero-bl { width: clamp(130px, 14vw, 220px); bottom: -34px; left: -36px; }
 .culture-card { border-radius: 0; }
 
 /* page openings: same outline on the photograph, a sprig on its edge, soft colour blobs behind */
@@ -585,7 +579,6 @@ html[lang='bn'] .phero-script { font-family: 'Noto Serif Bengali', serif; font-s
 
 /* ---------- explore Brahmanbaria ---------- */
 .explore2 { position: relative; overflow: hidden; padding: clamp(40px, 6vw, 88px) 0; }
-.ex-river { right: -40px; bottom: 0; width: clamp(280px, 30vw, 520px); opacity: .5; }
 .explore2-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(24px, 4vw, 64px); align-items: center; }
 .ex-media { position: relative; }
 .ex-img { position: relative; aspect-ratio: 5 / 4; overflow: hidden; background: var(--paper-2); }
@@ -595,8 +588,6 @@ html[lang='bn'] .phero-script { font-family: 'Noto Serif Bengali', serif; font-s
 .ex-script span { font: 600 clamp(2rem, 3.6vw, 3.2rem)/1 var(--font-script); }
 .ex-script small { font: 700 .72rem/1.4 var(--font-body); letter-spacing: .2em; text-transform: uppercase; opacity: .92; }
 html[lang='bn'] .ex-script span { font-family: 'Noto Serif Bengali', serif; font-size: 2rem; } html[lang='bn'] .ex-script small { letter-spacing: .04em; font-size: .85rem; }
-.sprig-ex-tr { width: clamp(110px, 11vw, 170px); top: -30px; right: -24px; transform: rotate(-12deg); }
-.sprig-ex-br { width: clamp(130px, 13vw, 210px); bottom: -40px; right: -20px; transform: scaleX(-1); }
 .ex-title { font-size: clamp(2.2rem, 4vw, 3.4rem); margin-bottom: 12px; }
 .ex-copy .lede { margin-bottom: 22px; }
 .ex-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
@@ -672,13 +663,71 @@ html[lang='bn'] .footer-grid h2 { font-family: 'Noto Serif Bengali', serif; font
 .sp-place-img { position: relative; aspect-ratio: 4 / 3; overflow: hidden; margin-bottom: 14px; } .sp-place-img img { width: 100%; height: 100%; object-fit: cover; }
 .sp-place { background: transparent; padding: 0; }
 
+/* ---------- full-width home hero (artwork edge to edge, copy on a cream wash) ---------- */
+.hero-full { padding: 0 0 clamp(36px, 5vw, 72px); background: none; overflow: visible; }
+.hero-top { position: relative; isolation: isolate; overflow: hidden; min-height: clamp(560px, 78vh, 780px); display: flex; align-items: center; }
+.hero-bg { position: absolute; inset: 0; z-index: -2; }
+.hero-bg img { width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 80% 42%; animation: hero-image 1.2s var(--ease-out) both; }
+.hero-top::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 246, 234, .97) 0%, rgba(255, 246, 234, .9) 24%, rgba(255, 246, 234, .6) 40%, rgba(255, 246, 234, .12) 56%, rgba(255, 246, 234, 0) 64%), linear-gradient(0deg, var(--paper) 0, rgba(255, 246, 234, 0) 16%); }
+:root[data-theme='dark'] .hero-top::after { background: linear-gradient(90deg, rgba(23, 19, 15, .95) 0%, rgba(23, 19, 15, .86) 26%, rgba(23, 19, 15, .5) 44%, rgba(23, 19, 15, 0) 62%), linear-gradient(0deg, var(--paper) 0, rgba(23, 19, 15, 0) 16%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .hero-top::after { background: linear-gradient(90deg, rgba(23, 19, 15, .95) 0%, rgba(23, 19, 15, .86) 26%, rgba(23, 19, 15, .5) 44%, rgba(23, 19, 15, 0) 62%), linear-gradient(0deg, var(--paper) 0, rgba(23, 19, 15, 0) 16%); } }
+.hero-top .hero-grid { display: block; min-height: 0; width: min(var(--wrap), 100% - 2 * var(--gutter)); margin-inline: auto; padding: clamp(36px, 5vw, 72px) 0 clamp(70px, 8vw, 110px); }
+.hero-top .hero-copy { max-width: 640px; }
+.hero-full .hero-foot { position: relative; z-index: 2; margin-top: calc(-1 * clamp(30px, 4vw, 56px)); }
+.hero-full .stats-strip-inline { background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: var(--r-card); padding: clamp(14px, 1.6vw, 20px) clamp(14px, 2vw, 28px); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* thin sage vines from the mockup */
+.vine { position: absolute; z-index: 3; color: #7c9c78; pointer-events: none; overflow: visible; }
+:root[data-theme='dark'] .vine { color: #6f9474; opacity: .7; }
+.vine-hero-l { left: clamp(-6px, -.4vw, 0px); top: 16%; width: clamp(70px, 7vw, 110px); height: auto; transform: rotate(8deg); }
+.vine-ex-tr { right: 3%; top: 3%; width: clamp(70px, 7vw, 100px); }
+.vine-ex-br { right: 7%; bottom: 4%; width: clamp(60px, 6vw, 86px); }
+.vine-map { left: 10px; top: 24px; width: 80px; }
+
+/* ---------- explore Brahmanbaria: the picture runs to the left edge of the window ---------- */
+.explore2 { position: relative; overflow: hidden; padding: clamp(40px, 6vw, 88px) 0; }
+.explore2-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 48vw) minmax(0, 1fr); gap: clamp(24px, 3.6vw, 60px); align-items: center; padding-right: max(var(--gutter), calc((100vw - var(--wrap)) / 2)); }
+.ex-img { aspect-ratio: 16 / 11; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='.45'/%3E%3C/filter%3E%3Cpath filter='url(%23b)' d='M0 1H60C68 4 75 0 83 3C90 6 94 4 96 12C98 20 94 28 97 38C100 48 95 56 98 66C100 76 96 86 92 92C86 99 78 96 68 98C52 100 34 97 16 99C8 100 3 98 0 99Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='.45'/%3E%3C/filter%3E%3Cpath filter='url(%23b)' d='M0 1H60C68 4 75 0 83 3C90 6 94 4 96 12C98 20 94 28 97 38C100 48 95 56 98 66C100 76 96 86 92 92C86 99 78 96 68 98C52 100 34 97 16 99C8 100 3 98 0 99Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat; }
+.ex-img img { object-position: 22% 55%; }
+.ex-label { color: #9a6a3c; }
+:root[data-theme='dark'] .ex-label { color: #d9a877; }
+.ex-ups-row { display: grid; gap: 14px; }
+.ex-ups ul { margin: 0; }
+.ex-ups ul a { background: var(--card); border: 1px solid transparent; box-shadow: 0 1px 2px rgba(80, 50, 20, .06), 0 4px 14px rgba(80, 50, 20, .05); }
+.ex-ups ul a svg:first-child { color: #9a6a3c; }
+.ex-side { position: relative; display: flex; justify-content: flex-end; align-items: flex-end; min-height: 120px; }
+.ex-sun { position: absolute; left: 30%; top: 0; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, rgba(246, 176, 120, .75), rgba(246, 176, 120, .2) 60%, transparent 70%); }
+.ex-sketch { left: 0; top: 0; width: min(62%, 380px); filter: sepia(1) saturate(.75) hue-rotate(-12deg) brightness(.95); opacity: .6; }
+.ex-all { position: relative; z-index: 1; float: none; }
+
+/* ---------- colour of the line-art on the evergreen band and footer ---------- */
+.cband, .site-footer { background: #04362c; }
+:root[data-theme='dark'] .cband { background: #032a22; }
+.cb-heritage, .cb-students, .site-footer .sketch-art { filter: invert(1) sepia(1) saturate(.55) hue-rotate(80deg) brightness(1.02); mix-blend-mode: screen; }
+.cb-heritage { opacity: .26; } .cb-students { opacity: .24; }
+.site-footer .sketch-art { opacity: .2; } .site-footer .ft-heritage { opacity: .14 !important; }
+.site-footer { border-top: 1px solid rgba(251, 246, 238, .12); }
+.map-sec { position: relative; overflow: hidden; }
+
+/* students: one search bar for text, filters and the search action (as in the mockup) */
+.sbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; margin-top: clamp(-8px, -1vw, 0px); padding: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 2px 4px rgba(80, 50, 20, .04), 0 14px 34px rgba(80, 50, 20, .07); }
+.sbar-q { flex: 1.4 1 260px; display: flex; align-items: center; gap: 10px; padding: 0 12px; color: var(--muted); min-width: 0; }
+.sbar-q input { border: 0; background: transparent; min-height: 46px; padding: 0; box-shadow: none; } .sbar-q input:focus { box-shadow: none; }
+.sbar:focus-within { border-color: var(--line-2); }
+.sbar-filters { flex: 2 1 420px; display: flex; gap: 6px; align-items: center; min-width: 0; }
+.sbar-filters select { flex: 1 1 0; min-width: 0; width: auto; border: 0; border-left: 1px solid var(--line); border-radius: 0; background-color: transparent; min-height: 40px; padding: 0 12px; font-weight: 600; font-size: .88rem; }
+.sbar-filters select:focus { box-shadow: none; outline: 2px solid var(--teal-2); outline-offset: 2px; border-radius: 8px; }
+.sbar-go { flex-shrink: 0; }
 /* ---------- responsive ---------- */
 @media (max-width: 1180px) {
   .nav-links { display: none; } .menu-btn { display: grid; }
   .quick { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 1000px) {
-  .hero-media-wrap { order: 2; min-height: clamp(260px, 56vw, 420px); }
+  .sbar { flex-wrap: wrap; } .sbar-q { flex-basis: 100%; } .sbar-filters { flex-basis: 100%; flex-wrap: wrap; } .sbar-filters select { border: 1px solid var(--line); border-radius: 999px; flex: 1 1 160px; } .sbar-go { width: 100%; }
+  .explore2-grid { grid-template-columns: 1fr; padding-right: var(--gutter); } .ex-media { max-width: none; margin-right: var(--gutter); } .ex-copy { padding-left: var(--gutter); }
   .explore2-grid { grid-template-columns: 1fr; } .ex-media { max-width: 680px; }
   .cband { grid-template-columns: 1fr; } .cband-photo { min-height: clamp(240px, 52vw, 380px); -webkit-mask: none; mask: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; row-gap: 32px; } .footer-grid > :nth-child(3) { padding-left: 0; border-left: 0; }
@@ -702,8 +751,12 @@ html[lang='bn'] .footer-grid h2 { font-family: 'Noto Serif Bengali', serif; font
   .auth-panel { padding: 28px 0 8px; }
 }
 @media (max-width: 760px) {
+  .hero-top { display: block; min-height: 0; } .hero-bg { position: relative; height: clamp(260px, 70vw, 380px); }
+  .hero-top::after { background: linear-gradient(0deg, var(--paper) 0, rgba(255, 246, 234, 0) 30%); bottom: auto; height: clamp(260px, 70vw, 380px); }
+  :root[data-theme='dark'] .hero-top::after { background: linear-gradient(0deg, var(--paper) 0, rgba(23, 19, 15, 0) 30%); }
+  .hero-top .hero-grid { padding: 4px 0 40px; } .hero-full .hero-foot { margin-top: 0; } .vine-hero-l { display: none; }
+  .ex-side { min-height: 150px; } .ex-sketch { width: 100%; } .ex-all { width: 100%; }
   .ex-cards { grid-template-columns: 1fr; } .ex-card { padding-bottom: 12px; } .ex-ups ul { grid-template-columns: 1fr 1fr; } .ex-all { float: none; width: 100%; }
-  .sprig-hero-tr, .sprig-ex-tr { width: 110px; } .sprig-hero-bl, .sprig-ex-br { width: 120px; }
   .phero-wrap::before { width: 110px; left: -96px; } .phero-script { display: none; }
   .footer-grid { grid-template-columns: 1fr; } .footer-grid > * { padding-left: 0; border-left: 0; } .footer-bottom { flex-direction: column; align-items: flex-start; }
   .stats-strip-inline { grid-template-columns: 1fr 1fr; row-gap: 14px; } .stats-strip-inline > div:nth-child(3) { border-left: 0; padding-left: 0; }
