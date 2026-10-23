@@ -90,3 +90,40 @@ export async function downloadFile(path, filename) {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+// Profile photos are private (the API checks who is asking), so they are fetched with the viewer's token and shown
+// through an object URL. Results are cached per URL; the URL changes whenever the photo changes.
+const photoCache = new Map()
+export function loadPhoto(url) {
+  if (!url) return Promise.resolve(null)
+  if (!photoCache.has(url)) {
+    photoCache.set(url, (async () => {
+      const res = await fetch(`${BASE}${url}`, { credentials: 'include', headers: await bearer() })
+      if (!res.ok) return null
+      return URL.createObjectURL(await res.blob())
+    })().catch(() => null))
+  }
+  return photoCache.get(url)
+}
+
+export function usePhoto(url) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    let live = true
+    setSrc(null)
+    loadPhoto(url).then((s) => { if (live) setSrc(s) })
+    return () => { live = false }
+  }, [url])
+  return src
+}
+
+// Sends one photo to the member's own endpoint or the admin endpoint; resolves with the JSON the API returns.
+export async function sendPhoto(path, file) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE}/api/v1${path}`, { method: 'POST', credentials: 'include', headers: await bearer(), body: form })
+  let body = null
+  try { body = await res.json() } catch { /* empty */ }
+  if (!res.ok) throw Object.assign(new Error(body?.error || `HTTP ${res.status}`), { status: res.status })
+  return body
+}

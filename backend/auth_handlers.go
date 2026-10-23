@@ -99,6 +99,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.memberViewRoutes(m, h)
 	a.inviteRoutes(m, h)
 	a.profileChangeRoutes(m, h)
+	a.photoRoutes(m, h)
 	a.adminRoutes(m, h)
 }
 
@@ -444,6 +445,9 @@ func (a *App) resetPassword(w http.ResponseWriter, r *http.Request) {
 func (a *App) meBody(ctx context.Context, u User) map[string]any {
 	body := map[string]any{"user": map[string]any{"id": u.ID, "email": u.Email, "role": u.Role, "emailVerified": u.EmailVerified}, "profile": nil}
 	if p, err := a.Auth.Store.ProfileByUser(ctx, u.ID); err == nil {
+		if _, _, ver, err := a.Auth.Store.ProfilePhoto(ctx, u.ID); err == nil {
+			p.PhotoURL = "/api/v1/me/photo?v=" + ver
+		}
 		body["profile"] = p
 	}
 	return body

@@ -194,6 +194,7 @@ func (a *App) studentsList(w http.ResponseWriter, r *http.Request, _ User) {
 		a.memberFail(w, err)
 		return
 	}
+	a.withMemberPhotos(r.Context(), rows)
 	_, _, pages := window(total, q.Page, q.Limit)
 	writeJSON(w, 200, page{Items: rows, Total: total, Page: q.Page, Pages: pages})
 }
@@ -204,7 +205,9 @@ func (a *App) studentOneAdmin(w http.ResponseWriter, r *http.Request, _ User) {
 		a.memberFail(w, err)
 		return
 	}
-	writeJSON(w, 200, row)
+	rows := []MemberAdminRow{row}
+	a.withMemberPhotos(r.Context(), rows)
+	writeJSON(w, 200, rows[0])
 }
 
 func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
@@ -300,7 +303,9 @@ func (a *App) studentEdit(w http.ResponseWriter, r *http.Request, u User) {
 		a.memberFail(w, err)
 		return
 	}
-	writeJSON(w, 200, row)
+	rows := []MemberAdminRow{row}
+	a.withMemberPhotos(r.Context(), rows)
+	writeJSON(w, 200, rows[0])
 }
 
 var memberActions = map[string]string{"approve": StatusApproved, "reject": StatusRejected, "reset": StatusPending}

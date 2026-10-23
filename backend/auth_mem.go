@@ -40,6 +40,7 @@ type memStore struct {
 	inviteLog []time.Time
 	changes  map[string]*ProfileChange
 	edits    map[string]ManualImportedInput
+	photos   map[string]memPhoto
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).

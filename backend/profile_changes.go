@@ -375,6 +375,10 @@ func (a *App) membershipRequests(w http.ResponseWriter, r *http.Request, _ User)
 			break
 		}
 	}
+	vers := a.photoVersions(ctx)
+	for i := range items {
+		items[i].PhotoURL = studentPhotoURL(items[i].ID, vers[items[i].ID])
+	}
 	total := len(items)
 	lo, hi, pages := window(total, q.Page, q.Limit)
 	writeJSON(w, 200, page{Items: items[lo:hi], Total: total, Page: q.Page, Pages: pages})

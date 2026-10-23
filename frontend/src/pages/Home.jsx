@@ -206,7 +206,7 @@ export default function Home() {
             <p className="cband-lede">{t('community.body')}</p>
             {(students.data?.items || []).length > 0 && (
               <div className="cband-avatars">
-                {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} size={42} />)}
+                {(students.data?.items || []).map((st) => <Avatar key={st.id} name={st.name} photo={st.details?.photoUrl} size={42} />)}
                 <Link to="/students" className="cband-more" aria-label={t('community.cta')}>+</Link>
               </div>
             )}

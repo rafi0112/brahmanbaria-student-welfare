@@ -1,6 +1,6 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useApi, qs } from '../lib/api.js'
+import { useApi, qs, usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
@@ -126,6 +126,11 @@ export default function Students() {
   )
 }
 
+function SpAvatar({ name, photo }) {
+  const src = usePhoto(photo)
+  return <span className="sp-avatar" aria-hidden="true">{src ? <img src={src} alt="" /> : initials(name)}</span>
+}
+
 export function StudentDetail() {
   const base = useBase()
   const { id } = useParams()
@@ -156,7 +161,7 @@ export function StudentDetail() {
               <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
             </div>
             <div className="wrap sp-head">
-              <span className="sp-avatar" aria-hidden="true">{initials(s.name)}</span>
+              <SpAvatar name={s.name} photo={d?.photoUrl} />
               <div className="sp-id">
                 <h1>{s.name}{registered && <span className="sp-check" title={t('students.registeredMember')}><Icon name="verified" size={22} /></span>}</h1>
                 <ul className="sp-chips">

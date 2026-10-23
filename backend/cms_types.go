@@ -130,6 +130,7 @@ type MemberAdminRow struct {
 	ReviewedAt      string   `json:"reviewedAt,omitempty"`
 	ReviewedBy      string   `json:"reviewedBy,omitempty"`
 	ReviewNote      string   `json:"reviewNote,omitempty"`
+	PhotoURL        string   `json:"photoUrl,omitempty"` // filled by the API
 }
 
 // requiredProfileFields are what a profile needs to count as complete. Phone, blood group, gender and photo are optional.

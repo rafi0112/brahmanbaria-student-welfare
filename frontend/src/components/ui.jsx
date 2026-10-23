@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import images from '../data/images.json'
+import { usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 
 // Responsive WebP photo with reserved dimensions and a graceful fallback.
@@ -165,14 +166,17 @@ export function initials(name) {
   return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase()
 }
 
-// A monogram in one of four soft palette tints, chosen from the name so it stays the same for the same person.
-export function Avatar({ name, size = 52 }) {
+// A person's picture: their photo when one exists and this viewer may see it, otherwise a monogram in one of four soft
+// palette tints chosen from the name (so it stays the same for the same person).
+export function Avatar({ name, size = 52, photo, className = '' }) {
+  const src = usePhoto(photo)
   let h = 0
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 997
+  for (const c of name || '?') h = (h * 31 + c.charCodeAt(0)) % 997
   const tint = ['peach', 'teal', 'orange', 'sand'][h % 4]
+  if (src) return <img className={`avatar avatar-img ${className}`} src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
   return (
-    <span className={`avatar tint-${tint}`} style={{ width: size, height: size, fontSize: size * 0.36 }} aria-hidden="true">
-      {initials(name)}
+    <span className={`avatar tint-${tint} ${className}`} style={{ width: size, height: size, fontSize: size * 0.36 }} aria-hidden="true">
+      {initials(name || '?')}
     </span>
   )
 }

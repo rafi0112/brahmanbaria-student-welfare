@@ -4,6 +4,7 @@ import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
+import PhotoPicker from '../components/PhotoPicker.jsx'
 
 const LEVELS = ['members', 'hidden'] // the public site shows four fields only, so "public" no longer exists as a choice
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -198,6 +199,29 @@ function ChangeRequest({ p }) {
 }
 
 function DashboardBody({ user }) {
+  const { t } = useApp()
+  const auth = useAuth()
+  const p = auth.profile
+  return (
+    <section className="section wrap narrow">
+      <header className="dash-head">
+        <Avatar name={p?.name || user.email} photo={p?.photoUrl} size={72} />
+        <div>
+          <h1>{t('dash.hello')}, {p?.name || user.email}</h1>
+          <p className="muted">{user.email}</p>
+          {p && <p className="muted">{t('dash.status')}: {statusBadge(t, p.status)}</p>}
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={auth.logout}>{t('auth.logout')}</button>
+      </header>
+      <ProfileManager user={user} />
+    </section>
+  )
+}
+
+// Everything a signed-in person can see and change about themselves: photo, all details, academic changes (direct before
+// approval, as a request after), and contact and privacy settings. Used on /dashboard and in the account dialog.
+// view: 'all' | 'details' | 'edit'
+export function ProfileManager({ user, view = 'all' }) {
   const { t, n, pick } = useApp()
   const auth = useAuth()
   const p = auth.profile
@@ -234,24 +258,19 @@ function DashboardBody({ user }) {
     </label>
   )
 
+  const showDetails = view !== 'edit'
+  const showEdit = view !== 'details'
   return (
-    <section className="section wrap narrow">
-      <header className="dash-head">
-        <Avatar name={p?.name || user.email} size={72} />
-        <div>
-          <h1>{t('dash.hello')}, {p?.name || user.email}</h1>
-          <p className="muted">{user.email}</p>
-          {p && <p className="muted">{t('dash.status')}: {statusBadge(t, p.status)}</p>}
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={auth.logout}>{t('auth.logout')}</button>
-      </header>
+    <div className="pm">
+      {p && showEdit && <PhotoPicker name={p.name} photo={p.photoUrl} uploadPath="/me/photo" deletePath="/me/photo" onDone={(r) => auth.set(r)} />}
       {!p ? (
         user.role === 'admin'
           ? <Empty>{t('dash.noProfile')} <Link to="/admin">{t('admin.title')} →</Link></Empty>
           : <CompleteProfile defaultName={user.email.split('@')[0]} onDone={auth.set} />
       ) : (
         <>
-          {p.status === 'pending' && <p className="notice">{t('dash.pendingNote')}</p>}
+          {showDetails && p.status === 'pending' && <p className="notice">{t('dash.pendingNote')}</p>}
+          {showDetails && <>
           <h2>{t('dash.details')}</h2>
           <dl className="facts">
             <div><dt>{t('students.batch')}</dt><dd>{n(p.batch)}</dd></div>
@@ -263,9 +282,11 @@ function DashboardBody({ user }) {
             <div><dt>{t('dash.phone')}</dt><dd>{p.phone || t('dash.notSet')}</dd></div>
             <div><dt>{t('dash.bloodGroup')}</dt><dd>{p.bloodGroup || t('dash.notSet')}</dd></div>
             <div><dt>{t('dash.email')}</dt><dd>{user.email}</dd></div>
+            <div><dt>{t('dash.listed')}</dt><dd>{p.showInDirectory ? t('ad.me.yes') : t('ad.me.no')}</dd></div>
           </dl>
-          <ChangeRequest p={p} />
-          {form && (
+          </>}
+          {showEdit && <ChangeRequest p={p} />}
+          {showEdit && form && (
             <form onSubmit={save} className="card-form" noValidate>
               <h2>{t('dash.contact')}</h2>
               <label className="field">
@@ -302,6 +323,6 @@ function DashboardBody({ user }) {
           )}
         </>
       )}
-    </section>
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useBase } from '../lib/base.js'
 import { useApp } from '../lib/app.jsx'
+import { usePhoto } from '../lib/api.js'
 import { Badge, MediaPhoto, initials } from './ui.jsx'
 import Icon from './Icon.jsx'
 
@@ -54,9 +55,10 @@ export function StudentCard({ s, upazilas = [] }) {
   const base = useBase()
   const up = upazilas.find((u) => u.slug === s.upazila)
   const place = up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''
+  const photo = usePhoto(s.details?.photoUrl)
   return (
     <Link to={`${base}/students/${s.id}`} className="student-card">
-      <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true"><b>{initials(s.name)}</b><span className="sc-go"><Icon name="arrow" size={15} /></span></span>
+      <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true">{photo ? <img src={photo} alt="" /> : <b>{initials(s.name)}</b>}<span className="sc-go"><Icon name="arrow" size={15} /></span></span>
       <span className="student-info">
         <h3>{s.name}</h3>
         <p className="sc-dept">{s.department || '—'}</p>

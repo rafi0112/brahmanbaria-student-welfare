@@ -41,6 +41,7 @@ type Person struct {
 	ShowPhone  string
 	ShowEmail  string
 	ShowBlood  string
+	PhotoVer   string // set when the member has a photo
 }
 
 func personFromProfile(p *Profile, email string) Person {
@@ -71,6 +72,7 @@ type personDetails struct {
 	Email      string `json:"email,omitempty"`
 	Status     string `json:"status,omitempty"`   // admins only
 	Verified   *bool  `json:"verified,omitempty"` // admins only, directory records
+	PhotoURL   string `json:"photoUrl,omitempty"`
 }
 
 type personView struct {
@@ -119,6 +121,9 @@ func (p Person) view(v viewer) personView {
 		return out
 	}
 	d := &personDetails{Source: p.Source, Session: p.Session, Union: p.Union, Gender: p.Gender}
+	if p.Source == "member" && p.PhotoVer != "" {
+		d.PhotoURL = studentPhotoURL(strings.TrimPrefix(p.ID, "m-"), p.PhotoVer)
+	}
 	self := p.Source == "member" && v.ID != "" && p.ID == "m-"+v.ID
 	if p.Source == "member" {
 		if self || levelAllows(p.ShowPhone, v.Kind) {
@@ -149,6 +154,10 @@ func (a *App) directoryPeople(ctx context.Context) []Person {
 	if a.Auth != nil {
 		st := a.Auth.Store
 		if ms, err := st.ApprovedPeople(ctx); err == nil {
+			vers := a.photoVersions(ctx)
+			for i := range ms {
+				ms[i].PhotoVer = vers[strings.TrimPrefix(ms[i].ID, "m-")]
+			}
 			people = append(people, ms...)
 		} else {
 			log.Printf("approved people: %v", err)
@@ -264,7 +273,9 @@ func (a *App) studentOne(w http.ResponseWriter, r *http.Request) {
 			if u, err := a.Auth.Store.UserByID(r.Context(), uid); err == nil {
 				email = u.Email
 			}
-			writeJSON(w, 200, personFromProfile(p, email).view(v))
+			x := personFromProfile(p, email)
+			x.PhotoVer = a.photoVersions(r.Context())[uid]
+			writeJSON(w, 200, x.view(v))
 			return
 		}
 	}

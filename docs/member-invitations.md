@@ -96,3 +96,7 @@ The template uses only `{{ .ConfirmationURL }}` plus `{{ .SiteURL }}` for the lo
 | Visitor clicks the link | The email is **verified**, they land on `/verify-email` signed in, and their membership profile is created as **pending** from the details they entered. |
 | Verified, not yet approved | They can sign in and see **all of their own details**, and other people's **public** details only (name, batch, department, upazila). |
 | Admin approves (Membership Requests) | They become a member: they appear in Registered members and can see every shared member detail; the verified badge appears. |
+
+## Profile photos
+
+Members upload a JPEG or PNG (up to 5 MB) from the account menu → My profile; admins can set or remove any member's photo in the member drawer. The server decodes the file, crops it to a square, scales it to 480 px and re-encodes it as JPEG (which strips EXIF/GPS), then stores it in PostgreSQL (`profile_photos`, migration 017). Photos are served only through the API (`/api/v1/me/photo`, `/api/v1/students/m-{id}/photo`) to the member, approved members (when the member is listed in the directory) and admins: the same audience as other personal details. The public sees initials.

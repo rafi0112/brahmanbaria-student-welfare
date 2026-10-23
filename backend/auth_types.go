@@ -52,6 +52,7 @@ type Profile struct {
 	ShowEmail       string `json:"showEmail"`
 	ShowBlood       string `json:"showBlood"`
 	CreatedAt       string `json:"createdAt,omitempty"`
+	PhotoURL        string `json:"photoUrl,omitempty"` // filled by the API, not stored
 	Session         string `json:"session"`
 	Gender          string `json:"gender"` // '' = unspecified; only ever set explicitly
 	// the latest membership decision; internal, never sent to the member
@@ -112,6 +113,7 @@ type AuthStore interface {
 	ManualImportedStore
 	InviteStore
 	ProfileChangeStore
+	PhotoStore
 
 	CreateUser(ctx context.Context, n NewUser) (User, error)
 	UserByEmail(ctx context.Context, email string) (User, error)

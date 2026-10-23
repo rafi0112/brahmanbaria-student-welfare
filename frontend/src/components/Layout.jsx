@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { LeafMark, SketchArt } from './Decor.jsx'
+import { AccountMenu, ProfileDialog } from './Account.jsx'
 import Icon from './Icon.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
@@ -25,6 +26,7 @@ function Header() {
   const nav = useNavigate()
   const signOut = async () => { await logout(); nav('/') }
   const [open, setOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const loc = useLocation()
   const onHero = loc.pathname === '/'
@@ -58,15 +60,12 @@ function Header() {
           {BAR.map(([to, k]) => <NavLink key={to} to={to}>{t(k)}</NavLink>)}
         </nav>
         <div className="nav-tools">
-          <Link className="icon-btn hide-sm" to="/students" aria-label={t('common.search')} title={t('common.search')}><Icon name="search" size={18} /></Link>
-          <button type="button" className="icon-btn txt" onClick={toggleLang} aria-label={t('lang.toggle')}>{t('lang.toggle')}</button>
+          <Link className="icon-btn" to="/students" aria-label={t('common.search')} title={t('common.search')}><Icon name="search" size={18} /></Link>
+          <button type="button" className="icon-btn txt" onClick={toggleLang} aria-label={t('lang.toggle')} title={t('lang.toggle')}>{t('lang.toggle')}</button>
           <button type="button" className="icon-btn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}><ThemeGlyph dark={isDark()} /></button>
-          <span className="nav-sep hide-sm" aria-hidden="true" />
+          <span className={`nav-sep${user ? '' : ' hide-sm'}`} aria-hidden="true" />
           {user
-            ? <>
-                <Link className="btn btn-dark btn-sm hide-sm" to={home}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link>
-                <button type="button" className="btn btn-ghost btn-sm hide-sm" onClick={signOut}>{t('auth.logout')}</button>
-              </>
+            ? <AccountMenu onOpenProfile={() => setProfileOpen(true)} />
             : <>
                 <Link className="btn btn-ghost btn-sm hide-sm" to="/login">{t('nav.login')}</Link>
                 <Link className="btn btn-dark btn-sm hide-sm" to="/register">{t('nav.register')}</Link>
@@ -82,11 +81,12 @@ function Header() {
         </nav>
         <div className="drawer-cta">
           {user
-            ? <><Link className="btn btn-dark" to={home}>{user.role === 'admin' ? t('admin.title') : t('auth.account')}</Link><button type="button" className="btn btn-ghost" onClick={signOut}>{t('auth.logout')}</button></>
+            ? <><button type="button" className="btn btn-dark" onClick={() => { setOpen(false); setProfileOpen(true) }}>{t('acct.profile')}</button><Link className="btn btn-outline" to={home}>{user.role === 'admin' ? t('admin.title') : t('acct.dashboard')}</Link><button type="button" className="btn btn-quiet" onClick={signOut}>{t('auth.logout')}</button></>
             : <><Link className="btn btn-dark" to="/register">{t('nav.register')}</Link><Link className="btn btn-ghost" to="/login">{t('nav.login')}</Link></>}
         </div>
       </div>
       <button type="button" className="drawer-scrim" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} />
+      {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
     </header>
   )
 }

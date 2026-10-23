@@ -7,6 +7,7 @@ import { Avatar, Badge, Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
+import PhotoPicker from '../components/PhotoPicker.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
@@ -154,7 +155,7 @@ function Members({ mode }) {
             selection={{ picked, toggle, allOn: allOnPage, toggleAll: () => setPicked(allOnPage ? [] : rows.map((r) => r.id)), name: (r) => r.name }}
             columns={[
               { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
-                <span className="dt-person"><Avatar name={r.name} size={34} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.status === 'approved' && r.emailVerified && <VerifiedMark label={t('ad.vm.member')} />}</strong><small className="dt-sub dt-trunc" title={r.email}>{r.email}</small></span></span>
+                <span className="dt-person"><Avatar name={r.name} photo={r.photoUrl} size={34} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.status === 'approved' && r.emailVerified && <VerifiedMark label={t('ad.vm.member')} />}</strong><small className="dt-sub dt-trunc" title={r.email}>{r.email}</small></span></span>
               ) },
               { id: 'academic', label: t('ad.stu.col.academic'), width: '24%', cell: (r) => <div className="dt-stack"><span className="dt-trunc" title={r.department}>{r.department}</span><small className="dt-sub">{t('auth.batch')} {n(r.batch)}</small></div> },
               { id: 'status', label: t('ad.stu.col.status'), width: '30%', cell: (r) => (
@@ -235,6 +236,8 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved }) {
     <Modal title={row.name} onClose={onClose} drawer busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
       <p className="muted small">{row.email} · <StatusBadge status={row.status} /> · {row.role === 'admin' ? t('admin.roles.admin') : t('admin.roles.member')}
         {row.role === 'admin' && <> — <Link to="/admin?tab=roles">{t('ad.stu.manageRole')}</Link></>}</p>
+      <PhotoPicker name={row.name} photo={row.photoUrl} uploadPath={`/admin/students/${row.id}/photo`} deletePath={`/admin/students/${row.id}/photo`} size={72}
+        onDone={(r, what) => onSaved(r, t(what === 'set' ? 'ad.photoSaved' : 'ad.photoRemoved'))} />
       <form onSubmit={save} noValidate className="ad-form">
         <div className="ad-grid">
           <Field label={t('auth.name')} required error={errs.name} max={80} count={v.name.length}>{(id, bad) => <input id={id} value={v.name} onChange={text('name')} maxLength={80} aria-invalid={bad} />}</Field>
