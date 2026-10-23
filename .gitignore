@@ -23,6 +23,14 @@ frontend/public/images/*.jpg
 frontend/node_modules/
 frontend/dist/
 backend/*.exe
+backend/*.exe~
+backend/*.exe.new
+# Linux builds of the API for deployment (bswa-api, backend) and release archives
+backend/bswa-api
+backend/backend
+backend/*.tar.gz
+# Local server logs
+*.log
 # Playwright output
 frontend/test-results/
 frontend/playwright-report/

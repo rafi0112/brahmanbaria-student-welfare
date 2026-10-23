@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -20,6 +21,15 @@ func main() {
 	store, err := loadStore(dataDir)
 	if err != nil {
 		log.Fatalf("load data: %v", err)
+	}
+	// The real member files are git-ignored, so a fresh checkout falls back to the synthetic *.sample.json data. That is
+	// fine for development; in production it would publish invented people, so refuse to start instead.
+	if env("APP_ENV", "development") == "production" {
+		for _, f := range []string{"students.json", "alumni.json"} {
+			if _, err := os.Stat(filepath.Join(dataDir, f)); err != nil {
+				log.Fatalf("APP_ENV=production but %s is missing: upload the real member data to DATA_DIR (%s); sample data is never served in production", f, dataDir)
+			}
+		}
 	}
 	app := &App{
 		Store:      store,
@@ -110,7 +120,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:              ":" + env("PORT", "8080"),
+		Addr:              ":" + env("PORT", env("SERVER_PORT", "8080")), // all interfaces; Botkeep assigns SERVER_PORT
 		Handler:           app.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
