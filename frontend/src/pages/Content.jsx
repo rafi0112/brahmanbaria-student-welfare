@@ -7,7 +7,7 @@ import { useBase } from '../lib/base.js'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
 import { PostCard } from '../components/cards.jsx'
-import { Plane } from '../components/Sketch.jsx'
+import Icon from '../components/Icon.jsx'
 
 /* ---------------- Blog ---------------- */
 export function Blog() {
@@ -205,30 +205,69 @@ export function Contact() {
     }
   }
   const field = (k, label, props = {}) => (
-    <label className="field">
+    <label className={`field${props.wide ? ' span-2' : ''}`}>
       <span>{label}</span>
-      {props.area ? <textarea rows="6" value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required /> : <input type={props.type || 'text'} value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required />}
+      {props.area
+        ? <textarea rows="7" value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required maxLength={4000} />
+        : <input type={props.type || 'text'} autoComplete={props.auto} value={v[k]} onChange={on(k)} aria-invalid={!!st.fields[k]} required />}
       {st.fields[k] && <small className="err">{st.fields[k]}</small>}
     </label>
   )
+  const info = [
+    ['pin', 'contact.whereT', t('footer.campus')],
+    ['users', 'contact.whoT', t('contact.whoD')],
+    ['lock', 'contact.privT', t('contact.privD')],
+  ]
   return (
     <>
       <PageHero kicker={t('contact.kicker')} title={t('contact.title')} lede={t('contact.lede')} src="/images/bswa/river.webp" />
-      <section className="section wrap two-col">
-        <form className="card-form" onSubmit={submit} noValidate>
-          {field('name', t('contact.name'))}
-          {field('email', t('contact.email'), { type: 'email' })}
-          {field('subject', t('contact.subject'))}
-          {field('message', t('contact.message'), { area: true })}
-          <input className="hp" tabIndex="-1" autoComplete="off" aria-hidden="true" value={v.website} onChange={on('website')} name="website" />
-          <button className="btn btn-dark" disabled={st.status === 'sending'}>{st.status === 'sending' ? t('contact.sending') : t('contact.send')}</button>
-          <div aria-live="polite">
-            {st.status === 'ok' && <p className="notice ok">{t('contact.ok')}</p>}
-            {st.status === 'fail' && <p className="notice bad">{t('contact.fail')}</p>}
-            {st.status === 'limit' && <p className="notice bad">{t('contact.limit')}</p>}
+      <section className="section wrap contact">
+        <div className="contact-main">
+          {st.status === 'ok' ? (
+            <div className="contact-done" role="status">
+              <span className="contact-done-ico"><Icon name="check" size={26} /></span>
+              <h2>{t('contact.doneT')}</h2>
+              <p className="muted">{t('contact.ok')}</p>
+              <button type="button" className="btn btn-outline" onClick={() => setSt({ status: 'idle', fields: {} })}>{t('contact.another')}</button>
+            </div>
+          ) : (
+            <form className="contact-form" onSubmit={submit} noValidate>
+              <div className="contact-form-head">
+                <h2>{t('contact.formT')}</h2>
+                <p className="muted">{t('contact.formD')}</p>
+              </div>
+              <div className="form-grid">
+                {field('name', t('contact.name'), { auto: 'name' })}
+                {field('email', t('contact.email'), { type: 'email', auto: 'email' })}
+                {field('subject', t('contact.subject'), { wide: true })}
+                {field('message', t('contact.message'), { area: true, wide: true })}
+              </div>
+              <input className="hp" tabIndex="-1" autoComplete="off" aria-hidden="true" value={v.website} onChange={on('website')} name="website" />
+              <div className="contact-actions">
+                <button className="btn btn-dark" disabled={st.status === 'sending'} aria-busy={st.status === 'sending' || undefined}>{t('contact.send')} <Icon name="arrow" size={16} className="arr" /></button>
+                <p className="muted small">{t('contact.note')}</p>
+              </div>
+              <div aria-live="polite">
+                {st.status === 'invalid' && <p className="notice bad">{t('contact.invalid')}</p>}
+                {st.status === 'fail' && <p className="notice bad">{t('contact.fail')}</p>}
+                {st.status === 'limit' && <p className="notice bad">{t('contact.limit')}</p>}
+              </div>
+            </form>
+          )}
+        </div>
+        <aside className="contact-side">
+          <ul className="contact-info">
+            {info.map(([ic, k, d]) => (
+              <li key={k}><span className="ci-ico"><Icon name={ic} size={18} /></span><div><b>{t(k)}</b><p>{d}</p></div></li>
+            ))}
+          </ul>
+          <div className="contact-links">
+            <p className="ex-label">{t('contact.firstT')}</p>
+            <Link to="/faq">{t('nav.faq')}<Icon name="arrow" size={15} className="arr" /></Link>
+            <Link to="/membership">{t('nav.membership')}<Icon name="arrow" size={15} className="arr" /></Link>
+            <Link to="/students">{t('nav.students')}<Icon name="arrow" size={15} className="arr" /></Link>
           </div>
-        </form>
-        <div className="sketch-card"><img src="/art/landscape.webp" alt="" loading="lazy" /><Plane className="sketch plane" /><p className="muted">{t('contact.address')}</p></div>
+        </aside>
       </section>
     </>
   )

@@ -94,3 +94,18 @@ test('students: directory cards open the profile, filters narrow the list, and p
   await page.getByRole('link', { name: 'All students' }).click()
   await expect(page).toHaveURL(/\/students/)
 })
+
+test('contact: the form validates on the server, then shows a clear success state', async ({ page }) => {
+  await page.goto('/contact')
+  await expect(page.locator('.sketch-card')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Send message' }).click()
+  await expect(page.getByText('Please correct the highlighted fields.')).toBeVisible()
+  await page.getByLabel('Your name').fill('E2E Visitor')
+  await page.getByLabel('Email').fill('visitor@example.test')
+  await page.getByLabel('Subject').fill('Hello from the test')
+  await page.getByLabel('Message').fill('This message checks the contact form end to end.')
+  await page.getByRole('button', { name: 'Send message' }).click()
+  await expect(page.getByRole('heading', { name: 'Message received' })).toBeVisible()
+  await page.getByRole('button', { name: 'Send another message' }).click()
+  await expect(page.getByLabel('Your name')).toHaveValue('')
+})

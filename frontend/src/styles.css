@@ -720,12 +720,32 @@ html[lang='bn'] .footer-grid h2 { font-family: 'Noto Serif Bengali', serif; font
 .sbar-filters select { flex: 1 1 0; min-width: 0; width: auto; border: 0; border-left: 1px solid var(--line); border-radius: 0; background-color: transparent; min-height: 40px; padding: 0 12px; font-weight: 600; font-size: .88rem; }
 .sbar-filters select:focus { box-shadow: none; outline: 2px solid var(--teal-2); outline-offset: 2px; border-radius: 8px; }
 .sbar-go { flex-shrink: 0; }
+/* ---------- contact ---------- */
+.contact { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: clamp(20px, 3.4vw, 52px); align-items: start; }
+.contact-form, .contact-done { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: clamp(22px, 3.2vw, 44px); box-shadow: 0 2px 4px rgba(80, 50, 20, .03), 0 18px 44px rgba(80, 50, 20, .06); }
+.contact-form-head { margin-bottom: 22px; } .contact-form-head h2 { font-size: clamp(1.6rem, 2.4vw, 2.1rem); margin: 0 0 6px; } .contact-form-head p { margin: 0; }
+.contact-form textarea { resize: vertical; min-height: 160px; }
+.contact-actions { display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap; margin-top: 4px; } .contact-actions p { margin: 0; flex: 1 1 220px; }
+.contact-form .notice { margin-top: 14px; }
+.contact-done { display: grid; justify-items: start; gap: 8px; animation: rise .4s var(--ease-out); } .contact-done h2 { margin: 6px 0 0; } .contact-done p { margin: 0 0 10px; }
+.contact-done-ico { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--teal-soft); color: var(--teal); }
+.contact-side { display: grid; gap: 18px; position: sticky; top: calc(var(--nav-h) + 16px); }
+.contact-info { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-radius: var(--r-lg); background: #04362c; color: #fbf6ee; padding: 8px clamp(18px, 2vw, 26px); }
+.contact-info li { display: flex; gap: 14px; align-items: flex-start; padding: 18px 0; border-bottom: 1px solid rgba(251, 246, 238, .14); } .contact-info li:last-child { border-bottom: 0; }
+.contact-info b { display: block; font: 400 1.08rem/1.3 var(--font-head); margin-bottom: 2px; } html[lang='bn'] .contact-info b { font-family: 'Noto Serif Bengali', serif; font-weight: 600; font-size: 1rem; }
+.contact-info p { margin: 0; color: rgba(251, 246, 238, .78); font-size: .92rem; }
+.ci-ico { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: rgba(251, 246, 238, .1); color: #f6b08f; }
+.contact-links { display: grid; gap: 8px; } .contact-links .ex-label { margin-bottom: 4px; }
+.contact-links a { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); text-decoration: none; font-weight: 600; transition: border-color var(--dur) var(--ease); }
+.contact-links a:hover { border-color: var(--accent); } .contact-links a .arr { color: var(--accent-ink); }
+
 /* ---------- responsive ---------- */
 @media (max-width: 1180px) {
   .nav-links { display: none; } .menu-btn { display: grid; }
   .quick { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 1000px) {
+  .contact { grid-template-columns: 1fr; } .contact-side { position: static; }
   .sbar { flex-wrap: wrap; } .sbar-q { flex-basis: 100%; } .sbar-filters { flex-basis: 100%; flex-wrap: wrap; } .sbar-filters select { border: 1px solid var(--line); border-radius: 999px; flex: 1 1 160px; } .sbar-go { width: 100%; }
   .explore2-grid { grid-template-columns: 1fr; padding-right: var(--gutter); } .ex-media { max-width: none; margin-right: var(--gutter); } .ex-copy { padding-left: var(--gutter); }
   .explore2-grid { grid-template-columns: 1fr; } .ex-media { max-width: 680px; }
