@@ -479,3 +479,26 @@ test('site data from the database: events, FAQ and alumni are created in the pan
   await page.goto('/alumni?q=Zqxv')
   await expect(page.getByText('Zqxv E2E Alumnus')).toHaveCount(0)
 })
+
+test('alumni setting: choosing a batch asks once and saves; both admin pages follow it', async ({ page }) => {
+  await login(page)
+  await page.goto('/admin/alumni')
+  const sel = page.locator('#ac-batch')
+  const before = await sel.inputValue()
+  const next = String(Number(before) + 1)
+  await sel.selectOption(next)
+  const dlg = page.getByRole('dialog')
+  await expect(dlg).toContainText(`Make batches up to ${next} alumni?`)
+  await dlg.getByRole('button', { name: 'Yes, save it' }).click()
+  await expect(page.getByText(`Saved: alumni up to batch ${next}.`)).toBeVisible()
+  // the Membership Directory batch filter offers only the running batches now
+  await page.goto('/admin/students?tab=imported')
+  await expect(page.locator('.dt tbody tr').first()).toBeVisible()
+  const opts = await page.locator('select').filter({ hasText: 'All batches' }).first().locator('option').allTextContents()
+  expect(opts.some((o) => o === `Batch ${next}`)).toBe(false)
+  // put it back
+  await page.goto('/admin/alumni')
+  await page.locator('#ac-batch').selectOption(before)
+  await page.getByRole('dialog').getByRole('button', { name: 'Yes, save it' }).click()
+  await expect(page.getByText(`Saved: alumni up to batch ${before}.`)).toBeVisible()
+})

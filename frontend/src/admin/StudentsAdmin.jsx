@@ -11,6 +11,9 @@ import PhotoPicker from '../components/PhotoPicker.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
+// The batches still studying: after the saved alumni batch ("alumni up to"). Graduated batches are managed on the Alumni page.
+const runningBatches = (cut) => BATCHES.filter((b) => !(cut > 0) || b > cut)
+function useAlumniCut() { return useApi('/stats').data?.alumniUpToBatch || 0 }
 
 // Students has two sections, both over the same registered accounts: Membership Requests (pending decisions, split by profile
 // completeness) and Members (everyone, those needing review, the verified). The sidebar chooses between them.
@@ -57,7 +60,8 @@ function Members({ mode }) {
   const depts = useApi('/departments')
   const counts = useApi('/admin/student-counts')
   const audit = useApi(requests ? null : '/admin/directory-audit')
-  const list = useApi(`${requests ? '/admin/membership-requests' : '/admin/students'}${qs({ ...eff, page: f.page === '1' ? '' : f.page })}`)
+  const cut = useAlumniCut()
+  const list = useApi(`${requests ? '/admin/membership-requests' : '/admin/students'}${qs({ ...eff, ...(requests ? {} : { scope: 'running' }), page: f.page === '1' ? '' : f.page })}`)
   const [rejecting, setRejecting] = useState(null)
   const { notice, ok, bad, clear } = useNotice()
   const [picked, setPicked] = useState([])
@@ -120,7 +124,7 @@ function Members({ mode }) {
         ] : undefined}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
-          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
+          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: (requests ? BATCHES : runningBatches(cut)).map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
           { key: 'verified', label: t('ad.stu.verified'), all: t('ad.stu.anyVerified'), advanced: true, options: [['yes', t('ad.stu.verifiedYes')], ['no', t('ad.stu.verifiedNo')]] },
           ...(requests ? [] : [{ key: 'complete', label: t('ad.stu.complete'), all: t('ad.stu.anyComplete'), advanced: true, options: [['yes', t('ad.stu.completeYes')], ['no', t('ad.stu.completeNo')]] }]),
           { key: 'disabled', label: t('ad.stu.account'), all: t('ad.stu.anyAccount'), advanced: true, options: [['no', t('ad.stu.active')], ['yes', t('ad.stu.deactivated')]] },
@@ -333,6 +337,7 @@ export function VerifiedMark({ label }) {
 
 function Imported() {
   const { t, n, lang } = useApp()
+  const cut = useAlumniCut()
   const errText = useErrText()
   const when = useWhen(lang)
   const [f, set] = useFilters({ q: '', department: '', batch: '', status: '', page: '1', limit: '20' })
@@ -401,7 +406,7 @@ function Imported() {
         ]}
         fields={[
           { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
-          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: BATCHES.map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
+          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: runningBatches(cut).map((bt) => [String(bt), `${t('auth.batch')} ${n(bt)}`]) },
         ]} />
       <Notice notice={notice} onClose={clear} />
       {list.loading && <SkeletonRows />}
@@ -458,7 +463,7 @@ function Imported() {
 }
 
 // Add or edit a hand-added directory record. This never creates an account or confirms an email address.
-function ImportedForm({ row, depts, onClose, onSaved }) {
+export function ImportedForm({ row, depts, onClose, onSaved }) {
   const { t, n } = useApp()
   const errText = useErrText()
   const ups = useApi('/upazilas')

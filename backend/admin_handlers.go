@@ -188,6 +188,15 @@ func memberQuery(r *http.Request) (MemberQuery, bool) {
 	b, _ := strconv.Atoi(v.Get("batch"))
 	q := MemberQuery{Q: strings.TrimSpace(v.Get("q")), Status: v.Get("status"), Department: v.Get("department"), Batch: b,
 		Verified: v.Get("verified"), Complete: v.Get("complete"), Disabled: v.Get("disabled"), View: v.Get("view"), Sort: v.Get("sort"), Page: pg, Limit: limit}
+	switch v.Get("scope") { // running: batches after the alumni setting (Membership Directory); alumni: up to it
+	case "running":
+		q.BatchAbove = -1
+	case "alumni":
+		q.BatchUpTo = -1
+	case "":
+	default:
+		return q, false
+	}
 	ok := memberSorts[q.Sort] && (q.View == "" || q.View == "review" || q.View == "verified") && utf8.RuneCountInString(q.Q) <= 100 && (q.Status == "" || q.Status == StatusPending || q.Status == StatusApproved || q.Status == StatusRejected)
 	return q, ok
 }
@@ -198,6 +207,7 @@ func (a *App) studentsList(w http.ResponseWriter, r *http.Request, _ User) {
 		apiError(w, http.StatusBadRequest, "invalid filter")
 		return
 	}
+	a.applyScope(&q)
 	rows, total, err := a.Auth.Store.ListMembersAdmin(r.Context(), q)
 	if err != nil {
 		a.memberFail(w, err)
@@ -565,4 +575,20 @@ func (a *App) removeMember(w http.ResponseWriter, r *http.Request, actor User, i
 	}
 	_ = a.Auth.Store.DeleteProfilePhoto(r.Context(), id) // already gone with the account in Postgres; the memory store keeps photos apart
 	writeJSON(w, 200, map[string]any{"removed": id})
+}
+
+// applyScope turns the scope placeholders (-1) into the saved alumni batch. With no setting (0) nothing is filtered,
+// except that the alumni scope then holds nobody.
+func (a *App) applyScope(q *MemberQuery) {
+	cut := a.data().AlumniUpTo
+	if q.BatchAbove == -1 {
+		q.BatchAbove = cut
+	}
+	if q.BatchUpTo == -1 {
+		if cut > 0 {
+			q.BatchUpTo = cut
+		} else {
+			q.BatchUpTo, q.BatchAbove = -1, 1000 // no batch qualifies
+		}
+	}
 }

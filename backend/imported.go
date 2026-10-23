@@ -174,6 +174,19 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	needle := strings.TrimSpace(v.Get("q"))
 	b, _ := strconv.Atoi(v.Get("batch"))
 	status := v.Get("status") // "", verified, awaiting
+	// scope: "" or running = batches after the alumni setting (Membership Directory), alumni = up to it, all = everyone
+	scope := v.Get("scope")
+	cut := a.data().AlumniUpTo
+	inScope := func(b *int) bool {
+		grad := b != nil && cut > 0 && *b <= cut
+		switch scope {
+		case "all":
+			return true
+		case "alumni":
+			return grad
+		}
+		return !grad
+	}
 	reviews, err := a.Auth.Store.ImportedReviews(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -250,6 +263,9 @@ func (a *App) importedAll(ctx context.Context, v url.Values) ([]importedView, ma
 	counts := map[string]int{"verified": 0, "awaiting": 0, "registered": 0}
 	for _, r0 := range all {
 		s := r0.Student
+		if !inScope(s.Batch) {
+			continue
+		}
 		if needle != "" && !contains(s.Name, needle) {
 			continue
 		}

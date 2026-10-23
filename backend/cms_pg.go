@@ -456,6 +456,12 @@ func (s *pgStore) ListMembersAdmin(ctx context.Context, q MemberQuery) ([]Member
 	if q.Batch > 0 {
 		b.add("p.batch = ?::int", q.Batch)
 	}
+	if q.BatchAbove > 0 {
+		b.add("p.batch > ?::int", q.BatchAbove)
+	}
+	if q.BatchUpTo > 0 {
+		b.add("p.batch <= ?::int", q.BatchUpTo)
+	}
 	yn := func(v, cond string) {
 		switch v {
 		case "yes":

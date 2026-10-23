@@ -99,8 +99,10 @@ type MemberQuery struct {
 	Q, Status, Department, Verified, Complete, Disabled string
 	View                                                string // "" | review (needs an admin's attention) | verified (approved and email confirmed)
 	Batch                                               int
-	Page, Limit                                         int
-	Sort                                                string // newest (default), oldest, name, batch, status
+	// BatchAbove / BatchUpTo (0 = no limit): running batches are above the alumni setting, graduated ones up to it.
+	BatchAbove, BatchUpTo int
+	Page, Limit           int
+	Sort                  string // newest (default), oldest, name, batch, status
 }
 
 var memberSorts = map[string]bool{"": true, "newest": true, "oldest": true, "name": true, "batch": true, "status": true}

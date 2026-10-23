@@ -115,3 +115,59 @@ func TestAlumniCutoffMovesGraduatedBatches(t *testing.T) {
 		t.Fatalf("stats: %+v", st)
 	}
 }
+
+// The admin side follows the same line: Membership Directory holds the running batches, the admin Alumni page the
+// alumni records up to the saved batch plus the graduated directory students and members, each with only its batches.
+func TestAdminPagesSplitRunningAndGraduatedBatches(t *testing.T) {
+	e := cmsApp(t)
+	ctx := context.Background()
+	b := func(n int) *int { return &n }
+	_, _, _ = e.mem.UpsertDirectoryRecords(ctx, []DirectoryRecord{
+		{ID: "s-run-1", Kind: "student", Name: "Running Student", Batch: b(18)},
+		{ID: "s-grad-1", Kind: "student", Name: "Graduated Student", Batch: b(10)},
+		{ID: "a-old-1", Kind: "alumni", Name: "Old Alumnus", Batch: b(5)},
+		{ID: "a-later-1", Kind: "alumni", Name: "Later Alumnus", Batch: b(14)},
+	})
+	_ = e.mem.SetSetting(ctx, "", settingAlumniUpTo, 12)
+	_ = e.app.reloadLive(ctx)
+	dir := adminJSON(e, "GET", "/api/v1/admin/imported-students", nil).Body.String()
+	if !strings.Contains(dir, "Running Student") || strings.Contains(dir, "Graduated Student") {
+		t.Fatalf("Membership Directory shows the running batches only: %s", dir)
+	}
+	if all := adminJSON(e, "GET", "/api/v1/admin/imported-students?scope=all", nil).Body.String(); !strings.Contains(all, "Graduated Student") {
+		t.Fatal("scope=all still lists everyone")
+	}
+	var al struct {
+		Items  []alumniAdminRow `json:"items"`
+		Facets struct {
+			Batches map[string]int `json:"batches"`
+		} `json:"facets"`
+	}
+	decodeBody(t, adminJSON(e, "GET", "/api/v1/admin/alumni", nil), &al)
+	kinds := map[string]string{}
+	for _, r := range al.Items {
+		kinds[r.Name] = r.Kind
+	}
+	if kinds["Old Alumnus"] != "alumni" || kinds["Graduated Student"] != "student" || kinds["Running Student"] != "" || kinds["Later Alumnus"] != "" {
+		t.Fatalf("admin alumni rows: %v", kinds)
+	}
+	for k := range al.Facets.Batches {
+		if k == "14" || k == "18" {
+			t.Fatalf("admin alumni batch filter offers only alumni batches: %v", al.Facets.Batches)
+		}
+	}
+	// a graduated directory student keeps the email and verification steps on the Alumni page
+	if rec := adminJSON(e, "PATCH", "/api/v1/admin/imported-students/s-grad-1/email", map[string]string{"email": "grad@example.org"}); rec.Code != 200 {
+		t.Fatalf("email for a graduated student: %d %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(adminJSON(e, "GET", "/api/v1/admin/alumni?status=invited", nil).Body.String(), "grad@example.org") {
+		t.Fatal("the saved email shows on the admin Alumni page")
+	}
+	// registered members: running batches in the directory scope
+	if rec := adminJSON(e, "GET", "/api/v1/admin/students?scope=running", nil); rec.Code != 200 {
+		t.Fatalf("running scope: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "GET", "/api/v1/admin/students?scope=bogus", nil); rec.Code != 400 {
+		t.Fatalf("unknown scope: %d", rec.Code)
+	}
+}

@@ -386,7 +386,8 @@ func (m *memStore) ListMembersAdmin(_ context.Context, q MemberQuery) ([]MemberA
 		if q.Q != "" && !strings.Contains(strings.ToLower(r.Email+" "+r.Name), strings.ToLower(q.Q)) {
 			continue
 		}
-		if (q.Status != "" && r.Status != q.Status) || (q.Department != "" && r.Department != q.Department) || (q.Batch > 0 && r.Batch != q.Batch) {
+		if (q.Status != "" && r.Status != q.Status) || (q.Department != "" && r.Department != q.Department) || (q.Batch > 0 && r.Batch != q.Batch) ||
+			(q.BatchAbove > 0 && r.Batch <= q.BatchAbove) || (q.BatchUpTo > 0 && r.Batch > q.BatchUpTo) {
 			continue
 		}
 		if (q.Verified == "yes" && !r.EmailVerified) || (q.Verified == "no" && r.EmailVerified) ||

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,11 @@ func (a *App) alumniAdminRoutes(m *http.ServeMux, h func(func(http.ResponseWrite
 
 type alumniAdminRow struct {
 	Alumnus
+	Kind         string            `json:"kind"`              // alumni (an alumni record), student (a directory record of a graduated batch), member
+	Source       string            `json:"source,omitempty"`  // for directory students: file or manual
+	Session      string            `json:"session,omitempty"` // directory students: kept so editing them changes nothing else
+	Union        string            `json:"union,omitempty"`
+	Gender       string            `json:"gender,omitempty"`
 	Private      map[string]string `json:"private"`
 	Invite       map[string]any    `json:"invite,omitempty"`
 	Verified     bool              `json:"verified"`
@@ -38,38 +44,71 @@ func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
 	q := r.URL.Query()
 	needle := strings.TrimSpace(q.Get("q"))
 	batch, _ := strconv.Atoi(q.Get("batch"))
-	d := a.data()
-	invites, _ := a.Auth.Store.Invites(r.Context())
-	reviews, _ := a.Auth.Store.ImportedReviews(r.Context())
+	dep := q.Get("department")
 	status := q.Get("status") // "", verified, awaiting, invited
-	out := []alumniAdminRow{}
+	d := a.data()
+	ctx := r.Context()
+	invites, _ := a.Auth.Store.Invites(ctx)
+	reviews, _ := a.Auth.Store.ImportedReviews(ctx)
+	rows := []alumniAdminRow{}
+	// 1. alumni records (of the batches reached so far, and those without a batch)
 	for _, al := range d.Alumni {
-		pv := d.Private[al.ID]
-		if needle != "" && !contains(strings.Join([]string{al.Name, al.Occupation, al.Workplace, al.Designation, al.Department, pv["phone"], pv["email"]}, " "), needle) {
+		if d.AlumniUpTo > 0 && al.Batch != nil && *al.Batch > d.AlumniUpTo {
 			continue
 		}
-		if batch > 0 && (al.Batch == nil || *al.Batch != batch) {
-			continue
-		}
-		if dep := q.Get("department"); dep != "" && al.Department != dep {
-			continue
-		}
-		row := alumniAdminRow{Alumnus: al, Private: nonNilMap(pv)}
+		row := alumniAdminRow{Alumnus: al, Kind: "alumni", Private: nonNilMap(d.Private[al.ID])}
 		if rv, ok := reviews[al.ID]; ok {
 			row.Verified, row.VerifiedAt, row.VerifiedBy = true, rv.VerifiedAt, rv.VerifiedBy
 		}
 		if inv, ok := invites[al.ID]; ok {
 			row.Invite = a.inviteView(inv)
-			// activating the invitation and an approved membership verify the record, as for directory students
 			for _, uid := range []string{inv.CompletedUser, inv.ReplacesUser} {
 				if uid == "" || row.Verified {
 					continue
 				}
-				if p, err := a.Auth.Store.ProfileByUser(r.Context(), uid); err == nil && p != nil && p.Status == StatusApproved {
+				if p, err := a.Auth.Store.ProfileByUser(ctx, uid); err == nil && p != nil && p.Status == StatusApproved {
 					row.Verified, row.AutoVerified = true, true
 					row.Invite["emailVerified"] = true
 				}
 			}
+		}
+		rows = append(rows, row)
+	}
+	// 2. directory students of a graduated batch (same email, invitation and verification steps)
+	if grads, _, err := a.importedAll(ctx, url.Values{"scope": {"alumni"}}); err == nil {
+		for _, g := range grads {
+			rows = append(rows, alumniAdminRow{Alumnus: Alumnus{ID: g.ID, Name: g.Name, Batch: g.Batch, Department: g.Department, Upazila: g.Upazila},
+				Kind: "student", Source: g.Source, Session: g.Session, Union: g.Union, Gender: g.Gender, Private: nonNilMap(mergePrivate(g.Private, g.Phone, g.BloodGroup)), Invite: g.Invite,
+				Verified: g.Verified, AutoVerified: g.Auto, VerifiedAt: g.VerifiedAt, VerifiedBy: g.VerifiedBy})
+		}
+	}
+	// 3. registered members of a graduated batch
+	if d.AlumniUpTo > 0 {
+		if ms, _, err := a.Auth.Store.ListMembersAdmin(ctx, MemberQuery{Status: StatusApproved, BatchUpTo: d.AlumniUpTo, Limit: 100, Page: 1}); err == nil {
+			for _, m := range ms {
+				b := m.Batch
+				rows = append(rows, alumniAdminRow{Alumnus: Alumnus{ID: "m-" + m.ID, Name: m.Name, Batch: &b, Department: m.Department, Upazila: m.Upazila},
+					Kind: "member", Private: map[string]string{"phone": m.Phone, "email": m.Email}, Verified: m.EmailVerified})
+			}
+		}
+	}
+	out := []alumniAdminRow{}
+	batches, depts := map[int]int{}, map[string]int{}
+	for _, row := range rows {
+		if row.Batch != nil {
+			batches[*row.Batch]++
+		}
+		if row.Department != "" {
+			depts[row.Department]++
+		}
+		if needle != "" && !contains(strings.Join([]string{row.Name, row.Occupation, row.Workplace, row.Designation, row.Department, row.Private["phone"], row.Private["email"]}, " "), needle) {
+			continue
+		}
+		if batch > 0 && (row.Batch == nil || *row.Batch != batch) {
+			continue
+		}
+		if dep != "" && row.Department != dep {
+			continue
 		}
 		if (status == "verified" && !row.Verified) || (status == "awaiting" && row.Verified) || (status == "invited" && row.Invite == nil) {
 			continue
@@ -79,7 +118,23 @@ func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
 	sort.SliceStable(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
 	pg, limit := paging(r, 25)
 	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "fromDatabase": d.FromDB})
+	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "fromDatabase": d.FromDB,
+		"alumniUpToBatch": d.AlumniUpTo, "facets": map[string]any{"batches": batches, "departments": depts}})
+}
+
+// mergePrivate adds the edited phone and blood group to the form's contact columns.
+func mergePrivate(pv map[string]string, phone, blood string) map[string]string {
+	out := map[string]string{}
+	for k, v := range pv {
+		out[k] = v
+	}
+	if phone != "" {
+		out["phone"] = phone
+	}
+	if blood != "" {
+		out["bloodGroup"] = blood
+	}
+	return out
 }
 
 type alumniBody struct {

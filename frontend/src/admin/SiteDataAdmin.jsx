@@ -6,7 +6,8 @@ import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pag
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
 import Icon from './icons.jsx'
-import { EmailDialog, InviteCell, VerifiedMark } from './StudentsAdmin.jsx'
+import { EmailDialog, ImportedForm, InviteCell, VerifiedMark } from './StudentsAdmin.jsx'
+import { Link } from 'react-router-dom'
 
 // Admin pages for the rest of the site's data, all stored in the database: events, FAQ questions, departments,
 // upazilas (editorial entries) and alumni (directory records). Each page lists, adds, edits, publishes or removes.
@@ -331,18 +332,17 @@ function AlumniCutoff({ onChanged }) {
         <p className="muted small">{t('ad.ac.text')}</p>
         <div className="ad-cutoff-row">
           <label htmlFor="ac-batch">{t('ad.ac.label')}</label>
-          <select id="ac-batch" value={value} onChange={(e) => setV(e.target.value)}>
+          <select id="ac-batch" value={value} disabled={busy} onChange={(e) => { setV(e.target.value); if (Number(e.target.value) !== d.upToBatch) setAsk(true) }}>
             <option value="0">{t('ad.ac.none')}</option>
             {Array.from({ length: 40 }, (_, i) => i + 1).map((b) => <option key={b} value={b}>{t('auth.batch')} {n(b)}{by[b] ? ` (${n(by[b])})` : ''}</option>)}
           </select>
-          <button type="button" className="btn btn-dark btn-sm" disabled={busy || !changed} onClick={() => setAsk(true)}>{t('ad.sd.save')}</button>
-          {d.upToBatch < 60 && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setV(String(d.upToBatch + 1))}>{t('ad.ac.nextYear').replace('{n}', n(d.upToBatch + 1))}</button>}
+          {d.upToBatch < 60 && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setV(String(d.upToBatch + 1)); setAsk(true) }}>{t('ad.ac.nextYear').replace('{n}', n(d.upToBatch + 1))}</button>}
         </div>
         <p className="muted small">{t('ad.ac.now').replace('{n}', n(d.upToBatch)).replace('{shown}', n(d.alumniShown)).replace('{records}', n(d.alumniRecords))}
           {' '}{d.suggested ? t('ad.ac.suggested').replace('{n}', n(d.suggested)) : ''}</p>
         <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`}>{msg.text}</p>}</div>
       </div>
-      {ask && <Confirm title={t('ad.ac.title')} label={t('ad.sd.save')} busy={busy} onYes={save} onNo={() => setAsk(false)}
+      {ask && changed && <Confirm title={t('ad.ac.title')} label={t('ad.ac.saveIt')} busy={busy} onYes={save} onNo={() => { setAsk(false); setV(null) }}
         text={next > d.upToBatch ? t('ad.ac.confirmUp').replace('{n}', n(next)).replace('{count}', n(moving(d.upToBatch, next)))
           : t('ad.ac.confirmDown').replace('{n}', n(next)).replace('{count}', n(back(d.upToBatch, next)))} />}
     </section>
@@ -364,6 +364,7 @@ export function AlumniAdmin() {
   const [dropEmail, setDropEmail] = useState(null)
   const [verify, setVerify] = useState(null)
   const [undo, setUndo] = useState(null)
+  const [editStudent, setEditStudent] = useState(null)
   const { lang } = useApp()
   const when = useWhen(lang)
   const rows = list.data?.items || []
@@ -376,7 +377,7 @@ export function AlumniAdmin() {
   const upName = (slug) => { const u = (ups.data?.items || []).find((x) => x.slug === slug); return u ? pick(u.nameBn, u.nameEn) : '' }
   const remove = async () => {
     setBusy(true); clear()
-    try { await api(`/admin/alumni/${drop.id}/delete`, { method: 'POST', body: '{}' }); ok(t('ad.al.deleted')); list.retry() }
+    try { await api(drop.kind === 'student' ? `/admin/imported-students/${drop.id}/delete` : `/admin/alumni/${drop.id}/delete`, { method: 'POST', body: '{}' }); ok(t('ad.al.deleted')); list.retry() }
     catch (e) { bad(errText(e)) } finally { setBusy(false); setDrop(null) }
   }
   return (
@@ -393,8 +394,8 @@ export function AlumniAdmin() {
           { id: 'invited', label: t('ad.al.withEmail'), patch: { status: 'invited' } },
         ]}
         fields={[
-          { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: (depts.data?.items || []).map((d) => [d, d]) },
-          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: Array.from({ length: 30 }, (_, i) => [String(i + 1), `${t('auth.batch')} ${n(i + 1)}`]) },
+          { key: 'department', label: t('auth.dept'), all: t('ad.stu.anyDept'), options: Object.keys(list.data?.facets?.departments || {}).sort().map((d) => [d, d]) },
+          { key: 'batch', label: t('auth.batch'), all: t('ad.stu.anyBatch'), options: Object.keys(list.data?.facets?.batches || {}).map(Number).sort((x, y) => y - x).map((b) => [String(b), `${t('auth.batch')} ${n(b)} (${n(list.data.facets.batches[b])})`]) },
         ]} />
       <Notice notice={notice} onClose={clear} />
       {list.loading && <SkeletonRows />}
@@ -403,7 +404,7 @@ export function AlumniAdmin() {
         <>
           <DataTable caption={t('ad.al.title')} rows={rows} rowKey={(r) => r.id}
             columns={[
-              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div> },
+              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong>{r.kind !== 'alumni' && <small className="dt-sub">{t(r.kind === 'member' ? 'ad.al.fromMember' : 'ad.al.fromDirectory')}</small>}<small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div> },
               { id: 'work', label: t('ad.al.workplace'), width: '18%', cell: (r) => <small className="dt-sub dt-clamp">{r.workplace || '—'}</small> },
               { id: 'acad', label: t('ad.stu.col.academic'), width: '16%', cell: (r) => <div className="dt-stack"><small className="dt-sub dt-trunc">{r.department || '—'}</small><small className="dt-sub">{r.batch ? `${t('auth.batch')} ${n(r.batch)}` : ''} {upName(r.upazila)}</small></div> },
               { id: 'invite', label: t('ad.inv.col'), width: '20%', cell: (r) => (r.invite ? <InviteCell r={r} t={t} when={when} />
@@ -415,15 +416,15 @@ export function AlumniAdmin() {
               ) },
               { id: 'actions', srLabel: t('ad.actions'), width: '150px', className: 'dt-actions-cell', cell: (r) => (
                 <div className="dt-actions">
-                  {!r.verified && <button type="button" className="btn btn-outline btn-sm" disabled={!r.invite?.email || busy} title={r.invite?.email ? undefined : t('ad.imp.needEmail')} onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
-                  <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
-                    { label: t('ad.edit'), icon: 'pencil', onClick: () => setEdit(r) },
+                  {r.kind !== 'member' && !r.verified && <button type="button" className="btn btn-outline btn-sm" disabled={!r.invite?.email || busy} title={r.invite?.email ? undefined : t('ad.imp.needEmail')} onClick={() => setVerify(r)}>{t('ad.imp.verify')}</button>}
+                  {r.kind === 'member' ? <Link className="btn btn-ghost btn-sm" to={`/admin/profile/${r.id}`}>{t('ad.stu.profilePage')}</Link> : <RowMenu label={`${t('ad.actions')}: ${r.name}`} items={[
+                    { label: t('ad.edit'), icon: 'pencil', onClick: () => (r.kind === 'student' ? setEditStudent(r) : setEdit(r)) },
                     { label: t(r.invite ? 'ad.inv.editEmail' : 'ad.inv.addEmail'), icon: 'mail', onClick: () => setEmailRow(r) },
                     r.invite && r.invite.status !== 'completed' && { label: t(r.invite.status === 'saved' ? 'ad.inv.send' : 'ad.inv.resend'), icon: 'external', onClick: () => post(`/admin/imported-students/${r.id}/invite`, 'POST', 'ad.inv.sentOk') },
                     r.invite && r.invite.status !== 'completed' && { label: t('ad.inv.removeEmail'), icon: 'trash', onClick: () => setDropEmail(r) },
                     r.verified && !r.autoVerified && { label: t('ad.imp.unverify'), icon: 'x', onClick: () => setUndo(r) },
                     { label: t('ad.al.delete'), icon: 'trash', danger: true, sep: true, onClick: () => setDrop(r) },
-                  ]} />
+                  ]} />}
                 </div>
               ) },
             ]} />
@@ -432,6 +433,8 @@ export function AlumniAdmin() {
       ))}
       {edit && <AlumnusEditor row={edit.id ? edit : null} depts={depts.data?.items || []} ups={ups.data?.items || []} onClose={() => setEdit(null)}
         onSaved={() => { const isNew = !edit.id; setEdit(null); ok(t(isNew ? 'ad.al.created' : 'ad.al.saved')); list.retry() }} />}
+      {editStudent && <ImportedForm row={{ ...editStudent, phone: editStudent.private?.phone || '', bloodGroup: editStudent.private?.bloodGroup || '' }} depts={depts.data?.items || []}
+        onClose={() => setEditStudent(null)} onSaved={() => { setEditStudent(null); ok(t('ad.al.saved')); list.retry() }} />}
       {emailRow && <EmailDialog row={emailRow} initial={emailRow.private?.email || ''} onClose={() => setEmailRow(null)}
         onSaved={() => { setEmailRow(null); ok(t('ad.inv.emailSaved')); list.retry() }} onRemove={() => { setDropEmail(emailRow); setEmailRow(null) }} />}
       {dropEmail && <Confirm tone="danger" title={t('ad.inv.removeEmail')} text={t('ad.inv.removeText').replace('{who}', dropEmail.name)} label={t('ad.inv.removeEmail')} busy={busy}
