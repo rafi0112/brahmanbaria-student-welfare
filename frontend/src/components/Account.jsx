@@ -6,8 +6,14 @@ import { Avatar } from './ui.jsx'
 import Icon from './Icon.jsx'
 import { ProfileManager } from '../pages/Dashboards.jsx'
 
+function roleLabel(t, user, profile) {
+  if (user.role === 'admin') return t('admin.roles.admin')
+  if (!profile) return t('admin.roles.member')
+  return t(profile.status === 'approved' ? 'acct.member' : profile.status === 'rejected' ? 'dash.statusRejected' : 'acct.pending')
+}
+
 // The signed-in person's button in the header: their photo (or initials) opens a menu with who they are, their profile,
-// their dashboard or the admin panel, and sign out.
+// the admin panel (for administrators), and sign out.
 export function AccountMenu({ onOpenProfile }) {
   const { t } = useApp()
   const { user, profile, logout } = useAuth()
@@ -40,12 +46,11 @@ export function AccountMenu({ onOpenProfile }) {
             <div>
               <b>{name}</b>
               <small>{user.email}</small>
-              <span className={`acct-role ${isAdmin ? 'is-admin' : ''}`}>{isAdmin ? t('admin.roles.admin') : profile?.status === 'approved' ? t('acct.member') : profile ? t('acct.pending') : t('admin.roles.member')}</span>
+              <span className={`acct-role ${isAdmin ? 'is-admin' : ''}`}>{roleLabel(t, user, profile)}</span>
             </div>
           </div>
           <button type="button" role="menuitem" onClick={go(onOpenProfile)}><Icon name="users" size={17} />{t('acct.profile')}</button>
           {isAdmin && <button type="button" role="menuitem" onClick={go(() => nav('/admin'))}><Icon name="landmark" size={17} />{t('admin.title')}</button>}
-          <button type="button" role="menuitem" onClick={go(() => nav('/dashboard'))}><Icon name="book" size={17} />{t('acct.dashboard')}</button>
           <hr />
           <button type="button" role="menuitem" className="acct-out" onClick={go(async () => { await logout(); nav('/') })}><Icon name="arrow" size={17} />{t('auth.logout')}</button>
         </div>
@@ -57,7 +62,8 @@ export function AccountMenu({ onOpenProfile }) {
 // The profile dialog: details and editing of one's own profile, in a native modal dialog (focus trapped, Escape closes).
 export function ProfileDialog({ onClose }) {
   const { t } = useApp()
-  const { user, profile } = useAuth()
+  const { user, profile, logout } = useAuth()
+  const nav = useNavigate()
   const ref = useRef(null)
   const [tab, setTab] = useState('details')
   useEffect(() => {
@@ -77,6 +83,7 @@ export function ProfileDialog({ onClose }) {
           <div>
             <h2 id="pd-h">{name}</h2>
             <p className="muted">{user.email}</p>
+            <span className={`acct-role ${user.role === 'admin' ? 'is-admin' : ''}`}>{roleLabel(t, user, profile)}</span>
           </div>
           <button type="button" className="icon-btn pd-close" aria-label={t('nav.close')} onClick={onClose}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
@@ -91,7 +98,10 @@ export function ProfileDialog({ onClose }) {
         <div className="pd-body" role="tabpanel">
           <ProfileManager user={user} view={profile ? tab : 'all'} />
         </div>
-        <footer className="pd-foot"><Link to="/dashboard" onClick={onClose} className="link-arrow">{t('acct.openDashboard')} <Icon name="arrow" size={15} className="arr" /></Link></footer>
+        <footer className="pd-foot">
+          {user.role === 'admin' && <Link to="/admin" onClick={onClose} className="link-arrow">{t('admin.title')} <Icon name="arrow" size={15} className="arr" /></Link>}
+          <button type="button" className="btn btn-quiet btn-sm" onClick={async () => { onClose(); await logout(); nav('/') }}>{t('auth.logout')}</button>
+        </footer>
       </div>
     </dialog>
   )

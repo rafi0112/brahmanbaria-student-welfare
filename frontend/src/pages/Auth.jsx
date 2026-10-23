@@ -96,7 +96,7 @@ export default function Auth({ mode }) {
         } else {
           auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: v.password }) }))
         }
-        nav('/dashboard')
+        nav('/dashboard') // opens My profile; administrators continue to the panel from there
       } else if (mode === 'forgot') {
         if (supabaseConfigured) {
           // Unknown addresses get the same answer, so the form cannot be used to find registered emails.

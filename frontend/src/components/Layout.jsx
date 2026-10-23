@@ -30,9 +30,12 @@ function Header() {
   const [scrolled, setScrolled] = useState(false)
   const loc = useLocation()
   const onHero = loc.pathname === '/'
-  const home = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : null
-
   useEffect(() => setOpen(false), [loc.pathname])
+  useEffect(() => {
+    if (!loc.state?.openProfile || !user) return
+    setProfileOpen(true)
+    nav(loc.pathname + loc.search, { replace: true, state: null }) // a reload or Back does not open it again
+  }, [loc, user, nav])
   useEffect(() => {
     let raf = 0
     const read = () => { raf = 0; setScrolled(window.scrollY > 8) }
@@ -81,7 +84,7 @@ function Header() {
         </nav>
         <div className="drawer-cta">
           {user
-            ? <><button type="button" className="btn btn-dark" onClick={() => { setOpen(false); setProfileOpen(true) }}>{t('acct.profile')}</button><Link className="btn btn-outline" to={home}>{user.role === 'admin' ? t('admin.title') : t('acct.dashboard')}</Link><button type="button" className="btn btn-quiet" onClick={signOut}>{t('auth.logout')}</button></>
+            ? <><button type="button" className="btn btn-dark" onClick={() => { setOpen(false); setProfileOpen(true) }}>{t('acct.profile')}</button>{user.role === 'admin' && <Link className="btn btn-outline" to="/admin">{t('admin.title')}</Link>}<button type="button" className="btn btn-quiet" onClick={signOut}>{t('auth.logout')}</button></>
             : <><Link className="btn btn-dark" to="/register">{t('nav.register')}</Link><Link className="btn btn-ghost" to="/login">{t('nav.login')}</Link></>}
         </div>
       </div>

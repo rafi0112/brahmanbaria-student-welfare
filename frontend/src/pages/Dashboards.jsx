@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { api, qs, useApi } from '../lib/api.js'
+import { Link, Navigate } from 'react-router-dom'
+import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { errorKey, useAuth } from '../lib/auth.jsx'
-import { Avatar, Badge, Data, Empty, Loading, Pagination } from '../components/ui.jsx'
+import { Empty, Loading } from '../components/ui.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
 
 const LEVELS = ['members', 'hidden'] // the public site shows four fields only, so "public" no longer exists as a choice
@@ -19,14 +19,12 @@ export function Gate({ role, children }) {
   return children(user)
 }
 
-function statusBadge(t, s) {
-  if (s === 'approved') return <Badge tone="leaf">{t('dash.statusApproved')}</Badge>
-  if (s === 'rejected') return <Badge tone="muted">{t('dash.statusRejected')}</Badge>
-  return <Badge tone="gold">{t('dash.pending')}</Badge>
-}
-
+// The old dashboard address (login, Google sign-in and email links still lead here) opens "My profile" over the home page.
 export function Dashboard() {
-  return <Gate>{(user) => <DashboardBody user={user} />}</Gate>
+  const { user, loading } = useAuth()
+  if (loading) return <section className="section wrap narrow"><Loading /></section>
+  if (!user) return <Navigate to="/login" replace />
+  return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace state={{ openProfile: true }} />
 }
 
 function CompleteProfile({ defaultName, onDone }) {
@@ -108,14 +106,12 @@ function CompleteProfile({ defaultName, onDone }) {
   )
 }
 
-// Approved details are locked. A member asks for a change here; an administrator reviews it in Membership Requests.
-function ChangeRequest({ p }) {
+// Before approval a member corrects their academic details directly; once approved only an administrator changes them.
+function EditDetails({ p }) {
   const { t, n, pick } = useApp()
   const auth = useAuth()
-  const direct = p.status !== 'approved' // before approval the member corrects details directly; afterwards they ask for a change
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
-  const open = useApi(direct ? null : '/me/profile/request')
   const start = () => ({ name: p.name, batch: String(p.batch), department: p.department, session: p.session || '', upazila: p.upazila, union: p.union, gender: p.gender || '', phone: p.phone || '', bloodGroup: p.bloodGroup || '' })
   const [v, setV] = useState(null)
   const [errs, setErrs] = useState({})
@@ -123,28 +119,18 @@ function ChangeRequest({ p }) {
   const [busy, setBusy] = useState(false)
   const upList = ups.data?.items || []
   const unions = upList.find((u) => u.slug === v?.upazila)?.unions || []
-  const pending = open.data?.request
   const send = async (e) => {
     e.preventDefault()
-    setBusy(true); setMsg(null); setErrs({})
+    setMsg(null); setErrs({})
+    if (!/^01\d{9}$/.test(v.phone.trim())) { setErrs({ phone: t('auth.e.phone') }); return }
+    setBusy(true)
     try {
-      if (direct) {
-        if (!/^01\d{9}$/.test(v.phone.trim())) { setErrs({ phone: t('auth.e.phone') }); setBusy(false); return }
-        auth.set(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, phone: v.phone.trim(), batch: Number(v.batch) }) }))
-        setV(null); setMsg({ tone: 'ok', text: t('dash.saved') })
-      } else {
-        await api('/me/profile/request', { method: 'POST', body: JSON.stringify({ name: v.name, batch: Number(v.batch), department: v.department, session: v.session, upazila: v.upazila, union: v.union, gender: v.gender }) })
-        setV(null); setMsg({ tone: 'ok', text: t('dash.change.done') }); open.retry()
-      }
+      auth.set(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, phone: v.phone.trim(), batch: Number(v.batch) }) }))
+      setV(null); setMsg({ tone: 'ok', text: t('dash.saved') })
     } catch (err) {
       if (err.fields) setErrs(err.fields)
-      else setMsg({ tone: 'bad', text: err.message === 'no_changes' ? t('dash.change.none') : t(errorKey(err) || 'admin.failed') })
+      else setMsg({ tone: 'bad', text: t(errorKey(err) || 'admin.failed') })
     } finally { setBusy(false) }
-  }
-  const withdraw = async () => {
-    setBusy(true); setMsg(null)
-    try { await api('/me/profile/request', { method: 'DELETE' }); setMsg({ tone: 'ok', text: t('dash.change.withdrawn') }); open.retry() }
-    catch (err) { setMsg({ tone: 'bad', text: t(errorKey(err) || 'admin.failed') }) } finally { setBusy(false) }
   }
   const set = (k, val) => setV({ ...v, [k]: val, ...(k === 'upazila' ? { union: '' } : {}) })
   const sel = (k, label, opts, disabled) => (
@@ -158,15 +144,10 @@ function ChangeRequest({ p }) {
   )
   return (
     <section className="card-form" aria-labelledby="chg-h">
-      <h2 id="chg-h">{t(direct ? 'dash.change.titleEdit' : 'dash.change.title')}</h2>
-      <p className="muted">{t(direct ? 'dash.change.noteEdit' : 'dash.change.note')}</p>
-      {!direct && pending ? (
-        <>
-          <p className="notice">{t('dash.change.sent')}</p>
-          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={withdraw}>{t('dash.change.withdraw')}</button>
-        </>
-      ) : !v ? (
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => { setV(start()); setMsg(null) }}>{t(direct ? 'dash.change.titleEdit' : 'dash.change.open')}</button>
+      <h2 id="chg-h">{t('dash.change.titleEdit')}</h2>
+      <p className="muted">{t('dash.change.noteEdit')}</p>
+      {!v ? (
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => { setV(start()); setMsg(null) }}>{t('dash.change.titleEdit')}</button>
       ) : (
         <form onSubmit={send} noValidate>
           <label className="field"><span>{t('auth.name')}</span>
@@ -182,17 +163,13 @@ function ChangeRequest({ p }) {
           {sel('upazila', 'auth.upazila', upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]))}
           {sel('union', 'auth.union', unions.map((x) => [x, x]), !v.upazila)}
           {sel('gender', 'auth.gender', [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]])}
-          {direct && (
-            <>
-              <label className="field"><span>{t('auth.phone')}</span>
-                <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} value={v.phone} placeholder="01XXXXXXXXX" onChange={(e) => set('phone', e.target.value)} aria-invalid={!!errs.phone} />
-                {errs.phone && <small className="err">{errs.phone}</small>}
-              </label>
-              {sel('bloodGroup', 'auth.blood', BLOODS.map((b) => [b, b]))}
-            </>
-          )}
+          <label className="field"><span>{t('auth.phone')}</span>
+            <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} value={v.phone} placeholder="01XXXXXXXXX" onChange={(e) => set('phone', e.target.value)} aria-invalid={!!errs.phone} />
+            {errs.phone && <small className="err">{errs.phone}</small>}
+          </label>
+          {sel('bloodGroup', 'auth.blood', BLOODS.map((b) => [b, b]))}
           <div className="row-actions">
-            <button className="btn btn-dark" disabled={busy} aria-busy={busy || undefined}>{t(direct ? 'dash.change.save' : 'dash.change.submit')}</button>
+            <button className="btn btn-dark" disabled={busy} aria-busy={busy || undefined}>{t('dash.change.save')}</button>
             <button type="button" className="btn btn-ghost" onClick={() => setV(null)}>{t('dash.change.cancel')}</button>
           </div>
         </form>
@@ -202,28 +179,8 @@ function ChangeRequest({ p }) {
   )
 }
 
-function DashboardBody({ user }) {
-  const { t } = useApp()
-  const auth = useAuth()
-  const p = auth.profile
-  return (
-    <section className="section wrap narrow">
-      <header className="dash-head">
-        <Avatar name={p?.name || user.email} photo={p?.photoUrl} size={72} />
-        <div>
-          <h1>{t('dash.hello')}, {p?.name || user.email}</h1>
-          <p className="muted">{user.email}</p>
-          {p && <p className="muted">{t('dash.status')}: {statusBadge(t, p.status)}</p>}
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={auth.logout}>{t('auth.logout')}</button>
-      </header>
-      <ProfileManager user={user} />
-    </section>
-  )
-}
-
-// Everything a signed-in person can see and change about themselves: photo, all details, academic changes (direct before
-// approval, as a request after), and contact and privacy settings. Used on /dashboard and in the account dialog.
+// Everything a signed-in person can see and change about themselves: photo, all details, academic details (until approved),
+// and contact and privacy settings. Shown in the "My profile" dialog.
 // view: 'all' | 'details' | 'edit'
 export function ProfileManager({ user, view = 'all' }) {
   const { t, n, pick } = useApp()
@@ -289,7 +246,7 @@ export function ProfileManager({ user, view = 'all' }) {
             <div><dt>{t('dash.listed')}</dt><dd>{p.showInDirectory ? t('ad.me.yes') : t('ad.me.no')}</dd></div>
           </dl>
           </>}
-          {showEdit && <ChangeRequest p={p} />}
+          {showEdit && p.status !== 'approved' && <EditDetails p={p} />}
           {showEdit && form && (
             <form onSubmit={save} className="card-form" noValidate>
               <h2>{t('dash.contact')}</h2>
