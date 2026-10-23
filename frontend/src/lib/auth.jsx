@@ -23,8 +23,10 @@ export function AuthProvider({ children }) {
         }
       }
       setState({ user: d.user, profile, loading: false })
+      return d.user
     } catch {
       setState({ user: null, profile: null, loading: false })
+      return null
     }
   }, [])
   useEffect(() => { refresh() }, [refresh])

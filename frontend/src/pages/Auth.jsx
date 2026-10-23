@@ -256,8 +256,10 @@ export function Verify() {
       if (going) return
       going = true
       setState('ok')
-      await auth.refresh()
-      if (live) nav('/', { replace: true })
+      const me = await auth.refresh()
+      if (!live) return
+      if (me) nav('/', { replace: true })
+      else setState('nosession') // the email is confirmed but the site could not sign this browser in
     }
     supabase.auth.getSession().then(({ data }) => { if (!live) return; if (confirmed(data.session)) enter(); else setState('wait') })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { if (live && confirmed(session)) enter() })
@@ -289,9 +291,10 @@ export function Verify() {
         {state === 'ok' && (
           <>
             <p className="notice ok" role="status">{t('auth.verified')}</p>
-            <Link className="btn btn-dark btn-block" to={supabaseConfigured ? '/dashboard' : '/login'}>{t(supabaseConfigured ? 'auth.goDashboard' : 'nav.login')}</Link>
+            {supabaseConfigured ? <p className="muted" role="status">{t('auth.verifying')}</p> : <Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link>}
           </>
         )}
+        {state === 'nosession' && <><p className="notice ok" role="status">{t('auth.verified')}</p><Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link></>}
         {(state === 'bad' || state === 'err') && <p className="notice bad" role="alert">{state === 'bad' ? t('auth.verifyFailed') : t('state.error')}</p>}
         {(state === 'wait' || state === 'bad') && (
           <>
