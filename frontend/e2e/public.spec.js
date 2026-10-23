@@ -118,3 +118,17 @@ test('contact: the form validates on the server, then shows a clear success stat
   await page.getByRole('button', { name: 'Send another message' }).click()
   await expect(page.getByLabel('Your name')).toHaveValue('')
 })
+
+test('responsive: no page scrolls sideways on a small phone, a tablet or a laptop', async ({ page }) => {
+  test.setTimeout(180000)
+  const pages = ['/', '/about', '/students', '/events', '/alumni', '/committee', '/gallery', '/faq', '/contact', '/heritage', '/directory', '/login', '/register', '/membership']
+  for (const w of [320, 768, 1280]) {
+    await page.setViewportSize({ width: w, height: 800 })
+    for (const p of pages) {
+      await page.goto(p)
+      await page.waitForLoadState('networkidle')
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(over, `${p} at ${w}px`).toBe(0)
+    }
+  }
+})

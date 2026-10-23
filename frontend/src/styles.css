@@ -1106,3 +1106,16 @@ html[data-theme='dark'] .phero-deco { mix-blend-mode: screen; opacity: .5; }
   [data-parallax] { transform: none; }
   .faq-item::details-content { transition: none; }
 }
+
+/* ---------- responsive fixes found in the width audit ---------- */
+.explore2-grid > *, .ex-cards > *, .ex-ups ul > li { min-width: 0; }
+@media (max-width: 760px) {
+  .ex-title { font-size: clamp(1.9rem, 8.6vw, 2.6rem); overflow-wrap: anywhere; }
+  .ex-copy { padding-right: 0; }
+}
+@media (max-width: 420px) {
+  .filters-2, .filters { grid-template-columns: 1fr; }
+  .phero h1 { font-size: clamp(2rem, 10vw, 2.4rem); }
+  .state-actions .btn, .cta-band-actions .btn { flex: 1 1 100%; justify-content: center; }
+}
+@media (max-width: 360px) { .ex-ups ul { grid-template-columns: 1fr; } }
