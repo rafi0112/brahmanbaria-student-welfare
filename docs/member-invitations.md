@@ -76,3 +76,23 @@ A directory record (hand-added or a completed bundled one) holds name, batch, de
 | Administrator | everything, including details admins entered for directory records, each member's status and each record's verification |
 
 Rules enforced in one place (`backend/people.go`, tested in `supabase_auth_test.go` and `people_test.go`): contact details of people who have not registered stay admin-only (they never agreed to share them); a person never appears twice once their directory record is claimed by an approved account; the public site never serves placeholder articles (`sample: true`), which stay in the admin list to be replaced. Registration and activation require a real mobile number (`01XXXXXXXXX`); gender and blood group are optional. Phone, gender and blood group can be edited by the member at any time, academic details only through a change request once approved. New members' phone defaults to "approved members can see it" (migration 016; existing choices are untouched).
+
+## Confirm sign-up email (self-registration)
+
+Self-registration relies on Supabase's own **Confirm sign up** email; the app sends nothing itself.
+
+**One-time setup in Supabase**
+1. *Authentication → Sign In / Providers → Email*: switch **Confirm email** on.
+2. *Authentication → Email Templates → Confirm signup*: Subject `Confirm your BSWA email`; paste `docs/email-templates/supabase_confirm_signup_template.html` into the body. The email goes out through the same Gmail SMTP as invitations.
+3. *Authentication → URL Configuration*: the Site URL is the public site address, and `<site>/verify-email` is among the redirect URLs.
+4. Alternatively publish it from here with `cd backend && go run . apply-email-template --template=confirm` (preview) and `--apply` (needs `SUPABASE_ACCESS_TOKEN`, the same as for invitations; add `--template=invite` for the invitation email, which is the default).
+
+The template uses only `{{ .ConfirmationURL }}` plus `{{ .SiteURL }}` for the logo (`frontend/public/email/logo.png`, so the logo shows once the site is public).
+
+**What happens, end to end**
+| Step | Result |
+| --- | --- |
+| Visitor registers | Supabase creates the account (unconfirmed) and emails the link. They cannot sign in yet; the sign-in page offers to resend it. |
+| Visitor clicks the link | The email is **verified**, they land on `/verify-email` signed in, and their membership profile is created as **pending** from the details they entered. |
+| Verified, not yet approved | They can sign in and see **all of their own details**, and other people's **public** details only (name, batch, department, upazila). |
+| Admin approves (Membership Requests) | They become a member: they appear in Registered members and can see every shared member detail; the verified badge appears. |

@@ -20,7 +20,20 @@ import (
 // (SUPABASE_ACCESS_TOKEN, created at supabase.com/dashboard/account/tokens). Without --apply it only compares and reports.
 // The token stays in this process: it is never printed or logged.
 
-const defaultInviteSubject = "Activate your BSWA account"
+const (
+	defaultInviteSubject  = "Activate your BSWA account"
+	defaultConfirmSubject = "Confirm your BSWA email"
+)
+
+// authTemplate names one of the Supabase Auth emails this command can publish.
+type authTemplate struct {
+	name, label, file, subject, subjectKey, contentKey string
+}
+
+var authTemplates = map[string]authTemplate{
+	"invite":  {"invite", "Invite user", "../docs/email-templates/supabase_invite_template.html", defaultInviteSubject, "mailer_subjects_invite", "mailer_templates_invite_content"},
+	"confirm": {"confirm", "Confirm signup", "../docs/email-templates/supabase_confirm_signup_template.html", defaultConfirmSubject, "mailer_subjects_confirmation", "mailer_templates_confirmation_content"},
+}
 
 func projectRef(supabaseURL string) string {
 	u, err := url.Parse(strings.TrimSpace(supabaseURL))
@@ -62,8 +75,13 @@ func (m *mgmt) do(ctx context.Context, method, path string, body any) ([]byte, i
 	return b, res.StatusCode, nil
 }
 
-// applyInviteTemplate returns a human-readable report. With apply=false nothing is changed.
+// applyInviteTemplate publishes the Invite user email; see applyAuthTemplate.
 func applyInviteTemplate(ctx context.Context, m *mgmt, ref, html, subject string, apply bool) (string, error) {
+	return applyAuthTemplate(ctx, m, ref, authTemplates["invite"], html, subject, apply)
+}
+
+// applyAuthTemplate returns a human-readable report. With apply=false nothing is changed.
+func applyAuthTemplate(ctx context.Context, m *mgmt, ref string, kind authTemplate, html, subject string, apply bool) (string, error) {
 	b, code, err := m.do(ctx, http.MethodGet, "/v1/projects/"+ref+"/config/auth", nil)
 	if err != nil {
 		return "", err
@@ -77,44 +95,54 @@ func applyInviteTemplate(ctx context.Context, m *mgmt, ref, html, subject string
 	if code != http.StatusOK {
 		return "", fmt.Errorf("the Management API answered HTTP %d", code)
 	}
-	var cur struct {
-		Subject string `json:"mailer_subjects_invite"`
-		Content string `json:"mailer_templates_invite_content"`
-	}
-	_ = json.Unmarshal(b, &cur)
+	var all map[string]any
+	_ = json.Unmarshal(b, &all)
+	var cur struct{ Subject, Content string }
+	cur.Subject, _ = all[kind.subjectKey].(string)
+	cur.Content, _ = all[kind.contentKey].(string)
 	same := cur.Content == html && cur.Subject == subject
-	report := fmt.Sprintf("project %s\ncurrent invite subject: %q\ncurrent template: %d bytes (fingerprint %s)\nnew template:     %d bytes (fingerprint %s)\nnew subject: %q\n",
-		ref, cur.Subject, len(cur.Content), short(cur.Content), len(html), short(html), subject)
+	report := fmt.Sprintf("project %s (%s email)\ncurrent subject: %q\ncurrent template: %d bytes (fingerprint %s)\nnew template:     %d bytes (fingerprint %s)\nnew subject: %q\n",
+		ref, kind.label, cur.Subject, len(cur.Content), short(cur.Content), len(html), short(html), subject)
 	if same {
 		return report + "already up to date; nothing to do\n", nil
 	}
 	if !apply {
 		return report + "different: run again with --apply to publish it\n", nil
 	}
-	_, code, err = m.do(ctx, http.MethodPatch, "/v1/projects/"+ref+"/config/auth", map[string]string{"mailer_subjects_invite": subject, "mailer_templates_invite_content": html})
+	_, code, err = m.do(ctx, http.MethodPatch, "/v1/projects/"+ref+"/config/auth", map[string]string{kind.subjectKey: subject, kind.contentKey: html})
 	if err != nil {
 		return "", err
 	}
 	if code < 200 || code >= 300 {
 		return "", fmt.Errorf("the Management API refused the change (HTTP %d)", code)
 	}
-	return report + "published: the Invite user email now uses the new template\n", nil
+	return report + "published: the " + kind.label + " email now uses the new template\n", nil
 }
 
 func runApplyEmailTemplate(args []string) error {
 	apply := false
-	path := "../docs/email-templates/supabase_invite_template.html"
+	kind := authTemplates["invite"]
+	path := ""
 	for _, a := range args {
 		switch {
 		case a == "--apply":
 			apply = true
 		case strings.HasPrefix(a, "--file="):
 			path = strings.TrimPrefix(a, "--file=")
+		case strings.HasPrefix(a, "--template="):
+			k, ok := authTemplates[strings.TrimPrefix(a, "--template=")]
+			if !ok {
+				return fmt.Errorf("unknown template %q: use invite or confirm", strings.TrimPrefix(a, "--template="))
+			}
+			kind = k
 		}
+	}
+	if path == "" {
+		path = kind.file
 	}
 	token := strings.TrimSpace(os.Getenv("SUPABASE_ACCESS_TOKEN"))
 	if token == "" {
-		return fmt.Errorf("SUPABASE_ACCESS_TOKEN is not set. Create a personal access token at supabase.com/dashboard/account/tokens and add it to backend/.env (server side only). Alternatively paste docs/email-templates/invite.html into Authentication > Email Templates > Invite user by hand")
+		return fmt.Errorf("SUPABASE_ACCESS_TOKEN is not set. Create a personal access token at supabase.com/dashboard/account/tokens and add it to backend/.env (server side only). Alternatively paste the file from docs/email-templates into Authentication > Email Templates by hand")
 	}
 	ref := projectRef(os.Getenv("SUPABASE_URL"))
 	if ref == "" {
@@ -126,7 +154,7 @@ func runApplyEmailTemplate(args []string) error {
 	}
 	html := string(raw)
 	if !strings.Contains(html, "{{ .ConfirmationURL }}") {
-		return fmt.Errorf("the template does not contain {{ .ConfirmationURL }}; refusing to publish an invitation without its link")
+		return fmt.Errorf("the template does not contain {{ .ConfirmationURL }}; refusing to publish an email without its link")
 	}
 	// the leading comment is documentation for people; the published email starts at the doctype
 	if i := strings.Index(strings.ToLower(html), "<!doctype html>"); i > 0 {
@@ -138,7 +166,7 @@ func runApplyEmailTemplate(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	report, err := applyInviteTemplate(ctx, &mgmt{base: strings.TrimRight(base, "/"), token: token, client: &http.Client{Timeout: 25 * time.Second}}, ref, html, defaultInviteSubject, apply)
+	report, err := applyAuthTemplate(ctx, &mgmt{base: strings.TrimRight(base, "/"), token: token, client: &http.Client{Timeout: 25 * time.Second}}, ref, kind, html, kind.subject, apply)
 	if err != nil {
 		return err
 	}

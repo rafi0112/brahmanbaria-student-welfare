@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -580,5 +581,39 @@ func TestApplyInviteTemplateComparesBeforeChangingAnything(t *testing.T) {
 	}
 	if projectRef("https://abcd.supabase.co/rest/v1") != "abcd" || projectRef("http://localhost:54321") != "" {
 		t.Fatal("project ref parsing")
+	}
+}
+
+func TestConfirmSignupTemplateTouchesOnlyItsOwnFields(t *testing.T) {
+	var patched map[string]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch {
+			patched = map[string]string{}
+			b := make([]byte, 1<<16)
+			n, _ := r.Body.Read(b)
+			_ = json.Unmarshal(b[:n], &patched)
+			w.WriteHeader(200)
+			return
+		}
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(map[string]string{"mailer_subjects_confirmation": "Confirm Your Signup", "mailer_templates_invite_content": "keep me"})
+	}))
+	defer srv.Close()
+	m := &mgmt{base: srv.URL, token: "sbp_test", client: srv.Client()}
+	kind := authTemplates["confirm"]
+	html := "<!DOCTYPE html><html>{{ .ConfirmationURL }}</html>"
+	rep, err := applyAuthTemplate(context.Background(), m, "abcd", kind, html, kind.subject, true)
+	if err != nil || len(patched) != 2 || patched["mailer_templates_confirmation_content"] != html || patched["mailer_subjects_confirmation"] != defaultConfirmSubject || !strings.Contains(rep, "Confirm signup") {
+		t.Fatalf("confirm publish: %v %v %q", err, patched, rep)
+	}
+	for name, file := range map[string]string{"confirm": authTemplates["confirm"].file, "invite": authTemplates["invite"].file} {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("%s template: %v", name, err)
+		}
+		s := string(raw)
+		if !strings.Contains(s, "{{ .ConfirmationURL }}") || strings.Contains(s, "Jela") || strings.Contains(s, "{{ .Token }}") || strings.Contains(s, "{{ .Email }}") {
+			t.Fatalf("%s template must carry the link and only the link variable, under the BSWA name", name)
+		}
 	}
 }

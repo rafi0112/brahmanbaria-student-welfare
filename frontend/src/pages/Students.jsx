@@ -4,6 +4,7 @@ import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useBase } from '../lib/base.js'
 import { Avatar, Badge, Crumbs, Data, Empty, Pagination, PageHero } from '../components/ui.jsx'
+import { useAuth } from '../lib/auth.jsx'
 import Icon from '../components/Icon.jsx'
 import { StudentCard } from '../components/cards.jsx'
 
@@ -15,6 +16,7 @@ function useDebounced(v, ms = 250) {
 
 export default function Students() {
   const { t, n, pick } = useApp()
+  const { user } = useAuth()
   const [sp, setSp] = useSearchParams()
   const f = { q: sp.get('q') || '', batch: sp.get('batch') || '', department: sp.get('department') || '', upazila: sp.get('upazila') || '', page: Number(sp.get('page')) || 1 }
   const [text, setText] = useState(f.q)
@@ -58,8 +60,8 @@ export default function Students() {
         </div>
         <p className="privacy-note" role="status">
           <Icon name={res.data?.view === 'public' ? 'lock' : 'users'} size={16} />
-          {t(res.data?.view === 'admin' ? 'students.viewAdmin' : res.data?.view === 'member' ? 'students.viewMember' : 'students.viewPublic')}
-          {res.data?.view === 'public' && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
+          {t(res.data?.view === 'admin' ? 'students.viewAdmin' : res.data?.view === 'member' ? 'students.viewMember' : user ? 'students.viewPending' : 'students.viewPublic')}
+          {res.data?.view === 'public' && !user && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
           {res.data?.sample && <Badge tone="gold">{t('students.sample')}</Badge>}
         </p>
         <Data q={res}>
@@ -80,6 +82,7 @@ export function StudentDetail() {
   const base = useBase()
   const { id } = useParams()
   const { t, n, pick } = useApp()
+  const { user } = useAuth()
   const res = useApi(`/students/${id}`)
   const ups = useApi('/upazilas')
   return (
@@ -110,8 +113,8 @@ export function StudentDetail() {
                   </dl>
                   <p className="privacy-note" role="status">
                     <Icon name={s.view === 'public' ? 'lock' : 'users'} size={16} />
-                    {t(s.view === 'admin' ? 'students.viewAdmin' : s.view === 'member' ? 'students.viewMember' : 'students.viewPublic')}
-                    {s.view === 'public' && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
+                    {t(s.view === 'admin' ? 'students.viewAdmin' : s.view === 'member' ? 'students.viewMember' : user ? 'students.viewPending' : 'students.viewPublic')}
+                    {s.view === 'public' && !user && <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>}
                   </p>
                   {d && d.source === 'directory' && s.view !== 'admin' && <p className="muted small">{t('students.noContactForRecord')}</p>}
                   <Link className="link-arrow" to={`${base}/students`}>← {t('students.back')}</Link>
