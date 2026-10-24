@@ -1,33 +1,36 @@
-# BSWA — Brahmanbaria Student's Welfare Association, Jagannath University
+# BSWA: Brahmanbaria Students' Welfare Association
 
-Community platform for Brahmanbaria students at university. React + Vite frontend,
-Go API, zero-cost hosting constraints. Full requirements: [jela_kollan_claude_project_context.md](jela_kollan_claude_project_context.md).
+A community platform for students and alumni from Brahmanbaria at Jagannath University. It combines a public site (student and
+alumni directory, district heritage and map, events, gallery, blog, executive committee) with a member area and an admin panel
+for the committee.
 
-## Admin panel
+- **Bilingual:** Bangla by default, English available; light and dark themes.
+- **Real data only:** the directory, content and settings live in Supabase (PostgreSQL). Nothing on the public site is mocked.
+- **Reviewed membership:** members sign up, verify their email and are approved by an admin before they get a profile.
 
-The admin panel (`/admin`) is where the committee runs the community. Every change is saved to Supabase and shows on the
-public site at once; the public pages list only published items. Light and dark themes, Bangla and English.
+> Full product requirements: [jela_kollan_claude_project_context.md](jela_kollan_claude_project_context.md)
+
+## Contents
+
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Repository layout](#repository-layout)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Data management](#data-management)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Documentation](#documentation)
+- [Credits](#credits)
+- [License](#license)
+
+## Screenshots
+
+### Admin panel
 
 ![Admin dashboard](docs/screenshots/admin-dashboard.png)
-
-### What an admin can do
-
-- **Dashboard:** counts of registered members, members awaiting approval, contact messages, published posts, places and images; a "needs attention" list (new messages, incomplete profiles, imported records awaiting review); charts of members by batch, department and upazila; the three latest activity entries; quick actions.
-- **Quick search:** one search box over every admin page and record.
-- **Messages:** the contact-form inbox (new / read), read and mark as read, delete. Messages are kept 30 days.
-- **Students**
-  - *Membership Requests:* approve or reject sign-ups, with complete and incomplete profile views. Removing a member needs a double confirmation.
-  - *Membership Directory:* registered members (all / needs review / verified) and directory records for the batches still studying. Add, edit, delete and export records to CSV; save an email on a record, send or resend the activation link, verify or unverify it. Verified people get a verified mark everywhere.
-  - *Alumni:* alumni records plus graduated students and members. A setting, **Alumni up to batch**, decides which batches count as alumni. Choosing a batch asks once and saves to Supabase, and the public Students and Alumni pages follow it (batch filters offer only the batches each page lists). Alumni records have the same email, invitation and verification steps as directory records.
-- **Administration**
-  - *Admin management:* search any member by any detail and make them an admin (double confirmation). There is no limit on the number of admins, all admins have the same abilities, and the last admin cannot leave the role.
-  - *Executive Committee:* terms, seats and photos; the published term appears on `/committee`.
-- **Content**
-  - *Blog* and *Heritage places:* create, edit, publish, draft and archive.
-  - *Events* and *FAQ:* full create, edit and delete.
-  - *Upazilas & departments:* the reference lists used by registration and the filters.
-  - *Gallery:* albums and images with upload progress, publish, hide and archive.
-- **Activity:** an audit trail of admin actions (who changed what, and when).
 
 | Alumni and the alumni batch setting | Membership Directory |
 | --- | --- |
@@ -35,9 +38,7 @@ public site at once; the public pages list only published items. Light and dark 
 
 ![Departments](docs/screenshots/admin-departments.png)
 
-## Public site
-
-What visitors see at the site address. Bangla by default, English one click away, light and dark.
+### Public site
 
 ![Home](docs/screenshots/public-hero.webp)
 
@@ -47,70 +48,199 @@ What visitors see at the site address. Bangla by default, English one click away
 
 ![Student community](docs/screenshots/public-students.webp)
 
-- **Home, About, Heritage:** the district's story, nine upazilas, heritage places and culture.
-- **Interactive map:** tap an upazila to see its students, union parishads and heritage places.
-- **Students and Alumni:** searchable lists with department, batch and upazila filters. The saved alumni batch decides which batches appear on which page.
-- **Events, Gallery, Blog, FAQ, Committee, Contact:** all read from Supabase; only published items show.
-- **Accounts:** sign up, verify the email, wait for admin approval, then a profile page (members only).
+## Features
 
-## Run locally (Windows)
+### Public site
 
-Backend (port 8080):
+- **Home, About and Heritage:** the district's story, its nine upazilas, heritage places and culture.
+- **Interactive map:** select an upazila to see its students, union parishads and heritage places.
+- **Students and Alumni:** searchable lists with department, batch and upazila filters. A saved "alumni up to batch" setting decides which batches appear on which page.
+- **Events, Gallery, Blog, FAQ, Executive Committee and Contact:** read from the database; only published items are shown.
+- **Accounts:** sign up, confirm the email address, wait for admin approval, then use a profile page. Strong-password rules with live guidance; password reset and automatic sign-in after email confirmation.
+
+### Admin panel (`/admin`)
+
+Every change is saved to Supabase and appears on the public site immediately. All admins have the same abilities; there is no limit on how many there can be, and the last admin cannot leave the role.
+
+| Area | What admins can do |
+| --- | --- |
+| Dashboard | Member, request, message and content counts; a "needs attention" list; charts by batch, department and upazila; recent activity; quick actions. |
+| Quick search | One search over every admin page and record. |
+| Messages | Contact-form inbox: read, mark as read, delete. Messages are kept for 30 days. |
+| Membership Requests | Approve or reject sign-ups, with complete and incomplete profile views. |
+| Membership Directory | Registered members and directory records of the batches still studying. Add, edit, delete, export CSV; save an email on a record, send or resend the activation link, verify or unverify. |
+| Alumni | Alumni records plus graduated students and members. The **Alumni up to batch** setting is saved in Supabase and both public pages follow it. Same email, invitation and verification steps as directory records. |
+| Admin management | Find any member by any detail and promote them to admin (double confirmation). Remove a member (double confirmation). |
+| Executive Committee | Terms, seats and photos; the published term appears on `/committee`. |
+| Content | Blog, heritage places, events, FAQ, upazilas and departments, gallery albums and images: create, edit, publish, draft, archive, delete. |
+| Activity | Audit trail of admin actions. |
+
+## Architecture
+
+```text
+Browser ──► Cloudflare Pages (React + Vite, static files)
+   │                │
+   │                └──► Go API ──► Supabase PostgreSQL (data, roles, settings)
+   │                         └────► Gmail SMTP (contact notification)
+   └──► Supabase Auth (sign-up, sign-in, password reset, invitations)
+```
+
+- **Frontend:** a static single-page app. It talks to the Go API for all data and to Supabase Auth for sign-in, using only the public (publishable) key.
+- **Backend:** a Go service built on the standard library. It verifies Supabase access tokens, applies role checks, and reads and writes PostgreSQL. Directory records, published departments, upazilas, places and the alumni setting are cached in memory and reloaded after every admin change.
+- **Database:** Supabase PostgreSQL with row level security; the public key cannot read any application table. Migrations run automatically when the API starts.
+- **Email:** Supabase Auth sends sign-up, reset and invitation emails. The backend sends only the contact-form notification (Gmail SMTP, or Brevo as an alternative).
+
+## Repository layout
+
+```text
+backend/     Go API: handlers, stores (PostgreSQL and in-memory), migrations/, tests
+frontend/    React + Vite app: src/pages, src/admin, src/components, src/lib, e2e/ (Playwright)
+scripts/     Data builders for the directory and the upazila map
+docs/        Deployment, data, authentication and design documentation, screenshots
+```
+
+## Getting started
+
+### Prerequisites
+
+- Go 1.23 or newer
+- Node.js 20 or newer and npm
+- A Supabase project for real use. For a quick local try-out you can run without one (see below).
+
+### 1. Backend
 
 ```bash
 cd backend
-go run .
+cp .env.example .env       # fill in the values; .env is git-ignored
+go run .                   # listens on :8080
 ```
 
-Frontend (port 5173, proxies `/api` to the backend):
+Without a database, set `AUTH_DEV_MEMORY=true` in `.env` for a local try-out: accounts live in memory and emails are printed to the log. The API then serves synthetic sample data. This mode is refused when `APP_ENV=production`.
+
+### 2. Frontend
 
 ```bash
 cd frontend
+cp .env.example .env       # public values only
 npm install
-npm run dev
+npm run dev                # http://localhost:5173, proxies /api to :8080
 ```
 
-Tests and build:
+### 3. First admin
+
+Register on the site and confirm the email, then put that address in `ADMIN_EMAILS` and run:
 
 ```bash
-cd backend && go test ./...
-cd frontend && npm run build
+cd backend
+go run . bootstrap-admin            # preview
+go run . bootstrap-admin --apply    # promote
 ```
 
-## Accounts (auth)
+Later admins are promoted from **Admin → Admin management**. Approving a member never makes them an admin.
 
-Copy `backend/.env.example` to `backend/.env` and fill it in (the file is git-ignored).
+### Backend commands
 
-- **Local try-out without a database:** `AUTH_DEV_MEMORY=true`, plus optional `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters) to seed an admin. Accounts vanish on restart and emails are printed in the API log. Open the site at `http://localhost:5173` (the API only accepts that origin).
-- **Real use:** set `DATABASE_URL` to the Supabase connection string (pooler, port 6543). Migrations run on start. Create the first admin once with `ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... go run . create-admin`.
-- **Supabase Auth mode (current):** when `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` (frontend `.env`) and `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` (backend `.env`) are set, sign-up, login, email confirmation and password reset go through Supabase Auth and the Go API verifies the bearer token. Turn **Confirm email** ON in Supabase. Roles (`member` / `admin`) live in the database. The first admin is created once with `go run . bootstrap-admin` (reads `ADMIN_EMAILS` from backend `.env`; the account must already be signed up and email-confirmed; preview by default, `--apply` to change). Later admins are promoted from `/admin` > Admin management. Approving a member never makes them an admin. Tables are locked with row level security (migration 003) so the public key cannot read them.
-- **Executive committee:** admins manage terms, seats and photos in `/admin` > Executive Committee; the published panel appears on `/committee`. One-time photo storage setup (`go run . storage-setup`) and the manual test are in `docs/executive-committee.md`.
-- **Admin panel:** `/admin` has a dashboard, admin management, the executive committee, students, heritage places, blog and gallery. Content is stored in PostgreSQL and the public site shows only published items. Setup (`go run . storage-setup`) and a manual test guide are in `docs/admin-manual-test.md`.
-- In Supabase mode the built-in password endpoints (`/auth/register`, `/auth/login`, ...) answer 410 Gone, so Supabase is the only place passwords and confirmations live. Manual test steps: [docs/auth-manual-test.md](docs/auth-manual-test.md). Next step: [docs/google-oauth-setup.md](docs/google-oauth-setup.md).
-- **Email:** Gmail SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`; an App Password) is what the project uses; `BREVO_API_KEY` and `MAIL_FROM` are an alternative. One of the two is required when `APP_ENV=production`. Sign-up, reset and invitation emails are sent by Supabase Auth; the backend sends the contact-form notification.
-- **Deploying:** see [docs/deployment.md](docs/deployment.md) for the Cloudflare Pages and backend variables.
-- **Different domains for site and API:** `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, `CORS_ORIGIN` and `FRONTEND_URL` set to the site URL.
-- Test the Postgres store against a throwaway database: `TEST_DATABASE_URL=postgres://... go test -run Postgres` (it drops the public schema).
+| Command | Purpose |
+| --- | --- |
+| `go run .` | Start the API (applies migrations). |
+| `go run . bootstrap-admin [--apply]` | Promote the confirmed accounts in `ADMIN_EMAILS` to admin. |
+| `go run . import-directory [--file=] [--apply]` | Preview or write directory records to Supabase. |
+| `go run . storage-setup` | One-time setup of the photo storage bucket. |
+| `go run . purge-contact` | Remove contact messages older than 30 days (for a scheduled job). |
 
-## Data
+## Configuration
 
-Real exports live in `Data/` (git-ignored). Regenerate the API data and the map:
+Real values are never committed. `backend/.env.example` and `frontend/.env.example` list every variable with placeholders.
+
+### Backend
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `APP_ENV` | production | `production` enables the production safety checks. |
+| `PORT` / `SERVER_PORT` | no | Listening port (`PORT`, then `SERVER_PORT`, then 8080). |
+| `DATABASE_URL` | yes | Supabase pooler connection string. Without it the API runs without accounts and serves only sample data. |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | yes | Used to verify access tokens. |
+| `SUPABASE_SECRET_KEY` | for invitations | Server side only (`sb_secret_...`). Enables member invitations and member removal. |
+| `CORS_ORIGIN` | yes | Exact origin of the frontend, for example `https://example.pages.dev`. |
+| `FRONTEND_URL` | yes | Frontend origin, used for links in emails. |
+| `COOKIE_SECURE`, `COOKIE_SAMESITE` | cross-site | Use `true` and `none` when the site and the API are on different domains. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | production | Gmail SMTP with an App Password. Alternatively set `BREVO_API_KEY` and `MAIL_FROM`. |
+| `CONTACT_RECIPIENT_EMAIL` | no | Mailbox notified about new contact messages (defaults to the SMTP account). |
+| `ADMIN_EMAILS` | first run | Comma-separated emails for `bootstrap-admin`. |
+| `INVITE_*` | no | Invitation rate limits, resend cooldown and link expiry. |
+| `DATA_DIR` | no | Folder with `students.json` and `alumni.json`. A development fallback only; the directory is read from Supabase. |
+
+### Frontend
+
+Every variable with the `VITE_` prefix is public and is embedded in the browser bundle. **Never put a secret in a `VITE_` variable.**
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_API_BASE` | production | Origin of the Go API, for example `https://api.example.com` (no trailing slash, no `/api/v1`). The Cloudflare Pages build fails if it is missing. |
+| `VITE_SUPABASE_URL` | yes | `https://<project-ref>.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | yes | The publishable (anon) key. |
+| `VITE_ENABLE_GOOGLE` | no | `true` shows Google sign-in once the provider is set up (see [docs/google-oauth-setup.md](docs/google-oauth-setup.md)). |
+
+## Data management
+
+- **Directory:** students and alumni live in the `directory_records` table. Public responses carry only public columns; contact details are visible to admins only. See [docs/directory-data.md](docs/directory-data.md) for the schema and the import workflow.
+- **Alumni batch:** the batch up to which people count as alumni is saved in Supabase (`site_settings`) and changed from **Admin → Alumni**. The Students and Alumni pages, the statistics and the batch filters follow it at once.
+- **Content:** blog, places, events, FAQ, departments, upazilas and the gallery are managed in the admin panel and stored in the database.
+- **Source exports:** the original spreadsheets and PDFs live in `Data/`, which is git-ignored. Keep it as a private backup.
+- **In-memory cache:** it reloads after every change made through the admin panel. Edits made directly in the Supabase dashboard appear after the next admin change or an API restart.
+
+## Testing
 
 ```bash
-pip install openpyxl
-python scripts/build_data.py
-python scripts/build_map.py path/to/geoBoundaries-BGD-ADM3_simplified.geojson
+cd backend  && go vet ./... && go test ./...
+cd frontend && npm test            # unit tests
+cd frontend && npm run build       # production build
+cd frontend && npm run e2e         # Playwright end-to-end tests (isolated in-memory API)
 ```
 
-Without `backend/data/students.json` the API serves synthetic sample students.
+The PostgreSQL stores can also be tested against temporary tables with `LIVE_TEMP_TABLES=1 go test` and `DATABASE_URL` set. Never point destructive tests at the production project.
 
-## Images
+## Deployment
 
-Photos come from Wikimedia Commons; author and licence for each are in
-`frontend/src/data/images.json`. `images/download_images.py` fetches more with attribution.
+| Piece | Host | Notes |
+| --- | --- | --- |
+| Frontend | Cloudflare Pages | Root `frontend`, build `npm run build`, output `dist`. Set the `VITE_*` variables for Production, then redeploy: they are baked in at build time. |
+| Backend | Any Go host with a public HTTPS URL | Set the backend variables above and check `/api/v1/health`. |
+| Database and auth | Supabase | Add the site URL and `https://<site>/**` under Authentication → URL configuration. |
+
+The exact variable lists and a post-deploy checklist are in [docs/deployment.md](docs/deployment.md).
+
+## Security
+
+- Secrets (`SUPABASE_SECRET_KEY`, `DATABASE_URL`, SMTP credentials) exist only in the backend environment and are never committed. `.env` files are git-ignored; `.env.example` files hold placeholders only.
+- Row level security is on for every application table, so the public key cannot read private data.
+- Passwords are handled by Supabase Auth. The client enforces a strong-password policy (10 to 72 characters, mixed case, a digit and a symbol, nothing derived from the name or email, no common words or sequences) and the API enforces the same rules.
+- Admin actions are role-checked on the server and recorded in the activity log. Promoting or removing a person needs a double confirmation.
+- The contact form and member invitations are rate limited.
+
+To report a vulnerability, contact the maintainers privately rather than opening a public issue.
+
+## Documentation
+
+| Topic | File |
+| --- | --- |
+| Deployment | [docs/deployment.md](docs/deployment.md) |
+| Directory data and import | [docs/directory-data.md](docs/directory-data.md) |
+| Member invitations | [docs/member-invitations.md](docs/member-invitations.md) |
+| Authentication test guide | [docs/auth-manual-test.md](docs/auth-manual-test.md) |
+| Google sign-in | [docs/google-oauth-setup.md](docs/google-oauth-setup.md) |
+| Executive committee | [docs/executive-committee.md](docs/executive-committee.md) |
+| Contact inbox | [docs/contact-inbox.md](docs/contact-inbox.md) |
+| Admin manual test guide | [docs/admin-manual-test.md](docs/admin-manual-test.md) |
+| Design systems | [public](docs/public-design-system.md), [admin](docs/admin-design-system.md) |
+| Email templates | [docs/email-templates/](docs/email-templates/) |
 
 ## Credits
 
-- Upazila boundaries: geoBoundaries (CC BY 4.0).
+- Upazila boundaries: [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0).
 - Union names and population: Wikipedia (CC BY-SA), unverified.
-- Photos: Wikimedia Commons contributors, see the gallery for each credit.
+- Photographs: Wikimedia Commons contributors; the author and licence of each are in `frontend/src/data/images.json`.
+
+## License
+
+No open-source licence has been granted. All rights are reserved by the project owners unless a `LICENSE` file says otherwise.
