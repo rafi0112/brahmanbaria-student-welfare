@@ -15,7 +15,7 @@
 https://github.com/user-attachments/assets/1c95da5e-4b2c-40a6-a0c2-d78224c0e5d2
 
 <p align="center">
-  <b>▶ Product film</b> (1:26, English narration, sound on)
+  <b>▶ Product film</b> (1:26, English narration; unmute in the player)
   &nbsp;·&nbsp; <a href="https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4">Download in 1080p</a>
   &nbsp;·&nbsp; <a href="docs/media/bswa-product-film.en.srt">Captions</a>
   &nbsp;·&nbsp; <a href="https://brahmanbaria-student-welfare.pages.dev">Open the live site</a>
@@ -49,7 +49,7 @@ An 86-second walkthrough of the public website and the admin panel, recorded fro
 
 | | |
 | --- | --- |
-| **Watch** | Plays at the top of this page (720p, with sound) |
+| **Watch** | Plays at the top of this page (1080p; GitHub starts videos muted, so turn the sound on in the player) |
 | **Download** | [`docs/media/bswa-product-film.mp4`](https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4): 1920 × 1080, 30 fps, H.264 + AAC |
 | **Captions** | [`docs/media/bswa-product-film.en.srt`](docs/media/bswa-product-film.en.srt) (English) |
 | **Thumbnail** | [`docs/media/bswa-product-film-thumbnail.png`](docs/media/bswa-product-film-thumbnail.png) |
