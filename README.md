@@ -48,6 +48,14 @@ for the committee.
 
 ![Student community](docs/screenshots/public-students.webp)
 
+### Branded emails
+
+The invitation email (the photo is blurred here on purpose).
+
+![Invitation email](docs/screenshots/email-invitation-top.png)
+
+![Invitation email: steps and notes](docs/screenshots/email-invitation-steps.png)
+
 ## Features
 
 ### Public site
@@ -57,6 +65,18 @@ for the committee.
 - **Students and Alumni:** searchable lists with department, batch and upazila filters. A saved "alumni up to batch" setting decides which batches appear on which page.
 - **Events, Gallery, Blog, FAQ, Executive Committee and Contact:** read from the database; only published items are shown.
 - **Accounts:** sign up, confirm the email address, wait for admin approval, then use a profile page. Strong-password rules with live guidance; password reset and automatic sign-in after email confirmation.
+
+### Branded emails
+
+Three responsive HTML templates share one design and are pasted into Supabase (Authentication → Email Templates). They are in [docs/email-templates/](docs/email-templates/).
+
+| Email | When it is sent | What it does |
+| --- | --- | --- |
+| Invitation | An admin sends an activation link to a directory record or alumni record. | Explains the four steps (open the link, confirm the email, review the prefilled profile, submit the membership request) and states that email confirmation alone does not grant membership. |
+| Email verification | Someone signs up. | Confirms the address and signs the person in automatically, then opens the site. |
+| Password reset | Someone asks for a reset. | Single-use link to choose a new password under the strong-password rules, then signs the person in. |
+
+All links are single use and point at the site's own address (see Supabase URL configuration in [docs/deployment.md](docs/deployment.md)).
 
 ### Admin panel (`/admin`)
 
