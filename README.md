@@ -8,11 +8,12 @@ for the committee.
 - **Real data only:** the directory, content and settings live in Supabase (PostgreSQL). Nothing on the public site is mocked.
 - **Reviewed membership:** members sign up, verify their email and are approved by an admin before they get a profile.
 
-> Full product requirements: [jela_kollan_claude_project_context.md](jela_kollan_claude_project_context.md)
+<p align="center"><img src="docs/screenshots/public-hero.webp" alt="BSWA home page" width="900"></p>
+
+> Full product requirements: [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md)
 
 ## Contents
 
-- [Screenshots](#screenshots)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Repository layout](#repository-layout)
@@ -26,61 +27,51 @@ for the committee.
 - [Credits](#credits)
 - [License](#license)
 
-## Screenshots
-
-### Admin panel
-
-![Admin dashboard](docs/screenshots/admin-dashboard.png)
-
-| Alumni and the alumni batch setting | Membership Directory |
-| --- | --- |
-| ![Admin alumni](docs/screenshots/admin-alumni.png) | ![Membership Directory](docs/screenshots/admin-membership-directory.png) |
-
-![Departments](docs/screenshots/admin-departments.png)
-
-### Public site
-
-![Home](docs/screenshots/public-hero.webp)
-
-![Explore Brahmanbaria](docs/screenshots/public-explore.webp)
-
-![Interactive upazila map](docs/screenshots/public-map.png)
-
-![Student community](docs/screenshots/public-students.webp)
-
-### Branded emails
-
-The invitation email (the photo is blurred here on purpose).
-
-![Invitation email](docs/screenshots/email-invitation-top.png)
-
-![Invitation email: steps and notes](docs/screenshots/email-invitation-steps.png)
-
 ## Features
 
 ### Public site
 
+Bangla by default, English one click away, light and dark themes, fully responsive.
+
 - **Home, About and Heritage:** the district's story, its nine upazilas, heritage places and culture.
-- **Interactive map:** select an upazila to see its students, union parishads and heritage places.
 - **Students and Alumni:** searchable lists with department, batch and upazila filters. A saved "alumni up to batch" setting decides which batches appear on which page.
 - **Events, Gallery, Blog, FAQ, Executive Committee and Contact:** read from the database; only published items are shown.
 - **Accounts:** sign up, confirm the email address, wait for admin approval, then use a profile page. Strong-password rules with live guidance; password reset and automatic sign-in after email confirmation.
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/public-explore.webp" alt="Explore Brahmanbaria"><br><sub><b>Explore Brahmanbaria.</b> Heritage, culture and the nine upazilas.</sub></td>
+    <td width="50%"><img src="docs/screenshots/public-map.png" alt="Interactive upazila map"><br><sub><b>Interactive map.</b> Select an upazila to see its students, union parishads and heritage places.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/public-students.webp" alt="Student community"><br><sub><b>Student community.</b> Members of every department and batch, together.</sub></td>
+  </tr>
+</table>
+
 ### Branded emails
 
-Three responsive HTML templates share one design and are pasted into Supabase (Authentication → Email Templates). They are in [docs/email-templates/](docs/email-templates/).
+Three responsive HTML templates share one design and are pasted into Supabase (Authentication → Email Templates). The sources are in [docs/email-templates/](docs/email-templates/).
 
 | Email | When it is sent | What it does |
 | --- | --- | --- |
-| Invitation | An admin sends an activation link to a directory record or alumni record. | Explains the four steps (open the link, confirm the email, review the prefilled profile, submit the membership request) and states that email confirmation alone does not grant membership. |
+| Invitation | An admin sends an activation link to a directory or alumni record. | Explains the four steps (open the link, confirm the email, review the prefilled profile, submit the membership request) and states that email confirmation alone does not grant membership. |
 | Email verification | Someone signs up. | Confirms the address and signs the person in automatically, then opens the site. |
 | Password reset | Someone asks for a reset. | Single-use link to choose a new password under the strong-password rules, then signs the person in. |
 
-All links are single use and point at the site's own address (see Supabase URL configuration in [docs/deployment.md](docs/deployment.md)).
+All links are single use and point at the site's own address (see the Supabase URL configuration in [docs/deployment.md](docs/deployment.md)).
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/email-invitation-top.png" alt="Invitation email"></td>
+    <td width="50%"><img src="docs/screenshots/email-invitation-steps.png" alt="Invitation email: steps and notes"></td>
+  </tr>
+</table>
 
 ### Admin panel (`/admin`)
 
 Every change is saved to Supabase and appears on the public site immediately. All admins have the same abilities; there is no limit on how many there can be, and the last admin cannot leave the role.
+
+<p align="center"><img src="docs/screenshots/admin-dashboard.png" alt="Admin dashboard" width="900"></p>
 
 | Area | What admins can do |
 | --- | --- |
@@ -95,20 +86,30 @@ Every change is saved to Supabase and appears on the public site immediately. Al
 | Content | Blog, heritage places, events, FAQ, upazilas and departments, gallery albums and images: create, edit, publish, draft, archive, delete. |
 | Activity | Audit trail of admin actions. |
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/admin-alumni.png" alt="Alumni and the alumni batch setting"><br><sub><b>Alumni.</b> One setting decides which batches count as alumni.</sub></td>
+    <td width="50%"><img src="docs/screenshots/admin-membership-directory.png" alt="Membership Directory"><br><sub><b>Membership Directory.</b> Registered members and directory records.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/admin-departments.png" alt="Departments"><br><sub><b>Reference data.</b> Departments and upazilas, used in registration and filters.</sub></td>
+  </tr>
+</table>
+
 ## Architecture
 
 ```text
 Browser ──► Cloudflare Pages (React + Vite, static files)
    │                │
-   │                └──► Go API ──► Supabase PostgreSQL (data, roles, settings)
-   │                         └────► Gmail SMTP (contact notification)
-   └──► Supabase Auth (sign-up, sign-in, password reset, invitations)
+   │                └──► Go API on Render ──► Supabase PostgreSQL (data, roles, settings)
+   │                              └────────► Gmail SMTP (contact notification)
+   └──► Supabase Auth (sign-up, sign-in, password reset, invitations; sends its emails through Gmail SMTP)
 ```
 
 - **Frontend:** a static single-page app. It talks to the Go API for all data and to Supabase Auth for sign-in, using only the public (publishable) key.
 - **Backend:** a Go service built on the standard library. It verifies Supabase access tokens, applies role checks, and reads and writes PostgreSQL. Directory records, published departments, upazilas, places and the alumni setting are cached in memory and reloaded after every admin change.
 - **Database:** Supabase PostgreSQL with row level security; the public key cannot read any application table. Migrations run automatically when the API starts.
-- **Email:** Supabase Auth sends sign-up, reset and invitation emails. The backend sends only the contact-form notification (Gmail SMTP, or Brevo as an alternative).
+- **Email:** Supabase Auth sends sign-up, reset and invitation emails. The backend sends only the contact-form notification (Gmail SMTP).
 
 ## Repository layout
 
@@ -184,7 +185,7 @@ Real values are never committed. `backend/.env.example` and `frontend/.env.examp
 | `CORS_ORIGIN` | yes | Exact origin of the frontend, for example `https://example.pages.dev`. |
 | `FRONTEND_URL` | yes | Frontend origin, used for links in emails. |
 | `COOKIE_SECURE`, `COOKIE_SAMESITE` | cross-site | Use `true` and `none` when the site and the API are on different domains. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | production | Gmail SMTP with an App Password. Alternatively set `BREVO_API_KEY` and `MAIL_FROM`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | production | Gmail SMTP with an App Password, used for the contact-form notification. |
 | `CONTACT_RECIPIENT_EMAIL` | no | Mailbox notified about new contact messages (defaults to the SMTP account). |
 | `ADMIN_EMAILS` | first run | Comma-separated emails for `bootstrap-admin`. |
 | `INVITE_*` | no | Invitation rate limits, resend cooldown and link expiry. |
@@ -225,7 +226,7 @@ The PostgreSQL stores can also be tested against temporary tables with `LIVE_TEM
 | Piece | Host | Notes |
 | --- | --- | --- |
 | Frontend | Cloudflare Pages | Root `frontend`, build `npm run build`, output `dist`. Set the `VITE_*` variables for Production, then redeploy: they are baked in at build time. |
-| Backend | Any Go host with a public HTTPS URL | Set the backend variables above and check `/api/v1/health`. |
+| Backend | Render (web service) | Root `backend`, build `go build -o app .`, start `./app`. Set the backend variables above and check `/api/v1/health`. |
 | Database and auth | Supabase | Add the site URL and `https://<site>/**` under Authentication → URL configuration. |
 
 The exact variable lists and a post-deploy checklist are in [docs/deployment.md](docs/deployment.md).

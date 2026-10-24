@@ -150,7 +150,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:              ":" + env("PORT", env("SERVER_PORT", "8080")), // all interfaces; Botkeep assigns SERVER_PORT
+		Addr:              ":" + env("PORT", env("SERVER_PORT", "8080")), // all interfaces; the host assigns PORT or SERVER_PORT
 		Handler:           app.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

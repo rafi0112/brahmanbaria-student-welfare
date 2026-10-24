@@ -1,4 +1,4 @@
-# Jela Kollan for University --- Project Context & Product Specification
+# BSWA: Project Requirements and Product Specification
 
 > **Concrete identity (resolved, Oct 2026):** জবিস্থ ব্রাহ্মণবাড়িয়া জেলা
 > ছাত্রকল্যাণ সমিতি — Brahmanbaria district students' welfare community at
@@ -14,7 +14,7 @@
 > **UI:** full bilingual UI (বাংলা default + English toggle) and
 > light/dark theme (follows system, user can override).
 >
-> **Design source of truth:** the three mockup PNGs in `design/`
+> **Design reference:** the original three mockups (kept in git history, commit `9e122ae`, folder `design/`; removed from the tree)
 > (cream paper + forest green, serif headings, slightly irregular photo
 > frames, hand-drawn line art, wavy section dividers, pill header).
 > **Workflow:** design by Claude Opus 5.5; implementation by Claude
@@ -789,10 +789,10 @@ Microservices, Redis, WebSockets, a CMS framework, Next.js/SSR, UI kits,
 animation libraries, map API keys (the upazila map is a static inline
 SVG), paid image CDNs.
 
-## 16. Design direction (Opus 5.5 design → Sonnet 5.5 implementation)
+## 16. Design direction
 
-Source of truth: the three mockups in `design/` (Community UI Showcase,
-Heritage UI Showcase, Complete Community UI Kit). The frontend follows
+Reference: the three original mockups (Community UI Showcase,
+Heritage UI Showcase, Complete Community UI Kit), kept in git history. The frontend follows
 them; every section is its own route/page (no single long page).
 
 - **Look:** warm paper background, deep forest-green, leaf green and a
@@ -835,7 +835,7 @@ no-card option — never silently add a paid service.
 
 Layout: `frontend/` (React + Vite), `backend/` (Go, standard library only),
 `scripts/` (data + map builders), `Data/` (private exports), `images/`
-(Commons downloader), `design/` (mockups).
+(Commons downloader), `docs/` (documentation).
 
 **Implemented and checked** (Go tests pass; frontend builds; pages
 checked in the browser at desktop and phone width):

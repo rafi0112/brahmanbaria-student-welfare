@@ -17,7 +17,7 @@ Restart the API after editing `backend/.env`; restart Vite after editing `fronte
 
 Supabase dashboard checklist (Authentication): Email provider on, **Confirm email** on, Site URL
 `http://localhost:5173`, Redirect URLs include `http://localhost:5173/verify-email` and
-`http://localhost:5173/reset-password`, custom SMTP (Brevo) enabled with a verified sender.
+`http://localhost:5173/reset-password`, custom SMTP enabled (Gmail with an App Password).
 
 ## 1. Sign-up and the confirmation email
 
@@ -25,7 +25,7 @@ Supabase dashboard checklist (Authentication): Email provider on, **Confirm emai
 2. Expected: you land on `/verify-email?email=...` with "Application received".
 3. Expected: an email arrives within about a minute (check Spam). **If it does not:**
    - Supabase → Authentication → Logs: was a send attempted, any SMTP error?
-   - Brevo → Transactional → Logs: was it accepted, blocked or deferred? Is the sender verified?
+   - The Gmail account's Sent folder and security alerts: was the App Password rejected?
    - Supabase → Authentication → Rate limits: the email send limit may be reached.
 4. Click the link. Expected: `/verify-email` shows "Email verified" and a "Go to dashboard" button.
 5. Open the dashboard. Expected: your name, batch, department, upazila, union, status "waiting for approval".
