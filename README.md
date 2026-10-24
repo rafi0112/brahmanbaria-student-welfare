@@ -1,19 +1,38 @@
-# BSWA: Brahmanbaria Students' Welfare Association
+<h1 align="center">BSWA: Brahmanbaria Students' Welfare Association</h1>
 
-A community platform for students and alumni from Brahmanbaria at Jagannath University. It combines a public site (student and
-alumni directory, district heritage and map, events, gallery, blog, executive committee) with a member area and an admin panel
-for the committee.
+<p align="center">
+  <b>The digital home of Brahmanbaria's students and alumni at Jagannath University:</b><br>
+  a bilingual public website for the community and an admin panel for the committee that runs it.
+</p>
+
+<p align="center">
+  <a href="https://brahmanbaria-student-welfare.pages.dev"><img src="https://img.shields.io/badge/Live_site-pages.dev-176B48?style=for-the-badge" alt="Live site"></a>
+  <img src="https://img.shields.io/badge/React-Vite-F39A32?style=for-the-badge" alt="React and Vite">
+  <img src="https://img.shields.io/badge/Go-API-D96B28?style=for-the-badge" alt="Go API">
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-292720?style=for-the-badge" alt="Supabase">
+</p>
+
+<p align="center">
+  <a href="docs/media/bswa-product-film.mp4">
+    <img src="docs/media/bswa-product-film-preview.gif" alt="BSWA product film: a short preview of the public website and the admin panel" width="900">
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/media/bswa-product-film.mp4"><b>▶ Watch the full product film</b></a> (1:26, 1080p, English narration)
+  &nbsp;·&nbsp; <a href="docs/media/bswa-product-film.en.srt">Captions</a>
+  &nbsp;·&nbsp; <a href="https://brahmanbaria-student-welfare.pages.dev">Open the live site</a>
+</p>
 
 - **Bilingual:** Bangla by default, English available; light and dark themes.
 - **Real data only:** the directory, content and settings live in Supabase (PostgreSQL). Nothing on the public site is mocked.
 - **Reviewed membership:** members sign up, verify their email and are approved by an admin before they get a profile.
 
-<p align="center"><img src="docs/screenshots/public-hero.webp" alt="BSWA home page" width="900"></p>
-
 > Full product requirements: [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md)
 
 ## Contents
 
+- [Product film](#product-film)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Repository layout](#repository-layout)
@@ -27,9 +46,22 @@ for the committee.
 - [Credits](#credits)
 - [License](#license)
 
+## Product film
+
+An 86-second walkthrough of the public website and the admin panel, recorded from the deployed site.
+
+| | |
+| --- | --- |
+| **Watch** | [`docs/media/bswa-product-film.mp4`](docs/media/bswa-product-film.mp4): 1920 × 1080, 30 fps, H.264 + AAC |
+| **Captions** | [`docs/media/bswa-product-film.en.srt`](docs/media/bswa-product-film.en.srt) (English) |
+| **Thumbnail** | [`docs/media/bswa-product-film-thumbnail.png`](docs/media/bswa-product-film-thumbnail.png) |
+| **Privacy** | Names, contact details, photos and workplaces of students and alumni are blurred in every frame. |
+
 ## Features
 
 ### Public site
+
+<p align="center"><img src="docs/screenshots/public-hero.webp" alt="BSWA home page" width="900"></p>
 
 Bangla by default, English one click away, light and dark themes, fully responsive.
 

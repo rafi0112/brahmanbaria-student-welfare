@@ -1,0 +1,83 @@
+1
+00:00:02,550 --> 00:00:03,453
+Meet BSWA.
+
+2
+00:00:05,500 --> 00:00:10,927
+The digital home of the Brahmanbaria Students'
+Welfare Association at Jagannath University.
+
+3
+00:00:10,967 --> 00:00:15,913
+A public website for the community, and an admin
+panel for the committee behind it.
+
+4
+00:00:17,500 --> 00:00:22,470
+Visitors explore the district's heritage, its
+nine upazilas, and an interactive map.
+
+5
+00:00:23,100 --> 00:00:25,735
+Students and alumni are searchable by batch,
+
+6
+00:00:25,775 --> 00:00:29,261
+department and upazila, with private details
+kept private.
+
+7
+00:00:29,850 --> 00:00:34,269
+The committee, a photo gallery and common
+questions, in Bangla or English.
+
+8
+00:00:35,400 --> 00:00:39,316
+Behind the scenes, the admin panel shows the
+whole community at a glance.
+
+9
+00:00:39,950 --> 00:00:41,481
+Every sign-up is reviewed.
+
+10
+00:00:41,521 --> 00:00:46,253
+Directory records are verified, and an
+invitation activates a member's account.
+
+11
+00:00:46,850 --> 00:00:51,267
+One setting decides which batches count as
+alumni, and every page follows it.
+
+12
+00:00:51,850 --> 00:00:56,367
+Heritage places, the gallery, events and FAQ are
+managed in one place,
+
+13
+00:00:56,407 --> 00:00:58,255
+with a full activity history.
+
+14
+00:00:59,500 --> 00:01:02,068
+Publish in the panel, and it is live on the
+site.
+
+15
+00:01:05,100 --> 00:01:08,422
+Built end to end with React and Vite, a Go API,
+
+16
+00:01:08,462 --> 00:01:14,717
+and Supabase for PostgreSQL and authentication,
+with row level security on private data.
+
+17
+00:01:18,700 --> 00:01:18,989
+BSWA.
+
+18
+00:01:19,029 --> 00:01:20,964
+Explore the project on GitHub.
+
