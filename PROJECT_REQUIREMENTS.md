@@ -17,15 +17,14 @@
 > **Design reference:** the original three mockups (kept in git history, commit `9e122ae`, folder `design/`; removed from the tree)
 > (cream paper + forest green, serif headings, slightly irregular photo
 > frames, hand-drawn line art, wavy section dividers, pill header).
-> **Workflow:** design by Claude Opus 5.5; implementation by Claude
-> Sonnet 5.5. Data lives in `Data/` (private, git-ignored); image tooling
-> in `images/`. See §13–§18 at the bottom.
+> **Layout:** private source data lives in `Data/` (git-ignored); image
+> tooling in `images/`. See §13–§18 at the bottom.
 
-**Purpose:** This file is the authoritative project context for Claude.
-Read it before proposing architecture, generating code, or changing
-requirements.
+**Purpose:** This file is the authoritative statement of the project's
+requirements and constraints. Read it before proposing architecture,
+writing code, or changing requirements.
 
-**Project name:** Jela Kollan for University\
+**Project name:** BSWA (Brahmanbaria Students' Welfare Association)\
 **Primary audience:** University students, alumni/community members, and
 administrators\
 **Current stage:** Planning and implementation preparation\
@@ -40,7 +39,7 @@ Avoid unnecessary complexity.
 
 ## 1. Product vision
 
-Jela Kollan for University is a community and information platform for
+BSWA is a community and information platform for
 university students, with a focus on student information,
 district/local-area knowledge, public information, and useful community
 resources.
@@ -174,7 +173,7 @@ navigation is left behind.
 
 ### 4.1 Home page
 
--   Clear identity and purpose of Jela Kollan for University.
+-   Clear identity and purpose of BSWA.
 -   Hero section with a concise headline, description, and primary
     actions.
 -   Quick links to Students, Upazila/Union Parishad Directory,
@@ -651,7 +650,7 @@ opportunities, alumni features, map view, PWA, and analytics.
 
 ------------------------------------------------------------------------
 
-## 12. Instructions to Claude
+## 12. Working agreements
 
 When working on this project:
 
@@ -683,7 +682,7 @@ When working on this project:
     performance measurements over technology hype.
 
 **Current priority:** produce a reviewable MVP plan and database/API
-design for Jela Kollan for University, including the Upazila/Union
+design for BSWA, including the Upazila/Union
 Parishad Directory and Historical Places pages, while preserving the
 strict no-card/no-billing/zero-budget constraint.
 
@@ -856,7 +855,7 @@ checked in the browser at desktop and phone width):
 - Map: 9 real upazila polygons (geoBoundaries) + heritage pins.
 - 19 licensed Commons photos with author/licence metadata
   (`frontend/src/data/images.json`).
-- Visual refresh to match `design/` and `Jela_Kollan_Design_Assets`: floating
+- Visual refresh to match `design/` and the supplied design assets: floating
   pill nav, hero with the Titas boat-race photo (Commons, CC BY-SA 4.0),
   organic blob photo, wavy edges, rounded banner heroes on inner pages,
   glass quick-access cards, photo collage section, student sketch card,
