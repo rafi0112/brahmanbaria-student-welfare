@@ -12,14 +12,11 @@
   <img src="https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-292720?style=for-the-badge" alt="Supabase">
 </p>
 
-<p align="center">
-  <a href="docs/media/bswa-product-film.mp4">
-    <img src="docs/media/bswa-product-film-preview.gif" alt="BSWA product film: a short preview of the public website and the admin panel" width="900">
-  </a>
-</p>
+https://github.com/user-attachments/assets/1c95da5e-4b2c-40a6-a0c2-d78224c0e5d2
 
 <p align="center">
-  <a href="https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4"><b>⬇ Download the full product film</b></a> (1:26, 1080p, English narration)
+  <b>▶ Product film</b> (1:26, English narration, sound on)
+  &nbsp;·&nbsp; <a href="https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4">Download in 1080p</a>
   &nbsp;·&nbsp; <a href="docs/media/bswa-product-film.en.srt">Captions</a>
   &nbsp;·&nbsp; <a href="https://brahmanbaria-student-welfare.pages.dev">Open the live site</a>
 </p>
@@ -52,7 +49,8 @@ An 86-second walkthrough of the public website and the admin panel, recorded fro
 
 | | |
 | --- | --- |
-| **Film** | [`docs/media/bswa-product-film.mp4`](https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4) (download): 1920 × 1080, 30 fps, H.264 + AAC |
+| **Watch** | Plays at the top of this page (720p, with sound) |
+| **Download** | [`docs/media/bswa-product-film.mp4`](https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4): 1920 × 1080, 30 fps, H.264 + AAC |
 | **Captions** | [`docs/media/bswa-product-film.en.srt`](docs/media/bswa-product-film.en.srt) (English) |
 | **Thumbnail** | [`docs/media/bswa-product-film-thumbnail.png`](docs/media/bswa-product-film-thumbnail.png) |
 | **Privacy** | Names, contact details, photos and workplaces of students and alumni are blurred in every frame. |
