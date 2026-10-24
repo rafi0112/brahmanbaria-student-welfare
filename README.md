@@ -35,6 +35,24 @@ public site at once; the public pages list only published items. Light and dark 
 
 ![Departments](docs/screenshots/admin-departments.png)
 
+## Public site
+
+What visitors see at the site address. Bangla by default, English one click away, light and dark.
+
+![Home](docs/screenshots/public-hero.webp)
+
+![Explore Brahmanbaria](docs/screenshots/public-explore.webp)
+
+![Interactive upazila map](docs/screenshots/public-map.png)
+
+![Student community](docs/screenshots/public-students.webp)
+
+- **Home, About, Heritage:** the district's story, nine upazilas, heritage places and culture.
+- **Interactive map:** tap an upazila to see its students, union parishads and heritage places.
+- **Students and Alumni:** searchable lists with department, batch and upazila filters. The saved alumni batch decides which batches appear on which page.
+- **Events, Gallery, Blog, FAQ, Committee, Contact:** all read from Supabase; only published items show.
+- **Accounts:** sign up, verify the email, wait for admin approval, then a profile page (members only).
+
 ## Run locally (Windows)
 
 Backend (port 8080):
