@@ -17,6 +17,7 @@ import (
 
 func main() {
 	loadDotEnv(".env")
+	logEnvPresence()
 	dataDir := env("DATA_DIR", "data")
 	store, err := loadStore(dataDir)
 	if err != nil {
@@ -382,4 +383,24 @@ func storageSetup(s AuthStore) error {
 	}
 	fmt.Println("bucket executive-photos and its admin-only upload policy are in place")
 	return nil
+}
+
+// logEnvPresence says which settings reached the process: names and value lengths only, never the values.
+// A length of 0 or "missing" means the host did not pass the variable (or it was saved empty); a length one or two
+// larger than expected usually means a stray space or quote around the value.
+func logEnvPresence() {
+	var parts []string
+	for _, k := range []string{"APP_ENV", "PORT", "SERVER_PORT", "DATABASE_URL", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY",
+		"SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "CORS_ORIGIN", "FRONTEND_URL"} {
+		v, ok := os.LookupEnv(k)
+		switch {
+		case !ok:
+			parts = append(parts, k+"=missing")
+		case strings.TrimSpace(v) != v || strings.ContainsAny(v[:min(1, len(v))], "\"'"):
+			parts = append(parts, fmt.Sprintf("%s=%d chars (space or quote at an end)", k, len(v)))
+		default:
+			parts = append(parts, fmt.Sprintf("%s=%d chars", k, len(v)))
+		}
+	}
+	log.Printf("environment: %s", strings.Join(parts, ", "))
 }
