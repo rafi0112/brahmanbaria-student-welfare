@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/media/bswa-product-film.mp4"><b>▶ Watch the full product film</b></a> (1:26, 1080p, English narration)
+  <a href="https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4"><b>⬇ Download the full product film</b></a> (1:26, 1080p, English narration)
   &nbsp;·&nbsp; <a href="docs/media/bswa-product-film.en.srt">Captions</a>
   &nbsp;·&nbsp; <a href="https://brahmanbaria-student-welfare.pages.dev">Open the live site</a>
 </p>
@@ -52,7 +52,7 @@ An 86-second walkthrough of the public website and the admin panel, recorded fro
 
 | | |
 | --- | --- |
-| **Watch** | [`docs/media/bswa-product-film.mp4`](docs/media/bswa-product-film.mp4): 1920 × 1080, 30 fps, H.264 + AAC |
+| **Film** | [`docs/media/bswa-product-film.mp4`](https://github.com/rafi0112/brahmanbaria-student-welfare/raw/main/docs/media/bswa-product-film.mp4) (download): 1920 × 1080, 30 fps, H.264 + AAC |
 | **Captions** | [`docs/media/bswa-product-film.en.srt`](docs/media/bswa-product-film.en.srt) (English) |
 | **Thumbnail** | [`docs/media/bswa-product-film-thumbnail.png`](docs/media/bswa-product-film-thumbnail.png) |
 | **Privacy** | Names, contact details, photos and workplaces of students and alumni are blurred in every frame. |
