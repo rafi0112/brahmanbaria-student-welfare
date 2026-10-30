@@ -7,8 +7,10 @@ import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../com
 import { PlaceCard } from '../components/cards.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import Icon from '../components/Icon.jsx'
+import Reveal from '../components/Reveal.jsx'
+import { CULTURE, DISCOVER } from '../data/explore.js'
 
-const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river']
+const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'palace', 'shrine', 'lake', 'park', 'market', 'port', 'heritage-site']
 
 export default function Heritage() {
   const base = useBase()
@@ -38,6 +40,38 @@ export default function Heritage() {
           {CATS.map((c) => <button key={c} className={`chip ${f.category === c ? 'on' : ''}`} aria-pressed={f.category === c} onClick={() => set({ category: c })}>{t(`cat.${c}`)}</button>)}
         </div>
       </PageHero>
+      {/* explore Brahmanbaria: the district's story, its discovery cards and cultural pillars (moved here from the home page) */}
+      <section className="section wrap heritage-explore" aria-labelledby="explore-h">
+        <Reveal className="section-head">
+          <div>
+            <p className="eyebrow">{pick('অনেক গল্পের একটি জেলা', 'A district of many stories')}</p>
+            <h2 id="explore-h">{pick('ঘুরে দেখুন ', 'Explore ')}<span className="hl">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span></h2>
+            <p className="lede">{pick('সমৃদ্ধ ইতিহাস, প্রাণবন্ত সংস্কৃতি, শান্ত নদী আর অনুপ্রেরণাদায়ী মানুষের জেলা। নয়টি উপজেলা জুড়ে এর ঐতিহ্য, প্রথা ও মানুষকে জানুন।', 'A land of rich history, vibrant culture, serene rivers and inspiring people. Discover its heritage, traditions and communities across nine upazilas.')}</p>
+          </div>
+        </Reveal>
+        <div className="ex-cards">
+          {DISCOVER.map((c, i) => (
+            <Reveal key={c.to} delay={i * 70}>
+              <Link to={c.to} className="ex-card">
+                <span className="ex-thumb blob-c"><img src={c.img} alt="" loading="lazy" decoding="async" /></span>
+                <span className="ex-card-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.dbn, c.den)}</small></span>
+                <span className="ex-arr" aria-hidden="true"><Icon name="arrow" size={14} /></span>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+        <ul className="culture">
+          {CULTURE.map((c) => (
+            <li key={c.img}>
+              <Link to={c.to} className="culture-card">
+                <img src={`/images/bswa/${c.img}.webp`} alt="" loading="lazy" decoding="async" width={c.w} height={c.h} />
+                <span className="culture-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.sbn, c.sen)}</small></span>
+                <Icon name="arrow" size={16} className="arr culture-arr" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
       <section className="section wrap side-layout">
         <aside className="side-card">
           <h2>{t('common.search')}</h2>

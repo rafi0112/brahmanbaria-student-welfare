@@ -114,20 +114,31 @@ export function UpazilaDetail() {
                 <div><dt>{t('dir.population')}</dt><dd className="num">{fmt(u.population, n) || t('dir.notAvailable')}</dd></div>
                 <div><dt>{t('dir.area')}</dt><dd className="num">{u.areaKm2 ? `${n(u.areaKm2)} ${t('dir.sqkm')}` : t('dir.notAvailable')}</dd></div>
               </dl>
-              <div className="detail-cols">
-                <div>
-                  <h2>{t('dir.unions')}</h2>
-                  <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('dir.search')} aria-label={t('dir.search')} />
+              {/* places across the full width, then the unions beside the students link */}
+              <section className="up-places" aria-labelledby="up-places-h">
+                <div className="section-head">
+                  <h2 id="up-places-h">{t('dir.places')} <span className="up-count num">{n(places.length)}</span></h2>
+                  <Link className="link-arrow" to={`/heritage?upazila=${u.slug}`}>{t('common.viewAll')} <Icon name="arrow" size={15} className="arr" /></Link>
+                </div>
+                {places.length === 0 ? <Empty /> : <div className="up-place-grid">{places.map((p) => <PlaceCard key={p.slug} p={p} upazilas={[u]} />)}</div>}
+              </section>
+              <div className="up-bottom">
+                <section className="up-unions" aria-labelledby="up-unions-h">
+                  <div className="up-unions-head">
+                    <h2 id="up-unions-h">{t('dir.unions')} <span className="up-count num">{n(u.unions.length)}</span></h2>
+                    <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('dir.search')} aria-label={t('dir.search')} />
+                  </div>
                   {unions.length === 0 ? <Empty>{t('dir.noUnion')}</Empty> : (
-                    <ol className="union-list">{unions.map((x) => <li key={x}>{x}</li>)}</ol>
+                    <ol className="up-union-chips">{unions.map((x) => <li key={x}><Icon name="pin" size={14} />{x}</li>)}</ol>
                   )}
                   <p className="muted small">{u.unionSource} {u.note} {t('dir.source')}: <a href={u.source} target="_blank" rel="noreferrer">Wikipedia</a> · {u.lastVerified}.</p>
-                </div>
-                <div>
-                  <h2>{t('dir.places')}</h2>
-                  {places.length === 0 ? <Empty /> : <div className="cards-1">{places.map((p) => <PlaceCard key={p.slug} p={p} upazilas={[u]} />)}</div>}
-                  <Link className="btn btn-dark" to={`/students?upazila=${u.slug}`}>{t('dir.studentsFrom')} →</Link>
-                </div>
+                </section>
+                <aside className="up-students">
+                  <span className="up-students-ico" aria-hidden="true"><Icon name="users" size={26} /></span>
+                  <p className="up-students-n num">{n(u.members)}</p>
+                  <p>{pick(`${u.nameBn} থেকে আসা শিক্ষার্থী`, `Students from ${u.nameEn}`)}</p>
+                  <Link className="btn btn-dark" to={`/students?upazila=${u.slug}`}>{t('dir.studentsFrom')} <Icon name="arrow" size={16} className="arr" /></Link>
+                </aside>
               </div>
             </>
           )

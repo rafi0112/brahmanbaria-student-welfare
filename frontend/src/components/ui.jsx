@@ -55,7 +55,7 @@ export function Credit({ id }) {
   if (!m) return null
   return (
     <p className="credit">
-      {t('place.photoCredit')}: {m.author} · <a href={m.source} target="_blank" rel="noreferrer">{m.license}</a>
+      {t('place.photoCredit')}: {m.author} · {m.source ? <a href={m.source} target="_blank" rel="noreferrer">{m.license}</a> : m.license}
     </p>
   )
 }

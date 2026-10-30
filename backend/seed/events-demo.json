@@ -1,0 +1,14 @@
+[
+  {"slug": "demo-freshers-reception-2026", "data": {"titleBn": "নবীনবরণ ২০২৬", "titleEn": "Freshers' Reception 2026", "date": "2026-11-21", "time": "15:00",
+    "venue": "TSC Auditorium, Jagannath University", "image": "alinagar-fair",
+    "summaryBn": "ব্রাহ্মণবাড়িয়া থেকে আসা নতুন শিক্ষার্থীদের বরণ, অ্যালামনাইদের শুভেচ্ছা ও সাংস্কৃতিক সন্ধ্যা। (ডেমো ইভেন্ট)",
+    "summaryEn": "A welcome for new students from Brahmanbaria, with words from alumni and a cultural evening. (Demo event)"}},
+  {"slug": "demo-career-seminar-2026", "data": {"titleBn": "ক্যারিয়ার ও উচ্চশিক্ষা সেমিনার", "titleEn": "Career and Higher Studies Seminar", "date": "2026-12-06", "time": "11:00",
+    "venue": "Seminar Room, Jagannath University", "image": "boat-race",
+    "summaryBn": "চাকরি, গবেষণা ও বিদেশে উচ্চশিক্ষা নিয়ে অ্যালামনাইদের অভিজ্ঞতা ও প্রশ্নোত্তর পর্ব। (ডেমো ইভেন্ট)",
+    "summaryEn": "Alumni share how they built careers in jobs, research and studies abroad, followed by questions. (Demo event)"}},
+  {"slug": "demo-blood-donation-2026", "data": {"titleBn": "রক্তদান কর্মসূচি", "titleEn": "Blood Donation Drive", "date": "2026-12-20", "time": "10:00",
+    "venue": "Brahmanbaria Sadar", "image": "bb-sunset",
+    "summaryBn": "সদস্যদের অংশগ্রহণে স্বেচ্ছায় রক্তদান ও রক্তের গ্রুপ নির্ণয় কর্মসূচি। (ডেমো ইভেন্ট)",
+    "summaryEn": "A voluntary blood donation and blood-group testing day run by members. (Demo event)"}}
+]

@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import images from '../data/images.json'
 import { api, useApi } from '../lib/api.js'
@@ -9,6 +9,7 @@ import Markdown from '../components/Markdown.jsx'
 import { PostCard } from '../components/cards.jsx'
 import Icon from '../components/Icon.jsx'
 import { toast } from '../components/Motion.jsx'
+import { FAQSection } from './Community.jsx'
 
 /* ---------------- Blog ---------------- */
 export function Blog() {
@@ -196,7 +197,31 @@ export function About() {
 }
 
 /* ---------------- Contact ---------------- */
-export function Contact() {
+// FAQ and Contact on one page. /faq and /contact redirect here (#faq, #contact); the hash scrolls to its section.
+export function HelpPage() {
+  const { t } = useApp()
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (!hash) return undefined
+    // after the route's scroll-to-top, bring the requested section into view
+    const id = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    return () => clearTimeout(id)
+  }, [hash])
+  return (
+    <>
+      <PageHero kicker={t('help.kicker')} title={t('help.title')} variant="tilt" lede={t('help.lede')} src="/images/bswa/baul.webp">
+        <div className="banner-chips" role="group" aria-label={t('help.title')}>
+          <a className="chip" href="#faq">{t('help.toFaq')}</a>
+          <a className="chip" href="#contact">{t('help.toContact')}</a>
+        </div>
+      </PageHero>
+      <FAQSection />
+      <ContactSection />
+    </>
+  )
+}
+
+function ContactSection() {
   const { t } = useApp()
   const [v, setV] = useState({ name: '', email: '', subject: '', message: '', website: '' })
   const [st, setSt] = useState({ status: 'idle', fields: {} })
@@ -229,8 +254,12 @@ export function Contact() {
   ]
   return (
     <>
-      <PageHero kicker={t('contact.kicker')} title={t('contact.title')} variant="wave" lede={t('contact.lede')} src="/images/bswa/river.webp" />
-      <section className="section wrap contact">
+      <div className="wrap help-head help-head-contact" id="contact">
+        <p className="eyebrow">{t('contact.kicker')}</p>
+        <h2>{t('contact.title')}</h2>
+        <p className="muted">{t('contact.lede')}</p>
+      </div>
+      <section className="section wrap contact" aria-label={t('contact.title')}>
         <div className="contact-main">
           {st.status === 'ok' ? (
             <div className="contact-done" role="status">
@@ -272,7 +301,7 @@ export function Contact() {
           </ul>
           <div className="contact-links">
             <p className="ex-label">{t('contact.firstT')}</p>
-            <Link to="/faq">{t('nav.faq')}<Icon name="arrow" size={15} className="arr" /></Link>
+            <a href="#faq">{t('nav.faq')}<Icon name="arrow" size={15} className="arr" /></a>
             <Link to="/membership">{t('nav.membership')}<Icon name="arrow" size={15} className="arr" /></Link>
             <Link to="/students">{t('nav.students')}<Icon name="arrow" size={15} className="arr" /></Link>
           </div>

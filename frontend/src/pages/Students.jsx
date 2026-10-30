@@ -116,7 +116,7 @@ export default function Students() {
           <div className="aside-card">
             <h2>{t('students.quickLinks')}</h2>
             <ul className="quick-links">
-              {[['/alumni', 'nav.alumni', 'users'], ['/committee', 'nav.committee', 'landmark'], ['/events', 'nav.events', 'calendar'], ['/contact', 'nav.contact', 'mail']].map(([to, k, ic]) => (
+              {[['/alumni', 'nav.alumni', 'users'], ['/committee', 'nav.committee', 'landmark'], ['/events', 'nav.events', 'calendar'], ['/help#contact', 'nav.contact', 'mail']].map(([to, k, ic]) => (
                 <li key={to}><Link to={to}><span className="ql-ico"><Icon name={ic} size={16} /></span>{t(k)}<Icon name="arrow" size={14} className="arr" /></Link></li>
               ))}
             </ul>

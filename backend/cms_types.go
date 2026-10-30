@@ -183,6 +183,8 @@ type CMSStore interface {
 	// SetEntryStatus: publish (draft/archived -> published), unpublish (published -> draft),
 	// archive (draft/published -> archived), restore (archived -> draft).
 	SetEntryStatus(ctx context.Context, actorID, id, action string) (Entry, error)
+	// DeleteEntry removes an archived entry for good (ErrBadState if it is not archived or is an album that still holds pictures).
+	DeleteEntry(ctx context.Context, actorID, id string) error
 	ReorderEntries(ctx context.Context, actorID, kind string, ids []string) error
 	CountEntries(ctx context.Context) (map[string]map[string]int, error)
 

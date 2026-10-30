@@ -674,3 +674,34 @@ func (s *pgStore) RemoveMember(ctx context.Context, actorID, userID string, exte
 	}
 	return tx.Commit(ctx)
 }
+
+func (s *pgStore) DeleteEntry(ctx context.Context, actorID, id string) error {
+	if !okID(id) {
+		return ErrNotFound
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	var kind, status, title string
+	if err := tx.QueryRow(ctx, `SELECT kind, status, title FROM cms_entries WHERE id = $1::uuid FOR UPDATE`, id).Scan(&kind, &status, &title); errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	var children int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM cms_entries WHERE parent_id = $1::uuid`, id).Scan(&children); err != nil {
+		return err
+	}
+	if status != StatusArchived || children > 0 {
+		return ErrBadState
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM cms_entries WHERE id = $1::uuid`, id); err != nil {
+		return err
+	}
+	if err := auditAdmin(ctx, tx, actorID, kind+".delete", kind, id, map[string]any{"title": title}); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}

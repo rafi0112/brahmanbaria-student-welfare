@@ -8,22 +8,8 @@ import Reveal from '../components/Reveal.jsx'
 import { Avatar, Photo } from '../components/ui.jsx'
 import { SketchArt, Vine } from '../components/Decor.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
-import { PlaceCard, PostCard } from '../components/cards.jsx'
-
-// The three discovery cards of "Explore Brahmanbaria", each opening the page that holds it.
-const DISCOVER = [
-  { to: '/heritage', img: '/images/bariura-bridge-640.webp', bn: 'ঐতিহ্য ও নিদর্শন', en: 'Heritage & Landmarks', dbn: 'ঐতিহাসিক স্থান ও সাংস্কৃতিক নিদর্শন ঘুরে দেখুন।', den: 'Explore historic places and cultural landmarks.' },
-  { to: '/heritage?category=mosque', img: '/images/bswa/mosque.webp', bn: 'ইসলামী সংস্কৃতি ও ঐতিহ্য', en: 'Islamic Culture & Traditions', dbn: 'বিশ্বাস, উৎসব ও স্থানীয় ঐতিহ্য জানুন।', den: 'Discover faith, festivals and local traditions.' },
-  { to: '/heritage?category=river', img: '/images/bswa/river.webp', bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', dbn: 'শান্ত নদী, প্রকৃতি ও মনোরম দৃশ্য।', den: 'Experience serene rivers, natural beauty and scenic landscapes.' },
-]
-
-// The cultural pillars of the district, each opening the page that really holds it.
-const CULTURE = [
-  { img: 'mosque', w: 530, h: 500, bn: 'ইসলামী ঐতিহ্য', en: 'Islamic Heritage', sbn: 'মসজিদ ও স্থাপত্য', sen: 'Mosques & architecture', to: '/heritage?category=mosque' },
-  { img: 'baul', w: 382, h: 400, bn: 'বাউল ও লোকসংস্কৃতি', en: 'Baul & Folk Culture', sbn: 'গান, গল্প ও যন্ত্র', sen: 'Music, stories & instruments', to: '/gallery' },
-  { img: 'puppets', w: 395, h: 512, bn: 'পুতুল নাচ', en: 'Putul Nach', sbn: 'ঐতিহ্যবাহী পুতুল নাচ', sen: 'Traditional puppet dance', to: '/gallery' },
-  { img: 'river', w: 740, h: 421, bn: 'নদী ও প্রকৃতি', en: 'Rivers & Nature', sbn: 'তিতাস, মেঘনা ও আরও', sen: 'The Titas, the Meghna and more', to: '/heritage?category=river' },
-]
+import { PostCard } from '../components/cards.jsx'
+import EventCarousel from '../components/EventCarousel.jsx'
 
 function MapPanel({ u }) {
   const { t, n, pick } = useApp()
@@ -51,6 +37,11 @@ export default function Home() {
   const ups = useApi('/upazilas')
   const places = useApi('/heritage')
   const posts = useApi('/blog')
+  const events = useApi('/events')
+  // upcoming events first (soonest first), then the most recent past ones
+  const today = new Date().toISOString().slice(0, 10)
+  const evAll = [...(events.data?.items || [])].sort((a, b) => a.date.localeCompare(b.date))
+  const eventList = [...evAll.filter((e) => e.date >= today), ...evAll.filter((e) => e.date < today).reverse()]
   const students = useApi('/students?limit=6')
   const upazilas = ups.data?.items || []
   const placeList = places.data?.items || []
@@ -92,21 +83,10 @@ export default function Home() {
               <div key={k}><span className="stat-ico" aria-hidden="true"><Icon name={ic} size={20} /></span><dt>{pick(bn, en)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
             ))}
           </dl>
-          <ul className="culture">
-            {CULTURE.map((c) => (
-              <li key={c.img}>
-                <Link to={c.to} className="culture-card">
-                  <img src={`/images/bswa/${c.img}.webp`} alt="" loading="lazy" decoding="async" width={c.w} height={c.h} />
-                  <span className="culture-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.sbn, c.sen)}</small></span>
-                  <Icon name="arrow" size={16} className="arr culture-arr" />
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
 
-      {/* ---------- explore Brahmanbaria: scenic image, three discovery cards and the nine upazilas ---------- */}
+      {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
       <section className="explore2" aria-labelledby="explore-h">
         <div className="explore2-grid">
           <Reveal className="ex-media ex-exact">
@@ -118,19 +98,7 @@ export default function Home() {
             <Reveal>
               <p className="eyebrow">{pick('অনেক গল্পের একটি জেলা', 'A district of many stories')}</p>
               <h2 id="explore-h" className="ex-title">{pick('ঘুরে দেখুন ', 'Explore ')}<span className="hl">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span></h2>
-              <p className="lede">{pick('সমৃদ্ধ ইতিহাস, প্রাণবন্ত সংস্কৃতি, শান্ত নদী আর অনুপ্রেরণাদায়ী মানুষের জেলা। নয়টি উপজেলা জুড়ে এর ঐতিহ্য, প্রথা ও মানুষকে জানুন।', 'A land of rich history, vibrant culture, serene rivers and inspiring people. Discover its heritage, traditions and communities across nine upazilas.')}</p>
             </Reveal>
-            <div className="ex-cards">
-              {DISCOVER.map((c, i) => (
-                <Reveal key={c.to} delay={i * 70}>
-                  <Link to={c.to} className="ex-card">
-                    <span className="ex-thumb blob-c"><img src={c.img} alt="" loading="lazy" decoding="async" /></span>
-                    <span className="ex-card-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.dbn, c.den)}</small></span>
-                    <span className="ex-arr" aria-hidden="true"><Icon name="arrow" size={14} /></span>
-                  </Link>
-                </Reveal>
-              ))}
-            </div>
             <Reveal className="ex-ups">
               <p className="ex-label">{pick('নয়টি উপজেলা', 'The nine upazilas')}</p>
               <div className="ex-ups-row">
@@ -167,15 +135,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- featured places ---------- */}
-      <section className="section wrap" aria-labelledby="featured-h">
+      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
+      <section className="section wrap" aria-labelledby="events-h">
         <Reveal className="section-head">
-          <h2 id="featured-h">{t('featured.title')}</h2>
-          <Link className="link-arrow" to="/heritage">{t('common.viewAll')} <Icon name="arrow" size={15} className="arr" /></Link>
+          <div>
+            <p className="eyebrow">{pick('ইভেন্ট ও আয়োজন', 'Events')}</p>
+            <h2 id="events-h">{pick('আসন্ন ও সাম্প্রতিক ইভেন্ট', 'Upcoming and recent events')}</h2>
+          </div>
+          <Link className="link-arrow" to="/events">{pick('সব ইভেন্ট', 'All events')} <Icon name="arrow" size={15} className="arr" /></Link>
         </Reveal>
-        <div className="cards-3">
-          {placeList.slice(0, 3).map((p, i) => <Reveal key={p.slug} delay={i * 70}><PlaceCard p={p} upazilas={upazilas} /></Reveal>)}
-        </div>
+        <EventCarousel items={eventList} loading={events.loading} />
       </section>
 
       {/* ---------- student community: real community photograph beside an evergreen panel ---------- */}

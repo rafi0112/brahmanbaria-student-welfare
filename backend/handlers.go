@@ -38,6 +38,7 @@ func (a *App) Routes() http.Handler {
 		writeJSON(w, 200, map[string]any{"items": a.data().Depts})
 	})
 	m.HandleFunc("GET /api/v1/events", a.publicEvents)
+	m.HandleFunc("GET /api/v1/events/{slug}", a.publicEvent)
 	m.HandleFunc("GET /api/v1/committee", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"items": a.data().Committee})
 	})

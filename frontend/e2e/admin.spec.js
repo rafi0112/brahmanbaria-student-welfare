@@ -429,9 +429,23 @@ test('site data from the database: events, FAQ and alumni are created in the pan
   await dlg.getByLabel('Venue').fill('TSC auditorium')
   await dlg.getByRole('button', { name: 'Save and publish' }).click()
   await expect(dlg).toBeHidden()
+  // the events page leads with it (the next event), lists it, and its own page opens
   await page.goto('/events')
+  await expect(page.locator('.evp-feature')).toContainText('E2E Freshers Reception')
+  await expect(page.locator('.evp-card', { hasText: 'E2E Freshers Reception' })).toContainText('TSC auditorium')
+  await page.locator('.evp-card', { hasText: 'E2E Freshers Reception' }).click()
+  await expect(page).toHaveURL(/\/events\/e2e-freshers-reception$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'E2E Freshers Reception' })).toBeVisible()
+  // the home page carousel shows it too
+  await page.goto('/')
+  await expect(page.locator('.evx-slide', { hasText: 'E2E Freshers Reception' })).toHaveCount(1)
+  // feature it from the list, then filter by featured
+  await page.goto('/admin/events')
+  await page.getByRole('button', { name: /Actions: E2E Freshers Reception/ }).click()
+  await page.getByRole('menuitem', { name: 'Feature' }).click()
+  await expect(page.getByText('Marked as featured.')).toBeVisible()
+  await page.goto('/admin/events?featured=yes')
   await expect(page.getByText('E2E Freshers Reception')).toBeVisible()
-  await expect(page.getByText('TSC auditorium')).toBeVisible()
   // FAQ
   await page.goto('/admin/faq')
   await expect(page.getByText('Who can join BSWA?').first()).toBeVisible() // the bundled questions were copied to the database
@@ -501,4 +515,51 @@ test('alumni setting: choosing a batch asks once and saves; both admin pages fol
   await page.locator('#ac-batch').selectOption(before)
   await page.getByRole('dialog').getByRole('button', { name: 'Yes, save it' }).click()
   await expect(page.getByText(`Saved: alumni up to batch ${before}.`)).toBeVisible()
+})
+
+test('heritage places: create, edit, publish to the site, archive, then delete permanently with a double confirmation', async ({ page }) => {
+  await login(page)
+  const api = (method, path, data) => page.request.fetch(`/api/v1${path}`, { method, data })
+  const made = await (await api('POST', '/admin/content/place', { slug: 'e2e-place', data: { nameEn: 'Zqxv E2E Place', nameBn: 'পরীক্ষা স্থান', category: 'park', upazila: 'akhaura', summary: 'First text.' } })).json()
+  const got = await (await api('GET', `/admin/content/place/${made.id}`)).json()
+  expect((await api('PATCH', `/admin/content/place/${made.id}`, { slug: 'e2e-place', data: { ...got.data, summary: 'Edited text.' }, expectedUpdatedAt: got.updatedAt })).status()).toBe(200)
+  expect((await api('POST', `/admin/content/place/${made.id}/publish`, {})).status()).toBe(200)
+  // on the site: the heritage list and the upazila page
+  await page.goto('/heritage/e2e-place')
+  await expect(page.getByText('Edited text.')).toBeVisible()
+  await page.goto('/directory/akhaura')
+  await expect(page.getByRole('heading', { name: 'Zqxv E2E Place' })).toBeVisible()
+  // a published place cannot be deleted outright
+  expect((await api('DELETE', `/admin/content/place/${made.id}`)).status()).toBe(409)
+  // archive, then delete from the panel: two confirmations
+  expect((await api('POST', `/admin/content/place/${made.id}/archive`, {})).status()).toBe(200)
+  await page.goto('/admin/heritage?status=archived')
+  await page.getByRole('button', { name: /Actions: Zqxv E2E Place/ }).click()
+  await page.getByRole('menuitem', { name: 'Delete permanently' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByRole('dialog')).toContainText('this cannot be undone')
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete permanently' }).click()
+  await expect(page.getByText('Deleted permanently.')).toBeVisible()
+  expect((await api('GET', `/admin/content/place/${made.id}`)).status()).toBe(404)
+  await page.goto('/heritage/e2e-place')
+  await expect(page.getByText('Edited text.')).toHaveCount(0)
+})
+
+test('events: past events stay on the home carousel and the events page, after the upcoming ones', async ({ page }) => {
+  await login(page)
+  const api = (method, path, data) => page.request.fetch(`/api/v1${path}`, { method, data })
+  const e = await (await api('POST', '/admin/content/event', { slug: 'e2e-past-meetup', data: { titleEn: 'Zqxv Past Meetup', date: '2020-01-15', venue: 'Old hall' } })).json()
+  expect((await api('POST', `/admin/content/event/${e.id}/publish`, {})).status()).toBe(200)
+  await page.goto('/')
+  const slide = page.locator('.evx-slide', { hasText: 'Zqxv Past Meetup' })
+  await expect(slide).toHaveCount(1)
+  await expect(slide.locator('.evx-when')).toHaveText('Past')
+  await page.goto('/events?when=past')
+  await expect(page.locator('.evp-card', { hasText: 'Zqxv Past Meetup' })).toBeVisible()
+  // archived, it leaves both; deleted, it is gone from the database
+  expect((await api('POST', `/admin/content/event/${e.id}/archive`, {})).status()).toBe(200)
+  await page.goto('/')
+  await expect(page.locator('.evx-slide', { hasText: 'Zqxv Past Meetup' })).toHaveCount(0)
+  expect((await api('DELETE', `/admin/content/event/${e.id}`)).status()).toBe(204)
+  expect((await api('GET', `/admin/content/event/${e.id}`)).status()).toBe(404)
 })

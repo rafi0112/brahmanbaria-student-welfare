@@ -20,7 +20,9 @@ export function actionConfirm(t, action, title) {
 /* ---------------------------------------------------------------- list (blog posts, places, images) */
 
 // `columns` renders the kind-specific cells; everything else (filters, paging, bulk, status flow) is shared.
-export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint, searchPlaceholder }) {
+// With `Editor` (a modal component taking row / onClose / onSaved / kind), Add and Edit open it in place instead of a page.
+// `canFeature` adds Feature / Unfeature to each row.
+export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint, searchPlaceholder, Editor, canFeature }) {
   const { t, lang, n } = useApp()
   const when = useWhen(lang)
   const errText = useErrText()
@@ -31,7 +33,18 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
   const [picked, setPicked] = useState([])
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [edit, setEdit] = useState(null) // the row in the modal editor; {} for a new one
   const rows = list.data?.items || []
+  const toggleFeature = async (r) => {
+    setBusy(true); clear()
+    try {
+      const e = await api(`/admin/content/${kind}/${r.id}`)
+      await api(`/admin/content/${kind}/${r.id}`, { method: 'PATCH', body: JSON.stringify({ slug: e.slug, featured: !e.featured, data: e.data, expectedUpdatedAt: e.updatedAt }) })
+      ok(t(e.featured ? 'ad.done.unfeature' : 'ad.done.feature')); list.retry()
+    } catch (err) { bad(errText(err)) } finally { setBusy(false) }
+  }
+  const addButton = Editor ? <button type="button" className="btn btn-dark btn-sm" onClick={() => setEdit({})}>+ {addLabel}</button>
+    : addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>
   useEffect(() => setPicked([]), [query])
   const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit', 'sort'].includes(k))
   const clearAll = () => set({ q: '', status: '', from: '', to: '', ...Object.fromEntries(extra.map((x) => [x.key, ''])) })
@@ -39,7 +52,10 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
   const run = async (action, ids, title) => {
     setBusy(true); clear()
     try {
-      if (ids.length === 1) {
+      if (action === 'delete') {
+        await api(`/admin/content/${kind}/${ids[0]}`, { method: 'DELETE' })
+        ok(t('ad.done.delete'))
+      } else if (ids.length === 1) {
         await api(`/admin/content/${kind}/${ids[0]}/${action}`, { method: 'POST' })
         ok(t(`ad.done.${action}`))
       } else {
@@ -57,7 +73,7 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
 
   return (
     <section aria-labelledby={`${kind}-h`}>
-      <PageHeader title={<span id={`${kind}-h`}>{title}</span>} desc={desc} action={addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
+      <PageHeader title={<span id={`${kind}-h`}>{title}</span>} desc={desc} action={addButton} />
       <ListToolbar section={kind} values={f} set={set} defaults={{ sort: 'updated', limit: '20' }} total={list.data?.total} loading={list.loading}
         search={{ placeholder: searchPlaceholder || t('ad.search') }}
         views={[
@@ -82,7 +98,7 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
       {list.error && <Data q={list}>{() => null}</Data>}
       {list.data && (rows.length === 0 ? (
         <EmptyState title={t(filtered ? 'ad.noMatch' : 'ad.nothingYet')} text={filtered ? t('ad.noMatchHint') : emptyHint}
-          action={filtered ? <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button> : addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>} />
+          action={filtered ? <button type="button" className="btn btn-ghost btn-sm" onClick={clearAll}>{t('common.clear')}</button> : addButton} />
       ) : (
         <>
           <DataTable caption={title} rows={rows} rowKey={(r) => r.id}
@@ -93,10 +109,13 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
               {
                 id: 'actions', srLabel: t('ad.actions'), width: '116px', className: 'dt-actions-cell', cell: (r) => (
                   <div className="dt-actions">
-                    <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>
+                    {Editor ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.edit')}</button>
+                      : <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>}
                     <RowMenu label={`${t('ad.actions')}: ${r.title}`} items={[
                       ...NEXT[r.status].map(([act, label]) => ({ label: t(label), onClick: () => ask(act, [r.id], r.title), disabled: busy, danger: act === 'archive' })),
+                      canFeature ? { label: t(r.featured ? 'ad.act2.unfeature' : 'ad.act2.feature'), icon: 'star', disabled: busy, onClick: () => toggleFeature(r) } : null,
                       r.status === 'published' && publicPath ? { label: t('ad.openPublic'), href: publicPath(r) } : null,
+                      r.status === 'archived' ? { label: t('ad.act2.delete'), icon: 'trash', danger: true, sep: true, disabled: busy, onClick: () => setConfirm({ action: 'delete', ids: [r.id], step: 1, text: actionConfirm(t, 'delete', r.title) }) } : null,
                     ]} />
                   </div>
                 ),
@@ -105,7 +124,14 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
           <Pager total={list.data.total} page={list.data.page} pages={list.data.pages} limit={f.limit} onPage={(p) => set({ page: p })} onLimit={(limit) => set({ limit })} />
         </>
       ))}
-      {confirm && <Confirm text={confirm.text} detail={confirm.action === 'archive' ? <p className="muted small">{t('ad.archiveNote')}</p> : null}
+      {edit && Editor && <Editor row={edit.id ? edit : null} kind={kind} onClose={() => setEdit(null)}
+        onSaved={(publishNow) => { setEdit(null); ok(t(publishNow ? 'ad.sd.savedPublished' : 'ad.sd.saved')); list.retry() }} />}
+      {confirm && confirm.action === 'delete' ? (
+        // permanent delete asks twice: what will happen, then a last check
+        <Confirm tone="danger" text={confirm.step === 1 ? confirm.text : t('ad.confirm.deleteAgain')}
+          detail={<p className="muted small">{t('ad.deleteNote')}</p>} label={t(confirm.step === 1 ? 'ad.act2.continue' : 'ad.act2.delete')} busy={busy}
+          onYes={() => (confirm.step === 1 ? setConfirm({ ...confirm, step: 2 }) : run('delete', confirm.ids))} onNo={() => setConfirm(null)} />
+      ) : confirm && <Confirm text={confirm.text} detail={confirm.action === 'archive' ? <p className="muted small">{t('ad.archiveNote')}</p> : null}
         label={t(`ad.act2.${confirm.action}`)} busy={busy} onYes={() => run(confirm.action, confirm.ids)} onNo={() => setConfirm(null)} />}
     </section>
   )

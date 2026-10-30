@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { LeafMark, SketchArt } from './Decor.jsx'
@@ -9,9 +9,9 @@ import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
   ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/events', 'nav.events'], ['/alumni', 'nav.alumni'],
-  ['/committee', 'nav.committee'], ['/gallery', 'nav.gallery'], ['/faq', 'nav.faq'], ['/contact', 'nav.contact'],
+  ['/committee', 'nav.committee'], ['/gallery', 'nav.gallery'], ['/help', 'nav.help'],
 ]
-const BAR = NAV.slice(1) // the brand already leads home on the bar; the drawer lists every page
+const BAR = NAV // Home is on the bar too, as the committee asked; the drawer lists every page
 
 function ThemeGlyph({ dark }) {
   return (
@@ -50,6 +50,34 @@ function Header() {
     addEventListener('scroll', onScroll, { passive: true })
     return () => { removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
   }, [])
+  // The bar fits itself to the space it has, in any language and signed in or not: full size, then compact (tighter
+  // links, no brand subtitle), and only when even that does not fit, the menu button. Hidden copies of the links are
+  // measured at both sizes, so the choice never depends on the mode currently shown.
+  const [mode, setMode] = useState('full')
+  const barRef = useRef(null), brandRef = useRef(null), toolsRef = useRef(null), mFull = useRef(null), mCompact = useRef(null), mSub = useRef(null), mName = useRef(null)
+  const fit = useCallback(() => {
+    const bar = barRef.current
+    if (!bar || !mFull.current || !mCompact.current) return
+    // the full bar's own gap (clamp(14px, 2vw, 28px)), so the answer does not depend on the mode on screen
+    const gap = Math.min(28, Math.max(14, window.innerWidth * 0.02))
+    const tools = [...toolsRef.current.children].filter((el) => !el.classList.contains('menu-btn'))
+      .reduce((w, el) => w + (el.offsetWidth ? el.offsetWidth + 6 : 0), 0)
+    const name = mName.current?.offsetWidth || 0
+    const sub = mSub.current?.offsetWidth || 0
+    const mark = 48
+    const needFull = mark + Math.max(name, sub) + gap + mFull.current.scrollWidth + gap + tools + 16
+    const needCompact = mark + name + 12 + mCompact.current.scrollWidth + 12 + tools + 16
+    const w = bar.clientWidth
+    setMode(w >= needFull ? 'full' : w >= needCompact ? 'compact' : 'menu')
+  }, [])
+  useLayoutEffect(() => { fit() }, [fit, t, user])
+  useEffect(() => {
+    const ro = new ResizeObserver(() => fit())
+    if (barRef.current) ro.observe(barRef.current)
+    document.fonts?.ready?.then(fit)
+    return () => ro.disconnect()
+  }, [fit])
+  useEffect(() => { if (mode !== 'menu') setOpen(false) }, [mode])
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     const esc = (e) => e.key === 'Escape' && setOpen(false)
@@ -58,17 +86,22 @@ function Header() {
   }, [open])
 
   return (
-    <header className={`site-header${scrolled ? ' is-scrolled' : ''}${onHero ? ' on-hero' : ''}${open ? ' is-open' : ''}`}>
+    <header className={`site-header nav-measured nav-${mode}${scrolled ? ' is-scrolled' : ''}${onHero ? ' on-hero' : ''}${open ? ' is-open' : ''}`}>
       <a className="skip" href="#main">{t('nav.skip')}</a>
-      <div className="nav-bar">
-        <Link to="/" className="brand" aria-label={t('brand')}>
+      {/* measuring copies of the links (never shown, never focusable) */}
+      <div className="nav-links nav-measure" ref={mFull} aria-hidden="true" inert="">{BAR.map(([to, k]) => <a key={to}>{t(k)}</a>)}</div>
+      <small className="nav-measure m-sub" ref={mSub} aria-hidden="true">{t('brandFull')}</small>
+      <span className="brand nav-measure m-name" aria-hidden="true"><b ref={mName}>{t('brand')}</b></span>
+      <div className="nav-links nav-measure m-compact" ref={mCompact} aria-hidden="true" inert="">{BAR.map(([to, k]) => <a key={to}>{t(k)}</a>)}</div>
+      <div className="nav-bar" ref={barRef}>
+        <Link to="/" className="brand" aria-label={t('brand')} ref={brandRef}>
           <LeafMark size={38} />
           <span><b>{t('brand')}</b><small>{t('brandFull')}</small></span>
         </Link>
         <nav className="nav-links" aria-label="Main">
-          {BAR.map(([to, k]) => <NavLink key={to} to={to}>{t(k)}</NavLink>)}
+          {BAR.map(([to, k]) => <NavLink key={to} to={to} end={to === '/'}>{t(k)}</NavLink>)}
         </nav>
-        <div className="nav-tools">
+        <div className="nav-tools" ref={toolsRef}>
           <Link className="icon-btn" to="/students" aria-label={t('common.search')} title={t('common.search')}><Icon name="search" size={18} /></Link>
           <button type="button" className="icon-btn txt" onClick={toggleLang} aria-label={t('lang.toggle')} title={t('lang.toggle')}>{t('lang.toggle')}</button>
           <button type="button" className="icon-btn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}><ThemeGlyph dark={isDark()} /></button>
@@ -129,11 +162,11 @@ function Footer() {
           <Link to="/directory">{t('footer.upazilas')}</Link>
           <Link to="/gallery">{t('nav.gallery')}</Link>
           <Link to="/blog">{t('nav.blog')}</Link>
-          <Link to="/faq">{t('nav.faq')}</Link>
+          <Link to="/help#faq">{t('nav.faq')}</Link>
         </nav>
         <div>
           <h2>{t('footer.touch')}</h2>
-          <Link to="/contact">{t('footer.send')}</Link>
+          <Link to="/help#contact">{t('footer.send')}</Link>
           <span className="footer-line">{t('footer.campus')}</span>
           <Link className="btn btn-sm ft-cta" to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('footer.join')} <Icon name="arrow" size={15} className="arr" /></Link>
         </div>

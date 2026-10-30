@@ -6,7 +6,7 @@ import { Badge, MediaPhoto } from '../components/ui.jsx'
 import { ContentList, EditorGate, StatusPanel, useEntryEditor } from './content.jsx'
 import { Field, ImagePicker, Modal, Notice, PageHeader, slugFrom, useUnsavedGuard } from './kit.jsx'
 
-const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river']
+const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'palace', 'shrine', 'lake', 'park', 'market', 'port', 'heritage-site']
 
 export function HeritageList() {
   const { t, pick } = useApp()

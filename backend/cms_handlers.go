@@ -337,6 +337,7 @@ func (a *App) cmsRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *http
 	m.HandleFunc("GET /api/v1/admin/content/{kind}/{id}", adm(a.cmsOne))
 	m.HandleFunc("PATCH /api/v1/admin/content/{kind}/{id}", adm(a.cmsSave))
 	m.HandleFunc("POST /api/v1/admin/content/{kind}/{id}/{action}", adm(a.cmsAction))
+	m.HandleFunc("DELETE /api/v1/admin/content/{kind}/{id}", adm(a.cmsDelete))
 	m.HandleFunc("POST /api/v1/admin/media", adm(a.uploadMedia))
 
 	m.HandleFunc("GET /api/v1/gallery", h(a.publicGallery))
@@ -382,14 +383,16 @@ func (a *App) entryOut(e Entry) Entry {
 			m[key+"Url"] = a.mediaURL(ref)
 		}
 	}
-	if imgs, ok := m["images"].([]any); ok {
-		urls := make([]string, len(imgs))
-		for i, v := range imgs {
-			if ref, _ := v.(string); photoRx.MatchString(ref) {
-				urls[i] = a.mediaURL(ref)
+	for key, out := range map[string]string{"images": "imageUrls", "gallery": "galleryUrls"} {
+		if imgs, ok := m[key].([]any); ok {
+			urls := make([]string, len(imgs))
+			for i, v := range imgs {
+				if ref, _ := v.(string); photoRx.MatchString(ref) {
+					urls[i] = a.mediaURL(ref)
+				}
 			}
+			m[out] = urls
 		}
-		m["imageUrls"] = urls
 	}
 	if b, err := json.Marshal(m); err == nil {
 		e.Data = b
@@ -506,6 +509,24 @@ func (a *App) cmsAction(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	writeJSON(w, 200, a.entryOut(e))
+}
+
+// cmsDelete removes an archived entry for good. Archive first, so a single click can never destroy published content.
+func (a *App) cmsDelete(w http.ResponseWriter, r *http.Request, u User) {
+	kind, ok := kindParam(w, r)
+	if !ok {
+		return
+	}
+	if e, err := a.Auth.Store.GetEntry(r.Context(), kind, r.PathValue("id"), false); err != nil || e.Kind != kind {
+		apiError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	if err := a.Auth.Store.DeleteEntry(r.Context(), u.ID, r.PathValue("id")); err != nil {
+		a.cmsFail(w, err)
+		return
+	}
+	a.afterContentChange(r, kind)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *App) cmsReorder(w http.ResponseWriter, r *http.Request, u User) {

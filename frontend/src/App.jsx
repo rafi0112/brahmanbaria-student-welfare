@@ -1,10 +1,10 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import Home from './pages/Home.jsx'
 import Students, { StudentDetail } from './pages/Students.jsx'
 import Directory, { UpazilaDetail } from './pages/Directory.jsx'
 import Heritage, { HeritageDetail } from './pages/Heritage.jsx'
-import { About, Blog, BlogPost, Contact, Gallery, NotFound } from './pages/Content.jsx'
+import { About, Blog, BlogPost, Gallery, HelpPage, NotFound } from './pages/Content.jsx'
 import Auth, { Verify } from './pages/Auth.jsx'
 import Activate from './pages/Activate.jsx'
 import { Dashboard } from './pages/Dashboards.jsx'
@@ -16,7 +16,8 @@ import GalleryAdmin from './admin/GalleryAdmin.jsx'
 import ActivityPage from './admin/ActivityPage.jsx'
 import ContactInbox from './admin/ContactInbox.jsx'
 import { AlumniAdmin, EventsAdmin, FAQAdmin, ReferenceAdmin } from './admin/SiteDataAdmin.jsx'
-import { Alumni, Committee, Events, FAQPage, Membership } from './pages/Community.jsx'
+import { Alumni, Committee, Membership } from './pages/Community.jsx'
+import { EventDetail, Events } from './pages/EventsPages.jsx'
 
 export default function App() {
   return (
@@ -34,11 +35,14 @@ export default function App() {
         <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="events" element={<Events />} />
+        <Route path="events/:slug" element={<EventDetail />} />
         <Route path="alumni" element={<Alumni />} />
         <Route path="committee" element={<Committee />} />
-        <Route path="faq" element={<FAQPage />} />
+        <Route path="help" element={<HelpPage />} />
+        {/* FAQ and Contact share the Help & Contact page now; old links land on their section */}
+        <Route path="faq" element={<Navigate to="/help#faq" replace />} />
         <Route path="membership" element={<Membership />} />
-        <Route path="contact" element={<Contact />} />
+        <Route path="contact" element={<Navigate to="/help#contact" replace />} />
         <Route path="login" element={<Auth mode="login" />} />
         <Route path="register" element={<Auth mode="register" />} />
         <Route path="forgot-password" element={<Auth mode="forgot" />} />

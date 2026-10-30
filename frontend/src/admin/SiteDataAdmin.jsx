@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
-import { Data } from '../components/ui.jsx'
+import { Data, MediaPhoto } from '../components/ui.jsx'
+import { ContentList } from './content.jsx'
 import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
@@ -35,6 +36,12 @@ function EntryAdmin({ kind, titleKey, descKey, addKey, columns, Editor, blank, s
     setBusy(true); clear()
     try { await api(`/admin/content/${kind}/${r.id}/${action}`, { method: 'POST', body: '{}' }); ok(t(done)); list.retry() }
     catch (e) { bad(errText(e)) } finally { setBusy(false); setConfirm(null) }
+  }
+  const [drop, setDrop] = useState(null) // { row, step } for the two-step permanent delete
+  const destroy = async (r) => {
+    setBusy(true); clear()
+    try { await api(`/admin/content/${kind}/${r.id}`, { method: 'DELETE' }); ok(t('ad.done.delete')); list.retry() }
+    catch (e) { bad(errText(e)) } finally { setBusy(false); setDrop(null) }
   }
   const move = async (i, dir) => {
     const ids = rows.map((r) => r.id)
@@ -73,6 +80,7 @@ function EntryAdmin({ kind, titleKey, descKey, addKey, columns, Editor, blank, s
                       r.status !== 'archived'
                         ? { label: t('ad.sd.remove'), icon: 'trash', danger: true, sep: true, onClick: () => setConfirm(r) }
                         : { label: t('ad.sd.restore'), icon: 'up', sep: true, onClick: () => act(r, 'restore', 'ad.sd.restored') },
+                      r.status === 'archived' && { label: t('ad.act2.delete'), icon: 'trash', danger: true, onClick: () => setDrop({ row: r, step: 1 }) },
                     ]} />
                   </div>
                 )
@@ -86,6 +94,9 @@ function EntryAdmin({ kind, titleKey, descKey, addKey, columns, Editor, blank, s
         onSaved={(publishNow) => { setEdit(null); ok(t(publishNow ? 'ad.sd.savedPublished' : 'ad.sd.saved')); list.retry() }} kind={kind} />}
       {confirm && <Confirm tone="danger" title={t('ad.sd.remove')} text={t('ad.sd.removeText').replace('{what}', confirm.title)} label={t('ad.sd.remove')} busy={busy}
         onYes={() => act(confirm, 'archive', 'ad.sd.removed')} onNo={() => setConfirm(null)} />}
+      {drop && <Confirm tone="danger" text={drop.step === 1 ? t('ad.confirm.delete').replace('{title}', drop.row.title) : t('ad.confirm.deleteAgain')}
+        detail={<p className="muted small">{t('ad.deleteNote')}</p>} label={t(drop.step === 1 ? 'ad.act2.continue' : 'ad.act2.delete')} busy={busy}
+        onYes={() => (drop.step === 1 ? setDrop({ ...drop, step: 2 }) : destroy(drop.row))} onNo={() => setDrop(null)} />}
     </section>
   )
 }
@@ -96,10 +107,10 @@ function useEntrySave(kind, row, onSaved) {
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
-  const save = async (data, { slug, publish } = {}) => {
+  const save = async (data, { slug, publish, featured } = {}) => {
     setBusy(true); setErrs({}); setMsg('')
     try {
-      const body = JSON.stringify({ data, ...(slug != null ? { slug } : {}), ...(row ? { expectedUpdatedAt: row.updatedAt } : {}) })
+      const body = JSON.stringify({ data, ...(slug != null ? { slug } : {}), ...(featured != null ? { featured } : {}), ...(row ? { expectedUpdatedAt: row.updatedAt } : {}) })
       const e = await api(row ? `/admin/content/${kind}/${row.id}` : `/admin/content/${kind}`, { method: row ? 'PATCH' : 'POST', body })
       if (publish && e.status !== 'published') await api(`/admin/content/${kind}/${e.id}/publish`, { method: 'POST', body: '{}' })
       onSaved(publish)
@@ -130,8 +141,13 @@ function EventEditor({ row, onClose, onSaved, kind }) {
   const d = row?.data || {}
   const [v, setV] = useState({ titleEn: d.titleEn || '', titleBn: d.titleBn || '', date: d.date || '', endDate: d.endDate || '', time: d.time || '', venue: d.venue || '',
     summaryEn: d.summaryEn || '', summaryBn: d.summaryBn || '', image: d.image || '', imageUrl: d.imageUrl || '', link: d.link || '' })
+  // more photos of the event; the admin list carries their resolved urls (empty for bundled photos)
+  const [gallery, setGallery] = useState((d.gallery || []).map((ref, i) => ({ ref, url: d.galleryUrls?.[i] || '' })))
+  const [featured, setFeatured] = useState(!!row?.featured)
   const { errs, msg, busy, save } = useEntrySave(kind, row, onSaved)
-  const { imageUrl, ...data } = v
+  const { imageUrl, ...rest } = v
+  const data = { ...rest, gallery: gallery.map((g) => g.ref).filter(Boolean) }
+  const legacy = (ref, url) => (ref && !url && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
   return (
     <Modal title={t(row ? 'ad.ev.edit' : 'ad.ev.add')} onClose={onClose} drawer busy={busy}>
       <div className="ad-grid-2">
@@ -145,20 +161,44 @@ function EventEditor({ row, onClose, onSaved, kind }) {
       <Field label={t('ad.ev.summaryEn')} error={errs.summaryEn} count={v.summaryEn.length} max={2000}>{(id, bad) => <textarea id={id} rows={4} {...text(v, setV, 'summaryEn')} aria-invalid={bad} maxLength={2000} />}</Field>
       <Field label={t('ad.ev.summaryBn')} error={errs.summaryBn} count={v.summaryBn.length} max={2000}>{(id, bad) => <textarea id={id} lang="bn" rows={4} {...text(v, setV, 'summaryBn')} aria-invalid={bad} maxLength={2000} />}</Field>
       <Field label={t('ad.ev.link')} error={errs.link} hint="https://…">{(id, bad) => <input id={id} type="url" {...text(v, setV, 'link')} aria-invalid={bad} />}</Field>
-      <ImagePicker label={t('ad.ev.image')} value={v.image} url={imageUrl} onChange={(m) => setV({ ...v, image: m ? m.path : '', imageUrl: m ? m.url : '' })} />
+      <ImagePicker label={t('ad.ev.image')} value={v.image} url={imageUrl} legacyUrl={legacy(v.image, imageUrl)} onChange={(m) => setV({ ...v, image: m ? m.path : '', imageUrl: m ? m.url : '' })} />
       {errs.image && <small className="err" role="alert">{errs.image}</small>}
+      <fieldset className="ad-section"><legend>{t('ad.ev.gallery')}</legend>
+        <p className="muted small">{t('ad.ev.galleryHint')}</p>
+        {errs.gallery && <small className="err" role="alert">{errs.gallery}</small>}
+        <div className="ad-gallery-grid">
+          {gallery.map((g, i) => (
+            <ImagePicker key={i} label={`${t('ad.her.photoN')} ${i + 1}`} value={g.ref} url={g.url} legacyUrl={legacy(g.ref, g.url)}
+              onChange={(m) => setGallery(m ? gallery.map((x, j) => (j === i ? { ref: m.path, url: m.url } : x)) : gallery.filter((_, j) => j !== i))} />
+          ))}
+        </div>
+        {gallery.length < 24 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setGallery([...gallery, { ref: '', url: '' }])}>+ {t('ad.her.addImage')}</button>}
+      </fieldset>
+      <label className="check"><input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} /> {t('ad.ev.featured')}</label>
       {msg && <p className="notice bad" role="alert">{msg}</p>}
-      <SaveRow busy={busy} row={row} onClose={onClose} onSave={(publish) => save(data, { publish, slug: row?.slug })} />
+      <SaveRow busy={busy} row={row} onClose={onClose} onSave={(publish) => save(data, { publish, slug: row?.slug, featured })} />
     </Modal>
   )
 }
 
+// Events: search, status views, featured filter, sorting, bulk actions and permanent delete come from the shared list;
+// adding and editing happen in the event editor above.
 export function EventsAdmin() {
-  return <EntryAdmin kind="event" titleKey="ad.ev.title" descKey="ad.ev.desc" addKey="ad.ev.add" Editor={EventEditor} blank={{}}
-    columns={(t) => [
-      { id: 'title', label: t('ad.ev.event'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.title}</strong><small className="dt-sub">{r.data.venue || '—'}</small></div> },
-      { id: 'date', label: t('ad.ev.date'), width: '170px', cell: (r) => <small className="dt-sub">{r.data.date}{r.data.time ? ` · ${r.data.time}` : ''}</small> },
-    ]} />
+  const { t } = useApp()
+  return (
+    <ContentList kind="event" title={t('ad.ev.title')} desc={t('ad.ev.desc')} addLabel={t('ad.ev.add')} Editor={EventEditor} canFeature
+      publicPath={(r) => `/events/${r.slug}`} emptyHint={t('ad.sd.noneHint')} searchPlaceholder={t('ad.sd.search')}
+      extra={[{ key: 'featured', label: t('ad.ev.featuredF'), all: t('ad.ev.anyFeatured'), options: [['yes', t('ad.ev.onlyFeatured')], ['no', t('ad.ev.notFeatured')]] }]}
+      columns={[
+        { label: t('ad.ev.event'), render: (r) => (
+          <div className="ad-ev-cell">
+            <MediaPhoto id={r.data.imageUrl ? undefined : r.data.image} url={r.data.imageUrl} alt="" className="dt-thumb" sizes="64px" />
+            <div className="dt-stack"><strong className="dt-clamp">{r.featured && <span className="ad-star" title={t('ad.ev.featured')}>★ </span>}{r.title}</strong><small className="dt-sub">{r.data.venue || '—'}</small></div>
+          </div>
+        ) },
+        { label: t('ad.ev.date'), width: '170px', render: (r) => <small className="dt-sub">{r.data.date}{r.data.time ? ` · ${r.data.time}` : ''}{r.data.gallery?.length ? ` · ${r.data.gallery.length + 1} ${t('ad.ev.photos')}` : ''}</small> },
+      ]} />
+  )
 }
 
 /* ---------------------------------------------------------------- FAQ */

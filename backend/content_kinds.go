@@ -35,8 +35,9 @@ type EventData struct {
 	Venue     string `json:"venue"`
 	SummaryEn string `json:"summaryEn"`
 	SummaryBn string `json:"summaryBn"`
-	Image     string `json:"image"`
-	Link      string `json:"link"` // registration or details page
+	Image     string   `json:"image"`
+	Gallery   []string `json:"gallery,omitempty"` // more photos of the event (uploaded or bundled), shown on its page
+	Link      string   `json:"link"`              // registration or details page
 }
 
 type FAQData struct {
@@ -81,6 +82,14 @@ func parseEvent(raw json.RawMessage, b *entryBody) (EntryInput, map[string]strin
 	}
 	if !validImageRef(d.Image) {
 		errs["image"] = "Upload the image again."
+	}
+	if len(d.Gallery) > 24 {
+		errs["gallery"] = "At most 24 photos."
+	}
+	for _, g := range d.Gallery {
+		if g == "" || !validImageRef(g) {
+			errs["gallery"] = "Upload the photos again."
+		}
 	}
 	if b.Slug == "" {
 		b.Slug = slugify(firstNonEmpty(d.TitleEn, d.Date))
@@ -184,9 +193,41 @@ func (a *App) publishedOf(ctx context.Context, kind string) ([]Entry, error) {
 
 type eventOut struct {
 	EventData
-	Slug     string `json:"slug"`
-	ImageURL string `json:"imageUrl,omitempty"`
-	Summary  string `json:"summary"` // kept for older clients: the English description, or the Bangla one
+	Slug        string   `json:"slug"`
+	ImageURL    string   `json:"imageUrl,omitempty"`
+	GalleryURLs []string `json:"galleryUrls,omitempty"` // same order as Gallery; "" where the photo is a bundled one
+	Featured    bool     `json:"featured"`
+	Summary     string   `json:"summary"` // kept for older clients: the English description, or the Bangla one
+}
+
+func (a *App) eventFromEntry(e Entry) eventOut {
+	var d EventData
+	_ = json.Unmarshal(e.Data, &d)
+	o := eventOut{EventData: d, Slug: e.Slug, Featured: e.Featured, Summary: firstNonEmpty(d.SummaryEn, d.SummaryBn)}
+	if u := a.mediaURL(d.Image); u != "" { // an uploaded picture; otherwise Image is a bundled picture id
+		o.ImageURL, o.Image = u, ""
+	}
+	if len(d.Gallery) > 0 {
+		o.GalleryURLs = make([]string, len(d.Gallery))
+		for i, g := range d.Gallery {
+			o.GalleryURLs[i] = a.mediaURL(g)
+		}
+	}
+	return o
+}
+
+// publicEvent is one published event by its slug, for the event's own page.
+func (a *App) publicEvent(w http.ResponseWriter, r *http.Request) {
+	if a.Auth == nil {
+		apiError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	e, err := a.Auth.Store.GetEntry(r.Context(), KindEvent, r.PathValue("slug"), true)
+	if err != nil {
+		apiError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	writeJSON(w, 200, a.eventFromEntry(e))
 }
 
 func (a *App) publicEvents(w http.ResponseWriter, r *http.Request) {
@@ -201,13 +242,7 @@ func (a *App) publicEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]eventOut, 0, len(items))
 	for _, e := range items {
-		var d EventData
-		_ = json.Unmarshal(e.Data, &d)
-		o := eventOut{EventData: d, Slug: e.Slug, Summary: firstNonEmpty(d.SummaryEn, d.SummaryBn)}
-		if u := a.mediaURL(d.Image); u != "" { // an uploaded picture; otherwise Image is a bundled picture id
-			o.ImageURL, o.Image = u, ""
-		}
-		out = append(out, o)
+		out = append(out, a.eventFromEntry(e))
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Date < out[j].Date })
 	writeJSON(w, 200, map[string]any{"items": out})

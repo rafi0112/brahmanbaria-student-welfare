@@ -588,3 +588,24 @@ func (m *memStore) RemoveMember(ctx context.Context, actorID, userID string, ext
 	m.auditLocked(actorID, "member.remove", "user", userID, map[string]any{"title": name, "email": u.Email})
 	return nil
 }
+
+func (m *memStore) DeleteEntry(_ context.Context, actorID, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cmsInit()
+	e, ok := m.cms.entries[id]
+	if !ok {
+		return ErrNotFound
+	}
+	for _, c := range m.cms.entries {
+		if c.ParentID == id {
+			return ErrBadState
+		}
+	}
+	if e.Status != StatusArchived {
+		return ErrBadState
+	}
+	delete(m.cms.entries, id)
+	m.auditLocked(actorID, e.Kind+".delete", e.Kind, id, map[string]any{"title": e.Title})
+	return nil
+}

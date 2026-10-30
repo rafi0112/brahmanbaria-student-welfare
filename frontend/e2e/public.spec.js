@@ -12,7 +12,8 @@ test('desktop navigation: links, active state and the bar settling on scroll', a
   await expect(header).toHaveClass(/on-hero/)
   await expect(header).not.toHaveClass(/is-scrolled/)
   const main = page.getByRole('navigation', { name: 'Main' })
-  for (const label of ['About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'FAQ', 'Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
+  for (const label of ['Home', 'About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'Help & Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Login', exact: true }).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Register', exact: true }).first()).toBeVisible()
   await page.mouse.wheel(0, 600)
@@ -105,7 +106,12 @@ test('students: directory cards open the profile, filters narrow the list, and p
 })
 
 test('contact: the form validates on the server, then shows a clear success state', async ({ page }) => {
+  // FAQ and Contact share one page; the old addresses land on their section
+  await page.goto('/faq')
+  await expect(page).toHaveURL(/\/help#faq$/)
   await page.goto('/contact')
+  await expect(page).toHaveURL(/\/help#contact$/)
+  await expect(page.getByRole('heading', { name: 'Frequently asked questions' })).toBeVisible()
   await expect(page.locator('.sketch-card')).toHaveCount(0)
   await page.getByRole('button', { name: 'Send message' }).click()
   await expect(page.getByText('Please correct the highlighted fields.')).toBeVisible()
@@ -121,7 +127,7 @@ test('contact: the form validates on the server, then shows a clear success stat
 
 test('responsive: no page scrolls sideways on a small phone, a tablet or a laptop', async ({ page }) => {
   test.setTimeout(180000)
-  const pages = ['/', '/about', '/students', '/events', '/alumni', '/committee', '/gallery', '/faq', '/contact', '/heritage', '/directory', '/login', '/register', '/membership']
+  const pages = ['/', '/about', '/students', '/events', '/alumni', '/committee', '/gallery', '/help', '/heritage', '/directory', '/login', '/register', '/membership']
   for (const w of [320, 768, 1280]) {
     await page.setViewportSize({ width: w, height: 800 })
     for (const p of pages) {

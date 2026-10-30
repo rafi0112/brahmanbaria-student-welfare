@@ -2,56 +2,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
-import { Avatar, Data, Empty, PageHero, Pagination, Photo, VerifiedMark } from '../components/ui.jsx'
+import { Avatar, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
-
-/* ---------------- Events ---------------- */
-function dateParts(date, lang, n) {
-  const d = new Date(`${date}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return null
-  return { day: n(d.getDate()), month: d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { month: 'short' }) }
-}
-
-export function Events() {
-  const { t, pick, n, lang } = useApp()
-  const res = useApi('/events')
-  const today = new Date().toISOString().slice(0, 10)
-  return (
-    <>
-      <PageHero kicker={t('events.kicker')} title={t('events.title')} variant="arch" lede={t('events.lede')} src="/images/bswa/puppets.webp" />
-      <section className="section wrap">
-        <Data q={res} skeleton="cards">
-          {(d) => {
-            if (d.items.length === 0) return <Empty icon="calendar" title={t('events.emptyTitle')} action={<><Link className="btn btn-dark" to="/contact">{t('events.suggest')} <Icon name="arrow" size={16} className="arr" /></Link><Link className="btn btn-outline" to="/gallery">{t('events.seeGallery')}</Link></>}>{t('events.empty')}</Empty>
-            const sorted = [...d.items].sort((a, b) => a.date.localeCompare(b.date))
-            const up = sorted.filter((e) => e.date >= today)
-            const past = sorted.filter((e) => e.date < today).reverse()
-            const list = (title, items) => items.length > 0 && (
-              <div className="event-group">
-                <h2>{title}</h2>
-                <div className="cards-3">
-                  {items.map((e) => (
-                    <article key={e.slug || e.date + e.titleEn} className="event-card">
-                      <div className="event-img">
-                        {e.imageUrl ? <img src={e.imageUrl} alt="" loading="lazy" decoding="async" className="event-photo" /> : e.image ? <Photo id={e.image} shape="shape-r" sizes="(min-width: 900px) 30vw, 90vw" /> : <div className="event-img-empty" aria-hidden="true" />}
-                        {dateParts(e.date, lang, n) && <time className="event-date" dateTime={e.date}><b>{dateParts(e.date, lang, n).day}</b><span>{dateParts(e.date, lang, n).month}</span></time>}
-                      </div>
-                      <h3>{pick(e.titleBn, e.titleEn)}</h3>
-                      <p className="muted meta"><Icon name="calendar" size={14} /> {e.date}{e.time ? ` · ${e.time}` : ''} {e.venue && <><Icon name="pin" size={14} /> {e.venue}</>}</p>
-                      <p>{pick(e.summaryBn, e.summaryEn) || e.summary}</p>
-                      {e.link && <a className="link-arrow" href={e.link} target="_blank" rel="noreferrer noopener">{t('events.details')} →</a>}
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )
-            return <>{list(t('events.upcoming'), up)}{list(t('events.past'), past)}</>
-          }}
-        </Data>
-      </section>
-    </>
-  )
-}
 
 /* ---------------- Alumni ---------------- */
 function useDebounced(v, ms = 250) {
@@ -139,7 +91,7 @@ export function Committee() {
       <PageHero kicker={t('committee.kicker')} title={t('committee.title')} variant="frame" lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap">
         <Data q={res} skeleton="committee">
-          {(d) => !d.committee || d.members.length === 0 ? <Empty icon="users" title={t('committee.emptyTitle')} action={<Link className="btn btn-outline" to="/contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>}>{t('committee.empty')}</Empty> : (
+          {(d) => !d.committee || d.members.length === 0 ? <Empty icon="users" title={t('committee.emptyTitle')} action={<Link className="btn btn-outline" to="/help#contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>}>{t('committee.empty')}</Empty> : (
             <>
               <header className="committee-head">
                 <h2>{d.committee.name}</h2>
@@ -189,13 +141,18 @@ function groupSeats(members) {
 }
 
 /* ---------------- FAQ ---------------- */
-export function FAQPage() {
+// The questions and answers; one section of the Help & Contact page (its "send a message" button jumps to the form below).
+export function FAQSection() {
   const { t, pick } = useApp()
   const res = useApi('/faq')
   return (
     <>
-      <PageHero kicker={t('faq.kicker')} title={t('faq.title')} variant="tilt" lede={t('faq.lede')} src="/images/bswa/baul.webp" />
-      <section className="section wrap faq-layout">
+      <div className="wrap help-head" id="faq">
+        <p className="eyebrow">{t('faq.kicker')}</p>
+        <h2>{t('faq.title')}</h2>
+        <p className="muted">{t('faq.lede')}</p>
+      </div>
+      <section className="section wrap faq-layout" aria-label={t('faq.title')}>
         <Data q={res} skeleton="list">
           {(d) => (
             <div className="faq-list">
@@ -212,7 +169,7 @@ export function FAQPage() {
           <span className="state-ico" aria-hidden="true"><Icon name="mail" size={22} /></span>
           <h2>{t('faq.helpTitle')}</h2>
           <p>{t('faq.helpText')}</p>
-          <Link className="btn btn-dark" to="/contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>
+          <a className="btn btn-dark" href="#contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></a>
           <Link className="faq-help-link" to="/membership">{t('faq.helpMember')} →</Link>
         </aside>
       </section>

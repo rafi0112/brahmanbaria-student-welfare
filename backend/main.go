@@ -56,6 +56,18 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "import-events" { // events from a file, published (preview unless --apply)
+		if err := importEvents(authStore, os.Args[2:]); err != nil {
+			log.Fatalf("import-events: %v", err)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "import-places" { // heritage places from seed/places-update.json (preview unless --apply)
+		if err := importPlaces(authStore, os.Args[2:]); err != nil {
+			log.Fatalf("import-places: %v", err)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "storage-setup" {
 		if err := storageSetup(authStore); err != nil {
 			log.Fatalf("storage-setup: %v", err)
