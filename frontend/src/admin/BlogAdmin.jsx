@@ -4,16 +4,20 @@ import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import Markdown from '../components/Markdown.jsx'
 import { MediaPhoto } from '../components/ui.jsx'
-import { ContentList, EditorGate, StatusPanel, useEntryEditor } from './content.jsx'
+import { ContentList, EditorGate, EditorModal, StatusPanel, useEditParam, useEntryEditor } from './content.jsx'
 import { Field, ImagePicker, Modal, Notice, PageHeader, slugFrom, useUnsavedGuard } from './kit.jsx'
 
 const CATS = ['community', 'heritage', 'student-life']
 
 export function BlogList() {
   const { t, n, pick } = useApp()
+  const { edit, open, swap, close } = useEditParam()
+  const [reload, setReload] = useState(0)
+  const created = useRef('') // the entry made in the open editor: keeps that editor mounted when the address gains its id
   return (
-    <ContentList kind="blog" title={t('ad.blog.title')} desc={t('ad.blog.desc')} addLabel={t('ad.blog.add')} addPath="/admin/blog/new"
-      emptyHint={t('ad.blog.emptyHint')} searchPlaceholder={t('ad.blog.search')} editPath={(r) => `/admin/blog/${r.id}/edit`} publicPath={(r) => `/blog/${r.slug}`}
+    <>
+    <ContentList key={reload} kind="blog" title={t('ad.blog.title')} desc={t('ad.blog.desc')} addLabel={t('ad.blog.add')} onAdd={() => open('new')} onEdit={(r) => open(r.id)}
+      emptyHint={t('ad.blog.emptyHint')} searchPlaceholder={t('ad.blog.search')} publicPath={(r) => `/blog/${r.slug}`}
       extra={[
         { key: 'category', label: t('ad.blog.category'), all: t('ad.blog.anyCategory'), options: CATS.map((c) => [c, t(`cat.${c}`)]) },
         { key: 'author', label: t('ad.blog.author'), text: true, advanced: true },
@@ -35,6 +39,9 @@ export function BlogList() {
         },
         { label: t('ad.blog.col.meta'), width: '20%', render: (r) => <>{r.featured ? '★ ' + t('ad.blog.featured') : '—'}<br /><small className="muted">{n(r.data.readMin || 1)} {t('blog.min')} · {r.publishedAt ? r.publishedAt.slice(0, 10) : t('ad.notPublished')}</small></> },
       ]} />
+    {edit && <BlogEditor key={edit === 'new' || edit === created.current ? 'new' : edit} entryId={edit === 'new' ? undefined : edit} onCreated={(saved) => { created.current = saved.id; swap(saved.id) }}
+      onClose={() => { created.current = ''; close(); setReload((x) => x + 1) }} />}
+    </>
   )
 }
 
@@ -104,8 +111,11 @@ function Preview({ v, imageUrl, onClose }) {
   )
 }
 
-export function BlogEditor() {
-  const { id } = useParams()
+// Inside the list it opens as a modal (onClose given); the old /admin/blog/:id/edit address still works as a page.
+export function BlogEditor({ entryId, onClose, onCreated }) {
+  const params = useParams()
+  const modal = !!onClose
+  const id = modal ? entryId : params.id
   const { t, n } = useApp()
   const { user, profile } = useAuth()
   const nav = useNavigate()
@@ -130,15 +140,12 @@ export function BlogEditor() {
 
   const submit = async (ev) => {
     ev.preventDefault()
-    const saved = await ed.save(toBody(v), (s) => `/admin/blog/${s.id}/edit`)
-    if (saved) setBase(fromEntry(saved))
+    const saved = await ed.save(toBody(v), modal ? null : (s) => `/admin/blog/${s.id}/edit`)
+    if (saved) { setBase(fromEntry(saved)); if (modal && !id) onCreated?.(saved) }
   }
-  const leave = () => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) nav('/admin/blog') }
+  const leave = () => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) { if (modal) onClose(); else nav('/admin/blog') } }
 
-  return (
-    <section aria-labelledby="blog-edit-h">
-      <PageHeader title={<span id="blog-edit-h">{t(id ? 'ad.blog.edit' : 'ad.blog.add')}</span>} desc={t('ad.blog.editDesc')}
-        crumbs={[{ to: '/admin/blog', label: t('ad.blog.title') }, { label: id ? (v.titleEn || v.titleBn || '…') : t('ad.blog.add') }]} />
+  const body = (
       <EditorGate editor={ed}>
         <Notice notice={ed.notice} onClose={ed.clear} />
         <div className="ad-editor">
@@ -214,6 +221,15 @@ export function BlogEditor() {
         </div>
         {preview && <Preview v={v} imageUrl={v.imageUrl} onClose={() => setPreview(false)} />}
       </EditorGate>
+  )
+  if (modal) {
+    return <EditorModal title={id ? `${t('ad.blog.edit')}: ${v.titleEn || v.titleBn || '…'}` : t('ad.blog.add')} dirty={dirty} busy={ed.busy} onClose={onClose}>{body}</EditorModal>
+  }
+  return (
+    <section aria-labelledby="blog-edit-h">
+      <PageHeader title={<span id="blog-edit-h">{t(id ? 'ad.blog.edit' : 'ad.blog.add')}</span>} desc={t('ad.blog.editDesc')}
+        crumbs={[{ to: '/admin/blog', label: t('ad.blog.title') }, { label: id ? (v.titleEn || v.titleBn || '…') : t('ad.blog.add') }]} />
+      {body}
       <p><Link className="link-arrow" to="/admin/blog">← {t('ad.blog.title')}</Link></p>
     </section>
   )

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Modal, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
 
@@ -22,7 +22,8 @@ export function actionConfirm(t, action, title) {
 // `columns` renders the kind-specific cells; everything else (filters, paging, bulk, status flow) is shared.
 // With `Editor` (a modal component taking row / onClose / onSaved / kind), Add and Edit open it in place instead of a page.
 // `canFeature` adds Feature / Unfeature to each row.
-export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint, searchPlaceholder, Editor, canFeature }) {
+// `onAdd` / `onEdit(row)` let the page open its own editor (for example a modal kept in the address) instead of a route.
+export function ContentList({ kind, title, desc, addLabel, addPath, editPath, publicPath, columns, extra = [], emptyHint, searchPlaceholder, Editor, canFeature, onAdd, onEdit }) {
   const { t, lang, n } = useApp()
   const when = useWhen(lang)
   const errText = useErrText()
@@ -43,7 +44,7 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
       ok(t(e.featured ? 'ad.done.unfeature' : 'ad.done.feature')); list.retry()
     } catch (err) { bad(errText(err)) } finally { setBusy(false) }
   }
-  const addButton = Editor ? <button type="button" className="btn btn-dark btn-sm" onClick={() => setEdit({})}>+ {addLabel}</button>
+  const addButton = Editor || onAdd ? <button type="button" className="btn btn-dark btn-sm" onClick={() => (onAdd ? onAdd() : setEdit({}))}>+ {addLabel}</button>
     : addPath && <Link className="btn btn-dark btn-sm" to={addPath}>+ {addLabel}</Link>
   useEffect(() => setPicked([]), [query])
   const filtered = Object.entries(f).some(([k, v]) => v && !['page', 'limit', 'sort'].includes(k))
@@ -109,7 +110,7 @@ export function ContentList({ kind, title, desc, addLabel, addPath, editPath, pu
               {
                 id: 'actions', srLabel: t('ad.actions'), width: '116px', className: 'dt-actions-cell', cell: (r) => (
                   <div className="dt-actions">
-                    {Editor ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.edit')}</button>
+                    {Editor || onEdit ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => (onEdit ? onEdit(r) : setEdit(r))}>{t('ad.edit')}</button>
                       : <Link className="btn btn-ghost btn-sm" to={editPath(r)}>{t('ad.edit')}</Link>}
                     <RowMenu label={`${t('ad.actions')}: ${r.title}`} items={[
                       ...NEXT[r.status].map(([act, label]) => ({ label: t(label), onClick: () => ask(act, [r.id], r.title), disabled: busy, danger: act === 'archive' })),
@@ -144,8 +145,9 @@ export function useEntryEditor(kind, id, listPath) {
   const { t } = useApp()
   const errText = useErrText()
   const nav = useNavigate()
-  const existing = useApi(id ? `/admin/content/${kind}/${id}` : null)
   const [entry, setEntry] = useState(null)
+  // nothing to load when the editor already holds this entry (it was just created here and the address caught up)
+  const existing = useApi(id && entry?.id !== id ? `/admin/content/${kind}/${id}` : null)
   const entryRef = useRef(null)
   const [fields, setFields] = useState({})
   const [busy, setBusy] = useState(false)
@@ -155,12 +157,14 @@ export function useEntryEditor(kind, id, listPath) {
 
   const save = useCallback(async (body, afterCreatePath) => {
     setBusy(true); setFields({}); clear()
+    // once created, every later save updates that entry, even before the address shows its id
+    const target = id || entryRef.current?.id
     try {
-      const saved = id ? await api(`/admin/content/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify({ ...body, expectedUpdatedAt: entryRef.current?.updatedAt || '' }) })
+      const saved = target ? await api(`/admin/content/${kind}/${target}`, { method: 'PATCH', body: JSON.stringify({ ...body, expectedUpdatedAt: entryRef.current?.updatedAt || '' }) })
         : await api(`/admin/content/${kind}`, { method: 'POST', body: JSON.stringify(body) })
       setEntry(saved)
       ok(t('ad.saved'))
-      if (!id && afterCreatePath) nav(afterCreatePath(saved), { replace: true })
+      if (!target && afterCreatePath) nav(afterCreatePath(saved), { replace: true })
       return saved
     } catch (e) {
       if (e.fields) setFields(e.fields)
@@ -212,4 +216,25 @@ export function EditorGate({ editor, children }) {
   if (editor.existing.loading) return <SkeletonRows rows={6} />
   if (editor.existing.error) return <Data q={editor.existing}>{() => null}</Data>
   return children
+}
+
+// The editor that is open, kept in the address (?edit=<id> or ?edit=new) so a reload, Back and links from elsewhere
+// (dashboard, quick search) open the same modal. Closing removes it and keeps the list's filters.
+export function useEditParam() {
+  const [sp, setSp] = useSearchParams()
+  const edit = sp.get('edit') || ''
+  const open = useCallback((id) => { const n = new URLSearchParams(sp); n.set('edit', id); setSp(n) }, [sp, setSp])
+  const swap = useCallback((id) => { const n = new URLSearchParams(sp); n.set('edit', id); setSp(n, { replace: true }) }, [sp, setSp])
+  const close = useCallback(() => { const n = new URLSearchParams(sp); n.delete('edit'); setSp(n) }, [sp, setSp])
+  return { edit, open, swap, close }
+}
+
+// A full editor (form, publishing panel, preview) inside a large modal. Closing with unsaved changes asks first.
+export function EditorModal({ title, dirty, busy, onClose, children }) {
+  const { t } = useApp()
+  return (
+    <Modal title={title} onClose={onClose} busy={busy} wide guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
+      <div className="ad-modal-editor">{children}</div>
+    </Modal>
+  )
 }

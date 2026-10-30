@@ -21,7 +21,7 @@ export default function CommandPalette({ onClose }) {
     ['/admin', 'dashboard', t('admin.nav.dash')], ['/admin?tab=roles', 'shield', t('admin.tab.roles')], ['/admin?tab=committee', 'star', t('admin.tab.committee')],
     ['/admin/students', 'users', t('admin.nav.students')], ['/admin/heritage', 'landmark', t('admin.nav.places')], ['/admin/blog', 'pen', t('admin.nav.blog')],
     ['/admin/gallery', 'image', t('admin.nav.gallery')], ['/admin/activity', 'clock', t('ad.nav.activity')],
-    ['/admin/blog/new', 'plus', t('ad.blog.add')], ['/admin/heritage/new', 'plus', t('ad.her.add')],
+    ['/admin/blog?edit=new', 'plus', t('ad.blog.add')], ['/admin/heritage?edit=new', 'plus', t('ad.her.add')],
   ], [t])
   const matches = dq ? sections.filter(([, , label]) => label.toLowerCase().includes(dq.toLowerCase())) : sections
 
@@ -38,8 +38,8 @@ export default function CommandPalette({ onClose }) {
       if (!live) return
       setFound([
         ...students.map((s) => ({ key: `s${s.id}`, group: t('admin.nav.students'), label: s.name, hint: s.email, to: `/admin/students?q=${encodeURIComponent(s.email)}` })),
-        ...posts.map((p) => ({ key: `b${p.id}`, group: t('admin.nav.blog'), label: pick(p.data.titleBn, p.data.titleEn) || p.title, hint: `/${p.slug}`, to: `/admin/blog/${p.id}/edit` })),
-        ...places.map((p) => ({ key: `p${p.id}`, group: t('admin.nav.places'), label: pick(p.data.nameBn, p.data.nameEn) || p.title, hint: `/${p.slug}`, to: `/admin/heritage/${p.id}/edit` })),
+        ...posts.map((p) => ({ key: `b${p.id}`, group: t('admin.nav.blog'), label: pick(p.data.titleBn, p.data.titleEn) || p.title, hint: `/${p.slug}`, to: `/admin/blog?edit=${p.id}` })),
+        ...places.map((p) => ({ key: `p${p.id}`, group: t('admin.nav.places'), label: pick(p.data.nameBn, p.data.nameEn) || p.title, hint: `/${p.slug}`, to: `/admin/heritage?edit=${p.id}` })),
         ...albums.map((a) => ({ key: `a${a.id}`, group: t('ad.kind.album'), label: pick(a.data.titleBn, a.data.titleEn) || a.title, hint: '', to: `/admin/gallery?album=${a.id}` })),
       ])
     }).finally(() => live && setBusy(false))

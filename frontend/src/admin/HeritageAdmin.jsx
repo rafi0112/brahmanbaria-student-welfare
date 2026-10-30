@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Badge, MediaPhoto } from '../components/ui.jsx'
-import { ContentList, EditorGate, StatusPanel, useEntryEditor } from './content.jsx'
+import { ContentList, EditorGate, EditorModal, StatusPanel, useEditParam, useEntryEditor } from './content.jsx'
 import { Field, ImagePicker, Modal, Notice, PageHeader, slugFrom, useUnsavedGuard } from './kit.jsx'
 
 const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'palace', 'shrine', 'lake', 'park', 'market', 'port', 'heritage-site']
@@ -11,10 +11,14 @@ const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'pal
 export function HeritageList() {
   const { t, pick } = useApp()
   const ups = useApi('/upazilas')
+  const { edit, open, swap, close } = useEditParam()
+  const [reload, setReload] = useState(0)
+  const created = useRef('') // the entry made in the open editor: keeps that editor mounted when the address gains its id
   const upOptions = (ups.data?.items || []).map((u) => [u.slug, pick(u.nameBn, u.nameEn)])
   return (
-    <ContentList kind="place" title={t('ad.her.title')} desc={t('ad.her.desc')} addLabel={t('ad.her.add')} addPath="/admin/heritage/new"
-      emptyHint={t('ad.her.emptyHint')} searchPlaceholder={t('ad.her.search')} editPath={(r) => `/admin/heritage/${r.id}/edit`} publicPath={(r) => `/heritage/${r.slug}`}
+    <>
+    <ContentList key={reload} kind="place" title={t('ad.her.title')} desc={t('ad.her.desc')} addLabel={t('ad.her.add')} onAdd={() => open('new')} onEdit={(r) => open(r.id)}
+      emptyHint={t('ad.her.emptyHint')} searchPlaceholder={t('ad.her.search')} publicPath={(r) => `/heritage/${r.slug}`}
       extra={[
         { key: 'category', label: t('ad.her.category'), all: t('ad.her.anyCategory'), options: CATS.map((c) => [c, t(`cat.${c}`)]) },
         { key: 'upazila', label: t('auth.upazila'), all: t('ad.her.anyUpazila'), options: upOptions },
@@ -36,6 +40,9 @@ export function HeritageList() {
         },
         { label: t('ad.her.col.checked'), width: '150px', render: (r) => (r.data.verified ? <Badge tone="leaf">✓ {t('place.verified')}</Badge> : <Badge tone="muted">{t('place.unverified')}</Badge>) },
       ]} />
+    {edit && <HeritageEditor key={edit === 'new' || edit === created.current ? 'new' : edit} entryId={edit === 'new' ? undefined : edit} onCreated={(saved) => { created.current = saved.id; swap(saved.id) }}
+      onClose={() => { created.current = ''; close(); setReload((n) => n + 1) }} />}
+    </>
   )
 }
 
@@ -85,8 +92,11 @@ function Preview({ v, upName, onClose }) {
   )
 }
 
-export function HeritageEditor() {
-  const { id } = useParams()
+// Inside the list it opens as a modal (onClose given); the old /admin/heritage/:id/edit address still works as a page.
+export function HeritageEditor({ entryId, onClose, onCreated }) {
+  const params = useParams()
+  const modal = !!onClose
+  const id = modal ? entryId : params.id
   const { t, pick } = useApp()
   const nav = useNavigate()
   const ed = useEntryEditor('place', id, '/admin/heritage')
@@ -106,16 +116,13 @@ export function HeritageEditor() {
 
   const submit = async (ev) => {
     ev.preventDefault()
-    const saved = await ed.save(toBody(v), (s) => `/admin/heritage/${s.id}/edit`)
-    if (saved) setBase(fromEntry(saved))
+    const saved = await ed.save(toBody(v), modal ? null : (s) => `/admin/heritage/${s.id}/edit`)
+    if (saved) { setBase(fromEntry(saved)); if (modal && !id) onCreated?.(saved) }
   }
-  const leave = () => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) nav('/admin/heritage') }
+  const leave = () => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) { if (modal) onClose(); else nav('/admin/heritage') } }
   const move = (list, i, d) => { const a = [...list]; [a[i], a[i + d]] = [a[i + d], a[i]]; return a }
 
-  return (
-    <section aria-labelledby="her-edit-h">
-      <PageHeader title={<span id="her-edit-h">{t(id ? 'ad.her.edit' : 'ad.her.add')}</span>} desc={t('ad.her.editDesc')}
-        crumbs={[{ to: '/admin/heritage', label: t('ad.her.title') }, { label: id ? (v.nameEn || v.nameBn || '…') : t('ad.her.add') }]} />
+  const body = (
       <EditorGate editor={ed}>
         <Notice notice={ed.notice} onClose={ed.clear} />
         <div className="ad-editor">
@@ -207,6 +214,15 @@ export function HeritageEditor() {
         </div>
         {preview && <Preview v={{ ...v, images: v.images.filter((i) => i.ref) }} upName={upName} onClose={() => setPreview(false)} />}
       </EditorGate>
+  )
+  if (modal) {
+    return <EditorModal title={id ? `${t('ad.her.edit')}: ${v.nameEn || v.nameBn || '…'}` : t('ad.her.add')} dirty={dirty} busy={ed.busy} onClose={onClose}>{body}</EditorModal>
+  }
+  return (
+    <section aria-labelledby="her-edit-h">
+      <PageHeader title={<span id="her-edit-h">{t(id ? 'ad.her.edit' : 'ad.her.add')}</span>} desc={t('ad.her.editDesc')}
+        crumbs={[{ to: '/admin/heritage', label: t('ad.her.title') }, { label: id ? (v.nameEn || v.nameBn || '…') : t('ad.her.add') }]} />
+      {body}
       <p><Link className="link-arrow" to="/admin/heritage">← {t('ad.her.title')}</Link></p>
     </section>
   )

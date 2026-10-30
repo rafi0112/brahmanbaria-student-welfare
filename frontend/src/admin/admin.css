@@ -623,3 +623,9 @@
 .ad-cutoff-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0 6px; }
 .ad-cutoff-row label { font-weight: 600; font-size: .85rem; }
 .ad-cutoff-row select { min-width: 170px; }
+
+/* full editors (heritage, blog) opened as a modal over their list */
+.adm .ad-modal-wide:has(.ad-modal-editor) { width: min(1200px, 100%); max-height: calc(100dvh - 32px); }
+.ad-modal-editor .ad-editor { margin-top: 4px; }
+.ad-modal-editor .ad-side-card { position: sticky; top: 0; }
+@media (max-width: 900px) { .ad-modal-editor .ad-editor { grid-template-columns: 1fr; } .ad-modal-editor .ad-side-card { position: static; } }

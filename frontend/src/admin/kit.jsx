@@ -285,7 +285,9 @@ export function Modal({ title, children, onClose, wide, busy, drawer, guard }) {
     document.body.style.overflow = 'hidden'
     return () => { removeEventListener('keydown', onKey); document.body.style.overflow = ''; prev?.focus?.() }
   }, [close])
-  return (
+  // rendered at the top of the admin shell (not inside the page), so a wide dialog always covers the sidebar too
+  const host = typeof document !== 'undefined' ? document.querySelector('.adm') || document.body : null
+  const dialog = (
     <div className={`modal-back ad-back ${drawer ? 'is-drawer' : ''} ${leaving ? 'is-leaving' : ''}`} onClick={(e) => e.target === e.currentTarget && close()}>
       <div ref={box} className={`modal ad-modal ${wide ? 'ad-modal-wide' : ''} ${drawer ? 'ad-drawer' : ''}`} role="dialog" aria-modal="true" aria-labelledby={labelId}>
         <header className="ad-modal-head">
@@ -296,6 +298,7 @@ export function Modal({ title, children, onClose, wide, busy, drawer, guard }) {
       </div>
     </div>
   )
+  return host ? createPortal(dialog, host) : dialog
 }
 
 export function Confirm({ title, text, detail, label, tone, busy, onYes, onNo }) {

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import Home from './pages/Home.jsx'
 import Students, { StudentDetail } from './pages/Students.jsx'
@@ -10,14 +10,19 @@ import Activate from './pages/Activate.jsx'
 import { Dashboard } from './pages/Dashboards.jsx'
 import { AdminHome, AdminShell } from './admin/Shell.jsx'
 import StudentsAdmin from './admin/StudentsAdmin.jsx'
-import { BlogEditor, BlogList } from './admin/BlogAdmin.jsx'
-import { HeritageEditor, HeritageList } from './admin/HeritageAdmin.jsx'
+import { BlogList } from './admin/BlogAdmin.jsx'
+import { HeritageList } from './admin/HeritageAdmin.jsx'
 import GalleryAdmin from './admin/GalleryAdmin.jsx'
 import ActivityPage from './admin/ActivityPage.jsx'
 import ContactInbox from './admin/ContactInbox.jsx'
 import { AlumniAdmin, EventsAdmin, FAQAdmin, ReferenceAdmin } from './admin/SiteDataAdmin.jsx'
 import { Alumni, Committee, Membership } from './pages/Community.jsx'
 import { EventDetail, Events } from './pages/EventsPages.jsx'
+
+function EditRedirect({ to }) {
+  const { id } = useParams()
+  return <Navigate to={`${to}?edit=${id}`} replace />
+}
 
 export default function App() {
   return (
@@ -57,11 +62,12 @@ export default function App() {
         <Route path="students" element={<StudentsAdmin />} />
         <Route path="profile/:id" element={<StudentDetail />} />
         <Route path="heritage" element={<HeritageList />} />
-        <Route path="heritage/new" element={<HeritageEditor />} />
-        <Route path="heritage/:id/edit" element={<HeritageEditor />} />
+        {/* editors open as a modal over the list; the old addresses lead there */}
+        <Route path="heritage/new" element={<Navigate to="/admin/heritage?edit=new" replace />} />
+        <Route path="heritage/:id/edit" element={<EditRedirect to="/admin/heritage" />} />
         <Route path="blog" element={<BlogList />} />
-        <Route path="blog/new" element={<BlogEditor />} />
-        <Route path="blog/:id/edit" element={<BlogEditor />} />
+        <Route path="blog/new" element={<Navigate to="/admin/blog?edit=new" replace />} />
+        <Route path="blog/:id/edit" element={<EditRedirect to="/admin/blog" />} />
         <Route path="gallery" element={<GalleryAdmin />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="contact" element={<ContactInbox />} />

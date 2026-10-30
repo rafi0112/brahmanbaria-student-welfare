@@ -145,7 +145,7 @@ export default function Dashboard() {
   return (
     <section aria-labelledby="dash-h">
       <PageHeader title={<span id="dash-h">{first ? `${t('ad.dash.hello')}, ${first}` : t('ad.dash.title')}</span>} desc={t('ad.dash.desc')}
-        action={<Link className="btn btn-dark" to="/admin/blog/new"><Icon name="plus" size={16} /> {t('ad.dash.addPost')}</Link>} />
+        action={<Link className="btn btn-dark" to="/admin/blog?edit=new"><Icon name="plus" size={16} /> {t('ad.dash.addPost')}</Link>} />
       {res.loading && <SkeletonRows rows={6} />}
       {res.error && <ErrorState error={res.error} retry={res.retry} />}
       {d && (
@@ -179,8 +179,8 @@ export default function Dashboard() {
                 <Link className="btn btn-outline btn-sm" to="/admin/students?tab=requests"><Icon name="users" size={15} /> {t('ad.dash.reviewPending')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/students?tab=imported"><Icon name="directory" size={15} /> {t('ad.imp.add')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/contact"><Icon name="mail" size={15} /> {t('ad.dash.openInbox')}</Link>
-                <Link className="btn btn-outline btn-sm" to="/admin/blog/new"><Icon name="blog" size={15} /> {t('ad.dash.addPost')}</Link>
-                <Link className="btn btn-outline btn-sm" to="/admin/heritage/new"><Icon name="landmark" size={15} /> {t('ad.dash.addPlace')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/blog?edit=new"><Icon name="blog" size={15} /> {t('ad.dash.addPost')}</Link>
+                <Link className="btn btn-outline btn-sm" to="/admin/heritage?edit=new"><Icon name="landmark" size={15} /> {t('ad.dash.addPlace')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin/gallery"><Icon name="image" size={15} /> {t('ad.dash.openGallery')}</Link>
                 <Link className="btn btn-outline btn-sm" to="/admin?tab=committee"><Icon name="star" size={15} /> {t('ad.dash.manageCommittee')}</Link>
               </div>

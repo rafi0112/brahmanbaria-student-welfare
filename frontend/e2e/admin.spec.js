@@ -131,11 +131,22 @@ test('mobile: the sidebar is a drawer that closes after navigating', async ({ pa
 
 test('blog: a new draft is saved and listed', async ({ page }) => {
   await login(page)
+  // the editor opens as a modal over the list (the old /new address leads there too)
   await page.goto('/admin/blog/new')
-  await page.getByLabel('Title', { exact: false }).first().fill('E2E smoke post')
-  await page.getByRole('button', { name: /save draft|save/i }).first().click()
-  await page.goto('/admin/blog')
-  await expect(page.getByText('E2E smoke post').first()).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/blog\?edit=new$/)
+  const dlg = page.getByRole('dialog')
+  await dlg.getByLabel('Title', { exact: false }).first().fill('E2E smoke post')
+  await dlg.getByRole('button', { name: /save draft|save/i }).first().click()
+  // after the first save the modal holds the saved post, so saving again updates it instead of creating a copy
+  await expect(page).toHaveURL(/edit=(?!new)[^&]+$/)
+  await dlg.getByLabel('Title', { exact: false }).first().fill('E2E smoke post edited')
+  await dlg.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dlg.getByText(/saved/i).first()).toBeVisible()
+  await dlg.getByRole('button', { name: /cancel/i }).first().click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page).toHaveURL(/\/admin\/blog$/)
+  await expect(page.getByText('E2E smoke post edited').first()).toBeVisible()
+  await expect(page.getByText('E2E smoke post', { exact: true })).toHaveCount(0)
 })
 
 test('nested views: each child opens its filtered list, marks itself current, and survives refresh and back/forward', async ({ page }) => {
@@ -210,10 +221,10 @@ async function typeInEveryField(page, scope, label) {
 
 test('every text field in the admin editors accepts full typing', async ({ page }) => {
   await login(page)
-  await page.goto('/admin/blog/new')
-  await typeInEveryField(page, page.locator('#adm-main'), 'blog editor')
-  await page.goto('/admin/heritage/new')
-  await typeInEveryField(page, page.locator('#adm-main'), 'heritage editor')
+  await page.goto('/admin/blog?edit=new')
+  await typeInEveryField(page, page.getByRole('dialog'), 'blog editor')
+  await page.goto('/admin/heritage?edit=new')
+  await typeInEveryField(page, page.getByRole('dialog'), 'heritage editor')
   for (const url of ['/admin/blog', '/admin/heritage', '/admin/gallery', '/admin/students', '/admin?tab=roles', '/admin/activity']) {
     await page.goto(url)
     await expect(page.locator('#adm-main')).toBeVisible()
@@ -422,7 +433,7 @@ test('site data from the database: events, FAQ and alumni are created in the pan
   await login(page)
   // event
   await page.goto('/admin/events')
-  await page.getByRole('button', { name: 'New event' }).click()
+  await page.getByRole('button', { name: 'New event' }).first().click()
   let dlg = page.getByRole('dialog', { name: 'New event' })
   await dlg.getByLabel('Title (English)').fill('E2E Freshers Reception')
   await dlg.getByLabel('Date').first().fill('2031-03-14')
