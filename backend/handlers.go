@@ -23,6 +23,8 @@ type App struct {
 	Auth       *Auth
 	mu         sync.Mutex
 	dataMu     sync.RWMutex // guards Store, which reloadLive swaps
+	// alumni photos fetched from saved links, keyed by id|link (see alumniPhoto)
+	alumniPhotos sync.Map
 }
 
 func (a *App) Routes() http.Handler {
@@ -32,6 +34,7 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/v1/students", a.students)
 	m.HandleFunc("GET /api/v1/students/{id}", a.studentOne)
 	m.HandleFunc("GET /api/v1/alumni", a.alumni)
+	m.HandleFunc("GET /api/v1/alumni/{id}/photo", a.alumniPhoto)
 	m.HandleFunc("GET /api/v1/upazilas", a.upazilas)
 	m.HandleFunc("GET /api/v1/upazilas/{slug}", a.upazila)
 	m.HandleFunc("GET /api/v1/departments", func(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +126,7 @@ func window(total, pg, limit int) (lo, hi, pages int) {
 
 func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	v := a.whoIsViewing(r)
 	pg, limit := paging(r, 48)
 	out := []Alumnus{}
 	list := a.shownAlumni(r.Context()) // alumni records and every graduated batch
@@ -148,7 +152,13 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	lo, hi, pages := window(len(out), pg, limit)
-	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "alumniUpToBatch": a.data().AlumniUpTo,
+	extras := a.alumniExtras(r.Context())
+	items := make([]alumnusView, 0, hi-lo)
+	for _, al := range out[lo:hi] {
+		x := extras[al.ID]
+		items = append(items, alumnusView{Alumnus: al, Photo: x.photo(al.ID), Contact: x.contact(v)})
+	}
+	writeJSON(w, 200, map[string]any{"items": items, "total": len(out), "page": pg, "pages": pages, "view": v.Kind, "alumniUpToBatch": a.data().AlumniUpTo,
 		"facets": map[string]any{"batches": batches, "departments": depts}})
 }
 

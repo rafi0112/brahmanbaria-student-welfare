@@ -479,7 +479,16 @@ test('site data from the database: events, FAQ and alumni are created in the pan
   await expect(dlg).toBeHidden()
   await page.goto('/alumni?q=Zqxv')
   await expect(page.getByText('Zqxv E2E Alumnus')).toBeVisible()
-  await expect(page.getByText('01712345678')).toHaveCount(0) // contact details stay admin-only
+  // contact details: shown to a signed-in member or admin, never to a visitor who is not signed in
+  await expect(page.locator('.al-contact')).toContainText('01712345678')
+  const guestCtx = await page.context().browser().newContext({ baseURL: new URL(page.url()).origin })
+  const guest = await guestCtx.newPage()
+  await guest.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en') } catch { /* ignore */ } })
+  await guest.goto('/alumni?q=Zqxv')
+  await expect(guest.getByText('Zqxv E2E Alumnus')).toBeVisible()
+  await expect(guest.getByText('01712345678')).toHaveCount(0)
+  await expect(guest.locator('.al-locked')).toContainText('Sign in to see contact details')
+  await guestCtx.close()
   // the same email and invitation steps as a directory record
   await page.goto('/admin/alumni?q=Zqxv')
   const arow = page.locator('.dt tbody tr', { hasText: 'Zqxv E2E Alumnus' })

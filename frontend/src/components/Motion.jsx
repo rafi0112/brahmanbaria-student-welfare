@@ -7,7 +7,7 @@ const finePointer = () => typeof matchMedia !== 'undefined' && matchMedia('(hove
 
 // Cards and tiles that fade up one after another as they scroll into view. Rendered lists change often (filters,
 // pages), so new elements are picked up by a MutationObserver instead of wrapping every card in a component.
-const STAGGER = '.student-card, .alumni-card, .member-card, .advisor-row, .value, .ex-card, .culture-card, .masonry-item, .faq-item, .place-card, .post-card, .ct-info > *, .stats-strip-inline > div, .ch-card'
+const STAGGER = '.student-card, .alumni-card, .member-card, .advisor-row, .value, .ex-card, .culture-card, .masonry-item, .faq-item, .place-card, .post-card, .ct-info > *, .ch-card'
 
 function useStaggerReveal(path) {
   useEffect(() => {

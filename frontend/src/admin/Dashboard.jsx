@@ -15,17 +15,17 @@ function niceMax(v) {
   return step * 4
 }
 
-// A bright, distinct colour for each bar or column; picked to stay readable on light and dark surfaces.
-const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#0ea5e9', '#22c55e', '#f97316', '#e11d48', '#06b6d4', '#84cc16', '#a855f7']
-const tone = (i) => PALETTE[i % PALETTE.length]
+// Each chart keeps one hue (its card's --ch-a); a mark's intensity follows its weight, so the largest value is the full
+// colour and smaller ones fade toward the card surface. 34 % is the lightest step, still clear of the surface.
+const shade = (weight) => `color-mix(in srgb, var(--ch-a) ${Math.round(34 + 66 * Math.max(0, Math.min(1, weight)))}%, var(--a-surface))`
 
-// Ranked horizontal bars (departments, upazilas): rank, label, a gradient bar sized to the largest value, count and share.
-function BarList({ rows, label, n, total, offset = 0 }) {
+// Ranked horizontal bars (departments, upazilas): rank, label, a bar sized and shaded by its value, count and share.
+function BarList({ rows, label, n, total }) {
   const max = Math.max(1, ...rows.map((r) => r.count))
   return (
     <ol className="ch-bars">
       {rows.map((r, i) => (
-        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined} style={{ '--i': i, '--c': tone(i + offset) }}>
+        <li key={r.key} className={r.key === 'other' ? 'is-other' : undefined} style={{ '--i': i, '--c': shade(r.count / max) }}>
           <span className="ch-rank num" aria-hidden="true">{r.key === 'other' ? '·' : n(i + 1)}</span>
           <span className="ch-bar-label" title={label(r.key)}>{label(r.key)}</span>
           <span className="ch-bar-track"><span className="ch-bar-fill" style={{ '--w': `${(r.count / max) * 100}%` }} /></span>
@@ -36,9 +36,10 @@ function BarList({ rows, label, n, total, offset = 0 }) {
   )
 }
 
-// Columns on a real axis: gridlines with round tick values, a gradient column per point and a tooltip on hover or focus.
-function Columns({ rows, label, n, title, unit, colorful }) {
-  const top = niceMax(Math.max(0, ...rows.map((r) => r.count)))
+// Columns on a real axis: gridlines with round tick values, a column per point shaded by its value, a tooltip on hover or focus.
+function Columns({ rows, label, n, title, unit }) {
+  const peak = Math.max(0, ...rows.map((r) => r.count))
+  const top = niceMax(peak)
   const ticks = [top, top * 0.75, top / 2, top / 4, 0]
   return (
     <div className="ch-plot" role="img" aria-label={`${title}: ${rows.map((r) => `${label(r.key)} ${r.count}`).join(', ')}`}>
@@ -47,7 +48,7 @@ function Columns({ rows, label, n, title, unit, colorful }) {
         <div className="ch-grid-lines" aria-hidden="true">{ticks.map((v) => <i key={v} />)}</div>
         <div className="ch-cols">
           {rows.map((r, i) => (
-            <div key={r.key} className="ch-col" tabIndex={0} style={{ '--i': i, ...(colorful ? { '--c': tone(i) } : {}) }}>
+            <div key={r.key} className="ch-col" tabIndex={0} style={{ '--i': i, '--c': shade(peak ? r.count / peak : 0) }}>
               <span className="ch-col-bar" style={{ '--h': `${(r.count / top) * 100}%` }} data-zero={r.count === 0 || undefined}>
                 <span className="ch-tip" role="tooltip"><b className="num">{n(r.count)}</b> {unit}<small>{label(r.key)}</small></span>
               </span>
@@ -60,8 +61,11 @@ function Columns({ rows, label, n, title, unit, colorful }) {
   )
 }
 
-// Membership status as a ring with rounded, separated segments; the legend carries counts and shares.
-function Donut({ parts, n, center }) {
+// Membership status as a ring with rounded, separated segments; the legend carries counts and shares. Segments are
+// shaded by rank (largest full, then lighter), so equal counts still read as separate parts.
+function Donut({ parts: raw, n, center }) {
+  const order = [...raw].sort((a, b) => b.value - a.value).map((p) => p.key)
+  const parts = raw.map((p) => ({ ...p, color: shade(1 - order.indexOf(p.key) / Math.max(1, raw.length - 1)) }))
   const total = parts.reduce((a, p) => a + p.value, 0)
   const R = 40
   const C = 2 * Math.PI * R
@@ -209,19 +213,19 @@ export default function Dashboard() {
               </ChartCard>
               <ChartCard accent="emerald" icon="users" title={t('ad.ch.status')} sub={t('ad.ch.statusSub')}>
                 <Donut n={n} center={t('ad.ch.members')} parts={[
-                  { key: 'approved', label: t('ad.status.approved'), value: d.members.approved, color: 'var(--a-ok)' },
-                  { key: 'pending', label: t('ad.status.pending'), value: d.members.pending, color: 'var(--a-warn)' },
-                  { key: 'rejected', label: t('ad.status.rejected'), value: d.members.rejected, color: 'var(--a-bad)' },
+                  { key: 'approved', label: t('ad.status.approved'), value: d.members.approved },
+                  { key: 'pending', label: t('ad.status.pending'), value: d.members.pending },
+                  { key: 'rejected', label: t('ad.status.rejected'), value: d.members.rejected },
                 ]} />
               </ChartCard>
               <ChartCard accent="amber" icon="star" title={t('ad.ch.batch')} sub={t('ad.ch.batchSub')} kpi={n(ch.byBatch.length)} kpiLabel={t('ad.ch.batches')}>
-                {ch.byBatch.length ? <Columns colorful rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} unit={t('ad.ch.unitStudents')} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
+                {ch.byBatch.length ? <Columns rows={ch.byBatch} n={n} label={(k) => n(Number(k))} title={t('ad.ch.batch')} unit={t('ad.ch.unitStudents')} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
               <ChartCard accent="violet" icon="directory" title={t('ad.ch.dept')} sub={t('ad.ch.studentsAll')} kpi={n(ch.students)} kpiLabel={t('ad.ch.students')}>
                 {ch.byDepartment.length ? <BarList rows={ch.byDepartment} n={n} total={ch.students} label={(k) => (k === 'other' ? t('ad.ch.other') : k)} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
               <ChartCard accent="teal" icon="landmark" title={t('ad.ch.upazila')} sub={t('ad.ch.studentsAll')} kpi={n(ch.byUpazila.length)} kpiLabel={t('ad.ch.upazilas')}>
-                {ch.byUpazila.length ? <BarList offset={4} rows={ch.byUpazila} n={n} total={ch.students} label={upName} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
+                {ch.byUpazila.length ? <BarList rows={ch.byUpazila} n={n} total={ch.students} label={upName} /> : <p className="ch-empty">{t('ad.ch.none')}</p>}
               </ChartCard>
             </div>
           )}

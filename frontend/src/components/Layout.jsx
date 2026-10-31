@@ -4,6 +4,7 @@ import { useApp } from '../lib/app.jsx'
 import { LeafMark, SketchArt } from './Decor.jsx'
 import { AccountMenu, ProfileDialog } from './Account.jsx'
 import Icon from './Icon.jsx'
+import SearchDialog from './SearchDialog.jsx'
 import { MotionLayer, Toasts, toast } from './Motion.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
@@ -22,13 +23,23 @@ function ThemeGlyph({ dark }) {
 }
 
 function Header() {
-  const { t, toggleLang, toggleTheme, isDark } = useApp()
+  const { t, lang, toggleLang, toggleTheme, isDark } = useApp()
   const { user, logout } = useAuth()
   const nav = useNavigate()
   const signOut = async () => { await logout(); nav('/') }
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  useEffect(() => { // "/" or Ctrl/⌘ + K opens search from anywhere except while typing
+    const key = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable
+      if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !typing)) { e.preventDefault(); setSearchOpen(true) }
+    }
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [])
   const [scrolled, setScrolled] = useState(false)
+  const [top, setTop] = useState(true) // at the very top: the bar is fully clear
   const loc = useLocation()
   const onHero = loc.pathname === '/'
   useEffect(() => setOpen(false), [loc.pathname])
@@ -42,18 +53,26 @@ function Header() {
     setProfileOpen(true)
     nav(loc.pathname + loc.search, { replace: true, state: null }) // a reload or Back does not open it again
   }, [loc, user, nav])
+  // On the home page the bar lies clear over the hero photograph until the hero has scrolled away; elsewhere it settles
+  // as soon as the page moves.
   useEffect(() => {
     let raf = 0
-    const read = () => { raf = 0; setScrolled(window.scrollY > 8) }
+    const read = () => {
+      raf = 0
+      const hero = onHero && document.querySelector('.hero-stage .hs')
+      setScrolled(window.scrollY > (hero ? hero.offsetHeight - (barRef.current?.offsetHeight || 72) - 1 : 8))
+      setTop(window.scrollY <= 8)
+    }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(read) }
     read()
     addEventListener('scroll', onScroll, { passive: true })
     return () => { removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
-  }, [])
+  }, [onHero])
   // The bar fits itself to the space it has, in any language and signed in or not: full size, then compact (tighter
   // links, no brand subtitle), and only when even that does not fit, the menu button. Hidden copies of the links are
   // measured at both sizes, so the choice never depends on the mode currently shown.
   const [mode, setMode] = useState('full')
+  const [subFits, setSubFits] = useState(true) // compact mode keeps the organisation's name under BSWA when it fits
   const barRef = useRef(null), brandRef = useRef(null), toolsRef = useRef(null), mFull = useRef(null), mCompact = useRef(null), mSub = useRef(null), mName = useRef(null)
   const fit = useCallback(() => {
     const bar = barRef.current
@@ -69,6 +88,7 @@ function Header() {
     const needCompact = mark + name + 12 + mCompact.current.scrollWidth + 12 + tools + 16
     const w = bar.clientWidth
     setMode(w >= needFull ? 'full' : w >= needCompact ? 'compact' : 'menu')
+    setSubFits(w >= needCompact - name + Math.max(name, sub))
   }, [])
   useLayoutEffect(() => { fit() }, [fit, t, user])
   useEffect(() => {
@@ -86,7 +106,7 @@ function Header() {
   }, [open])
 
   return (
-    <header className={`site-header nav-measured nav-${mode}${scrolled ? ' is-scrolled' : ''}${onHero ? ' on-hero' : ''}${open ? ' is-open' : ''}`}>
+    <header className={`site-header nav-measured nav-${mode}${subFits ? ' has-sub' : ''}${scrolled ? ' is-scrolled' : ''}${onHero ? ' on-hero' : ''}${onHero && !scrolled && !open ? ' is-clear' : ''}${top && !open ? ' is-top' : ''}${open ? ' is-open' : ''}`}>
       <a className="skip" href="#main">{t('nav.skip')}</a>
       {/* measuring copies of the links (never shown, never focusable) */}
       <div className="nav-links nav-measure" ref={mFull} aria-hidden="true" inert="">{BAR.map(([to, k]) => <a key={to}>{t(k)}</a>)}</div>
@@ -102,15 +122,15 @@ function Header() {
           {BAR.map(([to, k]) => <NavLink key={to} to={to} end={to === '/'}>{t(k)}</NavLink>)}
         </nav>
         <div className="nav-tools" ref={toolsRef}>
-          <Link className="icon-btn" to="/students" aria-label={t('common.search')} title={t('common.search')}><Icon name="search" size={18} /></Link>
-          <button type="button" className="icon-btn txt" onClick={toggleLang} aria-label={t('lang.toggle')} title={t('lang.toggle')}>{t('lang.toggle')}</button>
+          <button type="button" className="icon-btn" onClick={() => setSearchOpen(true)} aria-label={t('common.search')} aria-haspopup="dialog" title={`${t('common.search')} (Ctrl K)`}><Icon name="search" size={18} /></button>
+          <button type="button" className="icon-btn txt lang-seg" onClick={toggleLang} aria-label={t('lang.toggle')} title={t('lang.toggle')}><span className={lang === 'bn' ? 'on' : undefined}>বাং</span><span className={lang === 'en' ? 'on' : undefined}>EN</span></button>
           <button type="button" className="icon-btn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}><ThemeGlyph dark={isDark()} /></button>
           <span className={`nav-sep${user ? '' : ' hide-sm'}`} aria-hidden="true" />
           {user
             ? <AccountMenu onOpenProfile={() => setProfileOpen(true)} />
             : <>
-                <Link className="btn btn-ghost btn-sm hide-sm" to="/login">{t('nav.login')}</Link>
-                <Link className="btn btn-dark btn-sm hide-sm" to="/register">{t('nav.register')}</Link>
+                <Link className="btn btn-ghost btn-sm hide-sm nav-login" to="/login">{t('nav.login')}</Link>
+                <Link className="btn btn-dark btn-sm hide-sm nav-reg" to="/register">{t('nav.register')} <i aria-hidden="true"><Icon name="arrow" size={13} /></i></Link>
               </>}
           <button type="button" className="icon-btn menu-btn" aria-expanded={open} aria-controls="drawer" aria-label={open ? t('nav.close') : t('nav.menu')} onClick={() => setOpen(!open)}>
             <span className="burger" aria-hidden="true"><i /><i /><i /></span>
@@ -129,6 +149,7 @@ function Header() {
       </div>
       <button type="button" className="drawer-scrim" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} />
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
+      {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
       <Toasts t={t} />
       <MotionLayer />
     </header>
@@ -171,18 +192,32 @@ function Footer() {
           <Link className="btn btn-sm ft-cta" to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('footer.join')} <Icon name="arrow" size={15} className="arr" /></Link>
         </div>
       </div>
-      <div className="footer-bottom">
-        <span>© 2026 {t('brand')} · {t('brandFull')}</span>
-        <span className="ft-motto"><i aria-hidden="true" />{t('footer.motto')}</span>
-        <span>{t('footer.photos')}</span>
-      </div>
     </footer>
   )
 }
 
+// Every page opens at its top: a new page before it paints, and a link to the page already open scrolls back up.
+// A link with a #section is left to the page, which scrolls to that section itself.
+function useTopOnNavigate(pathname, hash) {
+  useLayoutEffect(() => { if (!hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) }, [pathname, hash])
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+    const click = (e) => {
+      // capture phase: the router's links cancel the browser's own navigation, so this runs before they do
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = e.target.closest?.('a[href]')
+      if (!a || a.target === '_blank') return
+      const u = new URL(a.href, location.href)
+      if (u.origin === location.origin && u.pathname === location.pathname && !u.hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+    document.addEventListener('click', click, true)
+    return () => document.removeEventListener('click', click, true)
+  }, [])
+}
+
 export default function Layout() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  const { pathname, hash } = useLocation()
+  useTopOnNavigate(pathname, hash)
   const bare = pathname.startsWith('/admin')
   return (
     <div className={`app ${bare ? 'app-bare' : ''}`}>

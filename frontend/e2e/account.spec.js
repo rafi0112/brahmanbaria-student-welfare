@@ -38,7 +38,7 @@ test('account menu, profile dialog with every detail, editing and a profile phot
 
   // header: search, language and theme first, then the account button (no separate admin/logout buttons)
   const tools = page.locator('.nav-tools')
-  await expect(tools.getByRole('link', { name: 'Search' })).toBeVisible()
+  await expect(tools.getByRole('button', { name: 'Search' })).toBeVisible()
   await expect(tools.getByRole('button', { name: 'Login' })).toHaveCount(0)
   const acct = page.getByRole('button', { name: 'Account menu' })
   await expect(acct).toBeVisible()
@@ -66,11 +66,12 @@ test('account menu, profile dialog with every detail, editing and a profile phot
 
   // photo: upload, it appears in the header button, then remove
   await dlg.locator('input[type=file]').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: png(240, 160) })
-  await expect(dlg.getByRole('button', { name: 'Change photo' })).toBeVisible()
+  await expect(dlg.getByRole('button', { name: 'Remove' })).toBeVisible()
   await expect(page.locator('.acct-btn img.avatar-img')).toBeVisible()
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dialog-desktop.png` })
   await dlg.getByRole('button', { name: 'Remove' }).click()
-  await expect(dlg.getByRole('button', { name: 'Add photo' })).toBeVisible()
+  await expect(dlg.getByRole('button', { name: 'Remove' })).toHaveCount(0)
+  await expect(dlg.getByRole('button', { name: 'Use link' })).toBeVisible() // a public link is offered first
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
 

@@ -6,7 +6,8 @@ import { Avatar } from './ui.jsx'
 const TYPES = ['image/jpeg', 'image/png']
 const MAX = 5 * 1024 * 1024
 
-// Shows a person's photo with "Upload"/"Change" and "Remove". Used for one's own profile and by admins for a member.
+// Shows a person's photo with a public-link field first (the recommended way), a file upload as the alternative, and
+// "Remove". Used for one's own profile and by admins for a member.
 // The server validates and re-encodes the file; the client only refuses obviously wrong files early.
 export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDone, size = 96 }) {
   const { t } = useApp()
@@ -41,13 +42,17 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
     <div className="photo-pick">
       <Avatar name={name} photo={photo} size={size} className="photo-pick-img" />
       <div className="photo-pick-actions">
-        <input ref={input} type="file" accept="image/jpeg,image/png" hidden onChange={pick} />
-        <button type="button" className="btn btn-outline btn-sm" disabled={busy} aria-busy={busy || undefined} onClick={() => input.current?.click()}>{t(photo ? 'photo.change' : 'photo.upload')}</button>
-        {photo && <button type="button" className="btn btn-quiet btn-sm" disabled={busy} onClick={remove}>{t('photo.remove')}</button>}
+        {/* a public link is the recommended way; a file from the device is the fallback */}
         <span className="photo-link">
+          <span className="photo-rec">{t('photo.recommended')}</span>
           <input type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder={t('photo.linkPh')} aria-label={t('photo.linkLabel')} disabled={busy}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); fromLink() } }} />
-          <button type="button" className="btn btn-outline btn-sm" disabled={busy || !link.trim()} onClick={fromLink}>{t('photo.useLink')}</button>
+          <button type="button" className="btn btn-dark btn-sm" disabled={busy || !link.trim()} onClick={fromLink}>{t('photo.useLink')}</button>
+        </span>
+        <span className="photo-alt">
+          <input ref={input} type="file" accept="image/jpeg,image/png" hidden onChange={pick} />
+          <button type="button" className="btn-link" disabled={busy} aria-busy={busy || undefined} onClick={() => input.current?.click()}>{t(photo ? 'photo.change' : 'photo.upload')}</button>
+          {photo && <button type="button" className="btn-link is-danger" disabled={busy} onClick={remove}>{t('photo.remove')}</button>}
         </span>
         <small className="muted">{t('photo.hint')}</small>
         {err && <small className="err" role="alert">{err}</small>}

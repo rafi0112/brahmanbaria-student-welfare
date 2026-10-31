@@ -48,7 +48,7 @@ function Thumb({ x, size = 56 }) {
   return <Avatar name={x.name} size={size} />
 }
 
-/* ---- photo: upload a file or give a Google Drive link; either way the server validates and stores it ---- */
+/* ---- photo: a public link (recommended) or a file; either way the server validates and stores it ---- */
 function PhotoPicker({ value, onChange }) {
   const { t } = useApp()
   const explain = useExplain()
@@ -94,17 +94,18 @@ function PhotoPicker({ value, onChange }) {
           ? <img className="exec-thumb" src={shown} alt={t('cm.photoPreview')} width={84} height={84} onError={() => setBroken(true)} />
           : <span className="exec-thumb exec-thumb-empty" aria-hidden="true" />}
         <div className="photo-controls">
-          <input ref={input} type="file" accept="image/jpeg,image/png" onChange={pick} hidden />
-          <div className="row">
-            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>{t('cm.choosePhoto')}</button>
-            {value && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { onChange(null); setLocal('') }}>{t('cm.removePhoto')}</button>}
-          </div>
-          <label className="field compact"><span>{t('cm.driveLink')}</span>
+          {/* a public link is the recommended way; a file from the device is the fallback */}
+          <label className="field compact"><span>{t('cm.driveLink')} <span className="photo-rec">{t('photo.recommended')}</span></span>
             <span className="row">
-              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://example.com/photo.jpg" inputMode="url" />
-              <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !link.trim()} onClick={useLink}>{t('cm.useLink')}</button>
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/…" inputMode="url" />
+              <button type="button" className="btn btn-dark btn-sm" disabled={busy || !link.trim()} onClick={useLink}>{t('cm.useLink')}</button>
             </span>
           </label>
+          <input ref={input} type="file" accept="image/jpeg,image/png" onChange={pick} hidden />
+          <div className="row">
+            <button type="button" className="btn-link" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
+            {value && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal('') }}>{t('cm.removePhoto')}</button>}
+          </div>
           <small className="muted">{t('cm.photoHelp')}</small>
           {busy && <small role="status">{t('cm.uploading')}</small>}
           {!busy && value && !err && !broken && <small className="ok-text" role="status">{t('cm.photoOk')}</small>}

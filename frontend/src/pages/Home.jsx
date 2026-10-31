@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
@@ -10,6 +10,7 @@ import { SketchArt, Vine } from '../components/Decor.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
 import { PostCard } from '../components/cards.jsx'
 import EventCarousel from '../components/EventCarousel.jsx'
+import HeroStage from '../components/HeroStage.jsx'
 
 function MapPanel({ u }) {
   const { t, n, pick } = useApp()
@@ -24,6 +25,62 @@ function MapPanel({ u }) {
       </dl>
       <Link className="btn btn-outline btn-sm" to={`/directory/${u.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>
     </div>
+  )
+}
+
+// One number that counts up from zero once `go` turns true (eased, about 1.6 s), in the page's numerals.
+function CountUp({ value, go, delay = 0 }) {
+  const { n } = useApp()
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    if (value == null || !go) return undefined
+    if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(value); return undefined }
+    let raf = 0
+    let start = 0
+    const tick = (now) => {
+      if (!start) start = now + delay
+      const p = Math.min(1, Math.max(0, (now - start) / 1600))
+      setV(Math.round(value * (1 - Math.pow(2, -10 * p))))
+      if (p < 1) raf = requestAnimationFrame(tick)
+      else setV(value)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [value, go, delay])
+  return value == null ? '–' : n(v)
+}
+
+// The four headline numbers on a cream band. They start counting, and their lines fill, when the band scrolls into view.
+function StatsBand({ items }) {
+  const { pick } = useApp()
+  const ref = useRef(null)
+  const [seen, setSeen] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setSeen(true); return undefined }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect() } }, { threshold: 0.35 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <section className={`stat-band${seen ? ' is-in' : ''}`} ref={ref} aria-labelledby="stat-h">
+      <div className="wrap stat-band-in">
+        <div className="stat-head">
+          <p className="eyebrow">{pick('এক নজরে', 'At a glance')}</p>
+          <h2 id="stat-h">{pick('সংখ্যায় আমাদের জেলা ও কমিউনিটি', 'Our district and community in numbers')}</h2>
+        </div>
+        <dl className="stat-grid">
+          {items.map(([k, v, ic, bn, en, subBn, subEn], i) => (
+            <div key={k} className="stat" style={{ '--i': i }}>
+              <span className="stat-ico" aria-hidden="true"><Icon name={ic} size={20} /></span>
+              <dd className="num"><CountUp value={v} go={seen} delay={i * 120} /></dd>
+              <dt>{pick(bn, en)}<small>{pick(subBn, subEn)}</small></dt>
+              <span className="stat-line" aria-hidden="true"><i /></span>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   )
 }
 
@@ -51,39 +108,21 @@ export default function Home() {
 
   return (
     <>
-      {/* ---------- hero: the supplied artwork exactly as designed. Its lettering and buttons are part of the picture, so the
-           heading is given to screen readers and real links sit exactly over the drawn buttons (below it on phones). ---------- */}
-      <section className="hero hero-full hero-exact" aria-labelledby="hero-title">
-        <div className="hx">
-          <img className="hx-img" src="/images/bswa/hero-4k-2400.webp" srcSet="/images/bswa/hero-4k-960.webp 960w, /images/bswa/hero-4k-1600.webp 1600w, /images/bswa/hero-4k-2400.webp 2400w, /images/bswa/hero-4k-3798.webp 3798w" sizes="100vw"
-            width="3798" height="1676" alt="" fetchpriority="high" decoding="async" />
-          <h1 id="hero-title" className="sr-only">{pick('ব্রাহ্মণবাড়িয়া — আমাদের ঐতিহ্য, আমাদের মানুষ, আমাদের আগামী। ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে।', 'Brahmanbaria — Our Heritage. Our People. Our Tomorrow.')}</h1>
-          {/* the small lines of the artwork are real text, so they stay sharp at any size (the heading above is for screen readers) */}
-          <p className="hx-eyebrow" aria-hidden="true">People · Heritage · Culture · Opportunity</p>
-          <div className="hx-tag" aria-hidden="true">
-            <span className="hx-tag-en">Our Heritage. Our People. Our Tomorrow.</span>
-            <span className="hx-tag-bn" lang="bn">ঐতিহ্য, সংস্কৃতি ও মানুষের বন্ধনে</span>
+      {/* ---------- hero: the four-scene cinematic stage (HeroStage), then the live numbers ---------- */}
+      <section className="hero hero-stage" aria-labelledby="hero-title">
+        <HeroStage />
+      </section>
+
+      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
+      <section className="section wrap" aria-labelledby="events-h">
+        <Reveal className="section-head">
+          <div>
+            <p className="eyebrow">{pick('ইভেন্ট ও আয়োজন', 'Events')}</p>
+            <h2 id="events-h">{pick('আসন্ন ও সাম্প্রতিক ইভেন্ট', 'Upcoming and recent events')}</h2>
           </div>
-          {/* crisp, real buttons laid exactly over the ones drawn in the artwork, so they stay sharp at any size */}
-          <Link className="hx-hit hx-explore" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
-          <Link className="hx-hit hx-meet" to="/students">{pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')}</Link>
-        </div>
-        <div className="wrap hx-actions">
-          <Link className="btn btn-dark" to="/heritage">{pick('ব্রাহ্মণবাড়িয়া ঘুরে দেখুন', 'Explore Brahmanbaria')} <Icon name="arrow" size={16} className="arr" /></Link>
-          <Link className="btn btn-outline" to="/students">{pick('আমাদের শিক্ষার্থীদের দেখুন', 'Meet Our Students')}</Link>
-        </div>
-        <div className="wrap hero-foot">
-          <dl className="stats-strip-inline" aria-label={pick('পরিসংখ্যান', 'At a glance')}>
-            {[
-              ['students', s?.students, 'users', 'শিক্ষার্থী', 'Students'],
-              ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas'],
-              ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads'],
-              ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places'],
-            ].map(([k, v, ic, bn, en]) => (
-              <div key={k}><span className="stat-ico" aria-hidden="true"><Icon name={ic} size={20} /></span><dt>{pick(bn, en)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
-            ))}
-          </dl>
-        </div>
+          <Link className="link-arrow" to="/events">{pick('সব ইভেন্ট', 'All events')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
+        <EventCarousel items={eventList} loading={events.loading} />
       </section>
 
       {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
@@ -118,6 +157,15 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- the district and the community in numbers: counts rise as the band comes into view ---------- */}
+      <StatsBand items={[
+        ['students', s ? (s.students || 0) + (s.alumni || 0) : undefined, 'users', 'শিক্ষার্থী ও অ্যালামনাই', 'Students and alumni',
+          s ? `বর্তমান ${n(s.students || 0)} · অ্যালামনাই ${n(s.alumni || 0)}` : '', s ? `${s.students || 0} current · ${s.alumni || 0} alumni` : ''],
+        ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas', 'ব্রাহ্মণবাড়িয়া জেলায়', 'in Brahmanbaria'],
+        ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads', 'নয়টি উপজেলা জুড়ে', 'across the nine upazilas'],
+        ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places', 'সূত্রসহ সংরক্ষিত', 'documented with sources'],
+      ]} />
+
       {/* ---------- interactive upazila map (real boundaries and counts) ---------- */}
       <section className="section-tint map-sec">
         <Vine className="vine-map" />
@@ -133,18 +181,6 @@ export default function Home() {
             <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(pl) => nav(`/heritage/${pl.slug}`)} />
           </Reveal>
         </div>
-      </section>
-
-      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
-      <section className="section wrap" aria-labelledby="events-h">
-        <Reveal className="section-head">
-          <div>
-            <p className="eyebrow">{pick('ইভেন্ট ও আয়োজন', 'Events')}</p>
-            <h2 id="events-h">{pick('আসন্ন ও সাম্প্রতিক ইভেন্ট', 'Upcoming and recent events')}</h2>
-          </div>
-          <Link className="link-arrow" to="/events">{pick('সব ইভেন্ট', 'All events')} <Icon name="arrow" size={15} className="arr" /></Link>
-        </Reveal>
-        <EventCarousel items={eventList} loading={events.loading} />
       </section>
 
       {/* ---------- student community: real community photograph beside an evergreen panel ---------- */}

@@ -342,7 +342,7 @@ export function TypeConfirm({ title, text, detail, expect, prompt, label, busy, 
 const ACCEPT = ['image/jpeg', 'image/png']
 const MAX = 5 * 1024 * 1024
 
-// One picture: choose a file (preview first, upload with progress) or paste a Google Drive link.
+// One picture: paste a public link (recommended) or choose a file (preview first, upload with progress).
 // onChange gets { path, url } once the server has stored the file, or null when it is removed.
 export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
   const { t } = useApp()
@@ -384,17 +384,18 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
           ? <img className="exec-thumb ad-thumb" src={shown} alt={t('ad.preview')} width={96} height={96} onError={() => setBroken(true)} />
           : <span className="exec-thumb exec-thumb-empty" aria-hidden="true" />}
         <div className="photo-controls">
-          <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
-          <div className="row">
-            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>{value || url ? t('ad.replacePhoto') : t('ad.choosePhoto')}</button>
-            {(value || local) && <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { onChange(null); setLocal(''); setErr('') }}>{t('ad.removePhoto')}</button>}
-          </div>
-          <label className="field compact"><span>{t('ad.driveLink')}</span>
+          {/* a public link is the recommended way; a file from the device is the fallback */}
+          <label className="field compact"><span>{t('ad.driveLink')} <span className="photo-rec">{t('photo.recommended')}</span></span>
             <span className="row">
-              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://example.com/photo.jpg" inputMode="url" disabled={busy} />
-              <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !link.trim()} onClick={() => send({ driveUrl: link.trim() }, '').then(() => setLink(''))}>{t('ad.useLink')}</button>
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/…" inputMode="url" disabled={busy} />
+              <button type="button" className="btn btn-dark btn-sm" disabled={busy || !link.trim()} onClick={() => send({ driveUrl: link.trim() }, '').then(() => setLink(''))}>{t('ad.useLink')}</button>
             </span>
           </label>
+          <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
+          <div className="row">
+            <button type="button" className="btn-link" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
+            {(value || local) && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal(''); setErr('') }}>{t('ad.removePhoto')}</button>}
+          </div>
           <small className="muted">{hint || t('ad.photoHelp')}</small>
           {busy && (
             <div role="status" aria-label={t('ad.uploading')}>

@@ -152,7 +152,7 @@ export function StudentDetail() {
         const contact = d ? rows([
           [t('students.phone'), d.phone && <a key="p" href={`tel:${d.phone}`}>{d.phone}</a>],
           [t('students.email'), d.email && <a key="e" href={`mailto:${d.email}`}>{d.email}</a>],
-          [t('students.blood'), d.bloodGroup],
+          [t('students.blood'), d.bloodGroup && <b key="b" className="blood-txt">{d.bloodGroup}</b>],
           [t('students.gender'), d.gender ? t(`ad.mem.${d.gender}`) : ''],
         ]) : []
         return (

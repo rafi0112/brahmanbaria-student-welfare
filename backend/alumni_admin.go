@@ -38,6 +38,7 @@ type alumniAdminRow struct {
 	AutoVerified bool              `json:"autoVerified,omitempty"`
 	VerifiedAt   string            `json:"verifiedAt,omitempty"`
 	VerifiedBy   string            `json:"verifiedBy,omitempty"`
+	Photo        string            `json:"photo,omitempty"` // the same image the public Alumni card shows
 }
 
 func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
@@ -118,6 +119,10 @@ func (a *App) alumniList(w http.ResponseWriter, r *http.Request, _ User) {
 	sort.SliceStable(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
 	pg, limit := paging(r, 25)
 	lo, hi, pages := window(len(out), pg, limit)
+	extras := a.alumniExtras(r.Context())
+	for i := lo; i < hi; i++ {
+		out[i].Photo = extras[out[i].ID].photo(out[i].ID)
+	}
 	writeJSON(w, 200, map[string]any{"items": out[lo:hi], "total": len(out), "page": pg, "pages": pages, "fromDatabase": d.FromDB,
 		"alumniUpToBatch": d.AlumniUpTo, "facets": map[string]any{"batches": batches, "departments": depts}})
 }

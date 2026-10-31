@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
-import { Data, MediaPhoto } from '../components/ui.jsx'
+import { Avatar, Data, MediaPhoto } from '../components/ui.jsx'
 import { ContentList } from './content.jsx'
 import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
@@ -295,7 +295,8 @@ export function ReferenceAdmin() {
 
 /* ---------------------------------------------------------------- alumni */
 
-const PRIVATE_FIELDS = [['phone', 'tel'], ['email', 'email'], ['bloodGroup', 'text'], ['permanentAddress', 'text'], ['presentAddress', 'text'], ['facebook', 'url'], ['photoLink', 'url'], ['note', 'text']]
+// the photo link is stored with these columns but shown on its own, because the photo is public
+const PRIVATE_FIELDS = [['phone', 'tel'], ['email', 'email'], ['bloodGroup', 'text'], ['permanentAddress', 'text'], ['presentAddress', 'text'], ['facebook', 'url'], ['note', 'text']]
 
 function AlumnusEditor({ row, depts, ups, onClose, onSaved }) {
   const { t, n, pick } = useApp()
@@ -325,6 +326,16 @@ function AlumnusEditor({ row, depts, ups, onClose, onSaved }) {
         <Field label={t('ad.al.workplace')} error={errs.workplace}>{(id, bad) => <input id={id} {...text(v, setV, 'workplace')} aria-invalid={bad} />}</Field>
         <Field label={t('auth.upazila')} error={errs.upazila}>{(id, bad) => (
           <select id={id} {...text(v, setV, 'upazila')} aria-invalid={bad}><option value="">—</option>{ups.map((u) => <option key={u.slug} value={u.slug}>{pick(u.nameBn, u.nameEn)}</option>)}</select>)}</Field>
+      </div>
+      <h4 className="ad-sub-h"><Icon name="gallery" size={15} /> {pick('ছবি', 'Photo')}</h4>
+      <div className="photo-pick">
+        <Avatar name={v.name || '?'} size={64} photo={row?.photo} />
+        <div className="photo-pick-actions">
+          <Field label={<>{t('ad.al.p.photoLink')} <span className="photo-rec">{t('photo.recommended')}</span></>} error={errs.photoLink}>{(id, bad) => (
+            <input id={id} type="url" inputMode="url" placeholder="https://drive.google.com/…" value={v.private.photoLink || ''} aria-invalid={bad}
+              onChange={(e) => setV({ ...v, private: { ...v.private, photoLink: e.target.value } })} />)}</Field>
+          <small className="muted">{pick('Google Drive এ ছবিটি "Anyone with the link" করে শেয়ার করে লিংকটি দিন। ছবিটি অ্যালামনাই পেজে সবার জন্য দেখানো হবে। লিংক মুছে দিলে ছবিও সরে যাবে।', 'Share the photo on Google Drive as "Anyone with the link" and paste the link. The photo is shown to everyone on the Alumni page; clearing the link removes it.')}</small>
+        </div>
       </div>
       <h4 className="ad-sub-h"><Icon name="shield" size={15} /> {t('ad.al.private')}</h4>
       <p className="muted small">{t('ad.al.privateNote')}</p>
@@ -444,7 +455,7 @@ export function AlumniAdmin() {
         <>
           <DataTable caption={t('ad.al.title')} rows={rows} rowKey={(r) => r.id}
             columns={[
-              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <div className="dt-stack"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong>{r.kind !== 'alumni' && <small className="dt-sub">{t(r.kind === 'member' ? 'ad.al.fromMember' : 'ad.al.fromDirectory')}</small>}<small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div> },
+              { id: 'name', label: t('ad.al.name'), primary: true, cell: (r) => <span className="dt-person"><Avatar name={r.name} size={34} photo={r.photo} /><div className="dt-stack"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t('ad.vm.imported')} />}</strong>{r.kind !== 'alumni' && <small className="dt-sub">{t(r.kind === 'member' ? 'ad.al.fromMember' : 'ad.al.fromDirectory')}</small>}<small className="dt-sub dt-trunc">{[r.designation, r.occupation].filter(Boolean).join(' · ') || '—'}</small></div></span> },
               { id: 'work', label: t('ad.al.workplace'), width: '18%', cell: (r) => <small className="dt-sub dt-clamp">{r.workplace || '—'}</small> },
               { id: 'acad', label: t('ad.stu.col.academic'), width: '16%', cell: (r) => <div className="dt-stack"><small className="dt-sub dt-trunc">{r.department || '—'}</small><small className="dt-sub">{r.batch ? `${t('auth.batch')} ${n(r.batch)}` : ''} {upName(r.upazila)}</small></div> },
               { id: 'invite', label: t('ad.inv.col'), width: '20%', cell: (r) => (r.invite ? <InviteCell r={r} t={t} when={when} />

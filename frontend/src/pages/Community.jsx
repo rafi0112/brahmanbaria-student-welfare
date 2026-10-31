@@ -13,7 +13,7 @@ function useDebounced(v, ms = 250) {
 }
 
 export function Alumni() {
-  const { t, n } = useApp()
+  const { t, n, pick } = useApp()
   const [sp, setSp] = useSearchParams()
   const f = { q: sp.get('q') || '', batch: sp.get('batch') || '', department: sp.get('department') || '', page: Number(sp.get('page')) || 1 }
   const [text, setText] = useState(f.q)
@@ -47,10 +47,12 @@ export function Alumni() {
           </select>
           {(f.q || f.batch || f.department) && <button className="btn btn-ghost btn-sm" onClick={() => { setText(''); setSp({}, { replace: true }) }}>{t('common.clear')}</button>}
         </div>
-        <p className="privacy-note">🔒 {t('alumni.note')}</p>
         <Data q={res} skeleton="people">
           {(d) => (
             <>
+              <p className="privacy-note">🔒 {t('alumni.note')} {d.view === 'public'
+                ? <>{pick('যোগাযোগের তথ্য (ফোন, ইমেইল, ফেসবুক) ও রক্তের গ্রুপ শুধু লগইন করা সদস্যরা দেখতে পারেন।', 'Contact details (phone, email, Facebook) and blood group are shown to signed-in members only.')} <Link to="/login" state={{ from: '/alumni' }}>{t('nav.login')} →</Link></>
+                : pick('আপনি সদস্য হিসেবে যোগাযোগের তথ্য দেখছেন; দয়া করে দায়িত্বশীলভাবে ব্যবহার করুন।', 'You are seeing contact details as a member; please use them responsibly.')}</p>
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}
                 {d.alumniUpToBatch > 0 && <> · {t('alumni.upTo').replace('{n}', n(d.alumniUpToBatch))} <Link className="link-arrow" to="/students">{t('alumni.laterStudents').replace('{n}', n(d.alumniUpToBatch + 1))} →</Link></>}</p>
               {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (
@@ -58,7 +60,7 @@ export function Alumni() {
                   {d.items.map((a) => (
                     <article key={a.id} className="alumni-card">
                       <header className="al-head">
-                        <Avatar name={a.name} size={52} />
+                        <Avatar name={a.name} size={56} photo={a.photo} />
                         <div>
                           <h3>{a.name}</h3>
                           {(a.designation || a.occupation) && <p className="al-role">{[...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')}</p>}
@@ -69,6 +71,14 @@ export function Alumni() {
                         {a.department && <span className="chip-mini">{a.department}</span>}
                         {a.batch ? <span className="chip-mini is-batch">{t('students.batch')} {n(a.batch)}</span> : null}
                       </p>
+                      {a.contact ? (
+                        <ul className="al-contact" aria-label={pick('যোগাযোগ', 'Contact')}>
+                          {a.contact.phone && <li><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}><Icon name="phone" size={14} /><span>{a.contact.phone}</span></a></li>}
+                          {a.contact.email && <li><a href={`mailto:${a.contact.email}`}><Icon name="mail" size={14} /><span>{a.contact.email}</span></a></li>}
+                          {a.contact.bloodGroup && <li className="al-blood"><Icon name="heart" size={14} /><span>{pick('রক্তের গ্রুপ', 'Blood group')}: <b>{a.contact.bloodGroup}</b></span></li>}
+                          {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <li><a href={a.contact.facebook} target="_blank" rel="noreferrer noopener"><Icon name="facebook" size={14} /><span>Facebook</span></a></li>}
+                        </ul>
+                      ) : d.view === 'public' && <p className="al-locked"><Icon name="lock" size={13} /> {pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details')}</p>}
                     </article>
                   ))}
                 </div>
@@ -98,23 +108,56 @@ export function Committee() {
                 <p className="muted">{[d.committee.term, d.committee.startsOn && `${d.committee.startsOn} → ${d.committee.endsOn || '…'}`].filter(Boolean).join(' · ')}</p>
                 {d.committee.description && <p className="committee-intro">{d.committee.description}</p>}
               </header>
-              {groupSeats(d.members).map(([key, seats]) => seats.length > 0 && (
-                <section key={key} className="cm-group" aria-labelledby={`cg-${key}`}>
-                  <h3 id={`cg-${key}`} className="cm-group-h">{t(`committee.group.${key}`)}<span>{seats.length}</span></h3>
-                  <div className={key === 'exec' ? 'cards-4' : 'cm-advisors'}>
-                    {seats.map((m) => (
-                      <article key={m.id} className={key === 'exec' ? 'member-card' : 'advisor-row'}>
-                        <ExecPhoto m={m} size={key === 'exec' ? 96 : 52} />
-                        <div>
-                          <h3>{m.name}{m.verified && <VerifiedMark size={key === 'exec' ? 16 : 14} />}</h3>
-                          <p className="role">{m.designation}</p>
-                          {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
+              {groupSeats(d.members).map(([key, seats]) => {
+                if (seats.length === 0) return null
+                // the first two executive seats (president, general secretary) lead in larger cards when the list is long
+                const lead = key === 'exec' && seats.length > 3 ? seats.slice(0, 2) : []
+                const rest = seats.slice(lead.length)
+                return (
+                  <section key={key} className={`cm-group cm-${key}`} aria-labelledby={`cg-${key}`}>
+                    <h3 id={`cg-${key}`} className="cm-group-h">{t(`committee.group.${key}`)}<span>{seats.length}</span></h3>
+                    {lead.length > 0 && (
+                      <div className="cm-lead">
+                        {lead.map((m) => (
+                          <article key={m.id} className="cm-lead-card">
+                            <span className="cm-ring"><ExecPhoto m={m} size={112} /></span>
+                            <div>
+                              <p className="cm-role">{m.designation}</p>
+                              <h3>{m.name}{m.verified && <VerifiedMark size={17} />}</h3>
+                              {m.bio && <p className="exec-bio">{m.bio}</p>}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                    {key === 'exec' ? (
+                      <div className="cm-grid">
+                        {rest.map((m) => (
+                          <article key={m.id} className="member-card">
+                            <span className="cm-ring"><ExecPhoto m={m} size={88} /></span>
+                            <h3>{m.name}{m.verified && <VerifiedMark size={15} />}</h3>
+                            <p className="cm-chip">{m.designation}</p>
+                            {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="cm-advisors">
+                        {rest.map((m) => (
+                          <article key={m.id} className="advisor-row">
+                            <ExecPhoto m={m} size={52} />
+                            <div>
+                              <h3>{m.name}{m.verified && <VerifiedMark size={14} />}</h3>
+                              <p className="role">{m.designation}</p>
+                              {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )
+              })}
             </>
           )}
         </Data>
@@ -123,10 +166,22 @@ export function Committee() {
   )
 }
 
+// Honorifics are skipped (several may stand together, as in অধ্যাপক ড. ...) so the monogram is the first letter of the
+// name itself, without its vowel sign: মোঃ রহিম → র, সুমন → স, Dr. Karim → K.
+const HONORIFIC = /^(?:(?:মোঃ|মো:|মোহাঃ|মো\.|মোছাঃ|মোসাঃ|ডঃ|ড\.|ডা\.|md\.|mst\.|dr\.|prof\.|mr\.|mrs\.|ms\.)\s*|(?:প্রফেসর|অধ্যাপক|md|mst|dr|prof|mr|mrs|ms)\s+)/iu
+function firstLetter(name) {
+  let n = (name || '').trim()
+  for (let prev = ''; prev !== n;) { prev = n; n = n.replace(HONORIFIC, '').trim() }
+  return ((n || name || '?').match(/\p{L}/u)?.[0] || '?').toUpperCase()
+}
+
+// A member's photo when one was given; otherwise one letter in a soft tint chosen from the name.
 function ExecPhoto({ m, size = 96 }) {
   const [bad, setBad] = useState(false)
   if (m.photoUrl && !bad) return <img className="exec-photo" src={m.photoUrl} alt={m.name} width={size} height={size} style={{ width: size, height: size }} loading="lazy" decoding="async" onError={() => setBad(true)} />
-  return <Avatar name={m.name} size={size} />
+  let h = 0
+  for (const c of m.name || '?') h = (h * 31 + c.charCodeAt(0)) % 997
+  return <span className={`cm-mono tint-${['peach', 'teal', 'orange', 'sand'][h % 4]}`} style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden="true">{firstLetter(m.name)}</span>
 }
 
 // Seats are shown in three groups by their designation; the order inside each group is the admin's order.

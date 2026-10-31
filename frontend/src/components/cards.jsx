@@ -69,7 +69,7 @@ export function StudentCard({ s, upazilas = [] }) {
         {s.details && (s.details.phone || s.details.bloodGroup) && (
           <p className="student-extra">
             {s.details.phone && <span className="num">{s.details.phone}</span>}
-            {s.details.bloodGroup && <span className="chip-mini">{s.details.bloodGroup}</span>}
+            {s.details.bloodGroup && <span className="chip-mini chip-blood">{s.details.bloodGroup}</span>}
           </p>
         )}
       </span>
