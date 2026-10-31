@@ -130,6 +130,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	pg, limit := paging(r, 48)
 	out := []Alumnus{}
 	list := a.shownAlumni(r.Context()) // alumni records and every graduated batch
+	extras := a.alumniExtras(r.Context())
 	batch, _ := strconv.Atoi(q.Get("batch"))
 	for _, s := range list {
 		if batch > 0 && (s.Batch == nil || *s.Batch != batch) {
@@ -138,8 +139,14 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		if d := q.Get("department"); d != "" && s.Department != d {
 			continue
 		}
-		if t := strings.TrimSpace(q.Get("q")); t != "" && !contains(s.Name, t) && !contains(s.Occupation, t) && !contains(s.Workplace, t) {
-			continue
+		if t := strings.TrimSpace(q.Get("q")); t != "" {
+			phone, email, blood := "", "", ""
+			if c := extras[s.ID].contact(v); c != nil { // search only what this viewer may see
+				phone, email, blood = c.Phone, c.Email, c.Blood
+			}
+			if !searchHit(t, []string{s.Name, s.Occupation, s.Workplace, s.Department}, phone, email, blood) {
+				continue
+			}
 		}
 		out = append(out, s)
 	}
@@ -152,7 +159,6 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	lo, hi, pages := window(len(out), pg, limit)
-	extras := a.alumniExtras(r.Context())
 	items := make([]alumnusView, 0, hi-lo)
 	for _, al := range out[lo:hi] {
 		x := extras[al.ID]

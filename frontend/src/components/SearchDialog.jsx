@@ -9,6 +9,9 @@ const readRecent = () => { try { return JSON.parse(localStorage.getItem(RECENT_K
 const saveRecent = (q) => { try { localStorage.setItem(RECENT_KEY, JSON.stringify([q, ...readRecent().filter((x) => x !== q)].slice(0, 5))) } catch { /* private mode */ } }
 
 const norm = (v) => (v || '').toString().toLowerCase()
+const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+// a typed blood group, in the forms the API understands (b+, B positive, বি পজিটিভ…)
+const looksBlood = (q) => /^(a|b|ab|o|এ|বি|এবি|ও)\s*(\+|-|−|pos(itive)?|neg(ative)?|\+ve|-ve|পজিটিভ|নেগেটিভ)$/i.test(q.trim())
 const hit = (q, ...fields) => fields.some((f) => norm(f).includes(q))
 
 function useDebounced(v, ms = 220) {
@@ -17,9 +20,10 @@ function useDebounced(v, ms = 220) {
   return d
 }
 
-// Site search in a dialog: pages, students (searched on the server), heritage places, upazilas, events and articles
-// (filtered here). Before typing it offers recent searches, the nine upazilas and the main pages. Arrow keys move,
-// Enter opens, Escape closes; with nothing matched, Enter searches the student directory.
+// Site search in a dialog: pages, students and alumni (searched on the server, where a signed-in member can also search by
+// blood group, phone or email), heritage places, upazilas, events and articles (filtered here). Before typing it offers
+// recent searches, blood groups, the nine upazilas and the main pages. Arrow keys move, Enter opens, Escape closes; with
+// nothing matched, Enter searches the student directory.
 export default function SearchDialog({ onClose }) {
   const { t, pick, n } = useApp()
   const nav = useNavigate()
@@ -36,6 +40,9 @@ export default function SearchDialog({ onClose }) {
   const events = useApi('/events')
   const posts = useApi('/blog')
   const students = useApi(dq.length >= 2 ? `/students${qs({ q: dq, limit: 5 })}` : null)
+  const alumni = useApi(dq.length >= 2 ? `/alumni${qs({ q: dq, limit: 4 })}` : null)
+  const viewer = useApi('/students?limit=1') // its "view" says whether private details can be searched
+  const canPrivate = viewer.data?.view === 'member' || viewer.data?.view === 'admin'
 
   useEffect(() => {
     input.current?.focus()
@@ -58,7 +65,9 @@ export default function SearchDialog({ onClose }) {
     add('pages', pick('পেজ', 'Pages'), pages.filter(([, l]) => norm(l).includes(needle)).slice(0, 4)
       .map(([to, l]) => ({ key: `p${to}`, to, title: l, sub: to, icon: 'arrow' })))
     add('students', pick('শিক্ষার্থী', 'Students'), (students.data?.items || []).slice(0, 5)
-      .map((s) => ({ key: `s${s.id}`, to: `/students/${s.id}`, title: s.name, sub: [s.department, s.batch && `${pick('ব্যাচ', 'Batch')} ${n(s.batch)}`].filter(Boolean).join(' · '), icon: 'users' })))
+      .map((s) => ({ key: `s${s.id}`, to: `/students/${s.id}`, title: s.name, blood: s.details?.bloodGroup, sub: [s.department, s.batch && `${pick('ব্যাচ', 'Batch')} ${n(s.batch)}`].filter(Boolean).join(' · '), icon: 'users' })))
+    add('alumni', pick('অ্যালামনাই', 'Alumni'), (alumni.data?.items || []).slice(0, 4)
+      .map((a) => ({ key: `a${a.id}`, to: `/alumni${qs({ q: a.name })}`, title: a.name, blood: a.contact?.bloodGroup, sub: [a.designation || a.occupation, a.workplace, a.batch && `${pick('ব্যাচ', 'Batch')} ${n(a.batch)}`].filter(Boolean).join(' · '), icon: 'grad' })))
     add('places', pick('ঐতিহ্য', 'Heritage'), (places.data?.items || []).filter((p) => hit(needle, p.nameBn, p.nameEn, p.summary, p.upazila, p.category)).slice(0, 4)
       .map((p) => ({ key: `h${p.slug}`, to: `/heritage/${p.slug}`, title: pick(p.nameBn, p.nameEn), sub: pick(p.nameEn, p.nameBn), icon: 'landmark', img: p.images?.[0] && `/images/${p.images[0]}-640.webp` })))
     add('upazilas', pick('উপজেলা', 'Upazilas'), (upazilas.data?.items || []).filter((u) => hit(needle, u.nameBn, u.nameEn, u.slug, ...(u.unions || []))).slice(0, 4)
@@ -68,7 +77,7 @@ export default function SearchDialog({ onClose }) {
     add('posts', pick('লেখা', 'Articles'), (posts.data?.items || []).filter((p) => hit(needle, p.title, p.titleBn, p.titleEn, p.summary)).slice(0, 3)
       .map((p) => ({ key: `b${p.slug}`, to: `/blog/${p.slug}`, title: p.title || pick(p.titleBn, p.titleEn), sub: p.summary, icon: 'book' })))
     return g
-  }, [needle, pages, students.data, places.data, upazilas.data, events.data, posts.data, pick, n])
+  }, [needle, pages, students.data, alumni.data, places.data, upazilas.data, events.data, posts.data, pick, n])
 
   const flat = groups.flatMap((g) => g.items)
   useEffect(() => { setActive(0) }, [needle])
@@ -89,7 +98,7 @@ export default function SearchDialog({ onClose }) {
       else if (needle) open(`/students${qs({ q: q.trim() })}`)
     }
   }
-  const searching = needle && (students.loading || places.loading || upazilas.loading || events.loading)
+  const searching = needle && (students.loading || alumni.loading || places.loading || upazilas.loading || events.loading)
   let idx = -1
 
   return (
@@ -97,7 +106,7 @@ export default function SearchDialog({ onClose }) {
       <div className="sd-panel" role="dialog" aria-modal="true" aria-label={t('common.search')} onKeyDown={onKey}>
         <div className="sd-field">
           <Icon name="search" size={20} />
-          <input ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={pick('শিক্ষার্থী, স্থান, উপজেলা, ইভেন্ট খুঁজুন…', 'Search students, places, upazilas, events…')}
+          <input ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={canPrivate ? pick('নাম, রক্তের গ্রুপ (যেমন B+), ফোন, স্থান বা ইভেন্ট…', 'Name, blood group (e.g. B+), phone, place or event…') : pick('শিক্ষার্থী, অ্যালামনাই, স্থান, উপজেলা, ইভেন্ট খুঁজুন…', 'Search students, alumni, places, upazilas, events…')}
             role="combobox" aria-expanded={flat.length > 0} aria-controls="sd-list" aria-activedescendant={flat[active] ? `sd-${flat[active].key}` : undefined} aria-autocomplete="list" />
           <button type="button" className="sd-esc" onClick={onClose} aria-label={pick('বন্ধ করুন', 'Close')}>Esc</button>
         </div>
@@ -111,6 +120,12 @@ export default function SearchDialog({ onClose }) {
                   <div className="sd-chips">{recent.map((r) => <button key={r} type="button" onClick={() => { setQ(r); input.current?.focus() }}><Icon name="clock" size={13} />{r}</button>)}</div>
                 </section>
               )}
+              <section>
+                <h3>{pick('রক্তের গ্রুপ দিয়ে খুঁজুন', 'Search by blood group')}</h3>
+                {canPrivate
+                  ? <div className="sd-chips">{BLOOD.map((b) => <button key={b} type="button" className="sd-blood" onClick={() => { setQ(b); input.current?.focus() }}><Icon name="heart" size={13} />{b}</button>)}</div>
+                  : <p className="sd-note"><Icon name="lock" size={14} /> {pick('রক্তের গ্রুপ, ফোন বা ইমেইল দিয়ে খুঁজতে অনুমোদিত সদস্য হিসেবে লগইন করুন।', 'Sign in as an approved member to search by blood group, phone or email.')} <button type="button" className="btn-link" onClick={() => open('/login')}>{pick('লগইন', 'Sign in')}</button></p>}
+              </section>
               {(upazilas.data?.items || []).length > 0 && <section>
                 <h3>{pick('উপজেলা', 'Upazilas')}</h3>
                 <div className="sd-chips">{(upazilas.data?.items || []).map((u) => <button key={u.slug} type="button" onClick={() => open(`/directory/${u.slug}`)}><Icon name="pin" size={13} />{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</button>)}</div>
@@ -136,6 +151,7 @@ export default function SearchDialog({ onClose }) {
                           onMouseMove={() => setActive(me)} onClick={() => open(it.to)}>
                           <span className="sd-ico" aria-hidden="true">{it.img ? <img src={it.img} alt="" loading="lazy" onError={(e) => { e.currentTarget.remove() }} /> : <Icon name={it.icon} size={16} />}</span>
                           <span className="sd-txt"><b>{it.title}</b>{it.sub && <small>{it.sub}</small>}</span>
+                          {it.blood && <span className="sd-bg">{it.blood}</span>}
                           <Icon name="arrow" size={14} className="sd-go" />
                         </li>
                       )
@@ -145,7 +161,9 @@ export default function SearchDialog({ onClose }) {
               ))}
               {!searching && flat.length === 0 && (
                 <li className="sd-empty" role="presentation">
-                  <p>{pick(`"${q.trim()}" — কিছু পাওয়া যায়নি।`, `No match for "${q.trim()}".`)}</p>
+                  <p>{looksBlood(q) && !canPrivate
+                    ? pick('রক্তের গ্রুপ দিয়ে খুঁজতে অনুমোদিত সদস্য হিসেবে লগইন করুন।', 'Sign in as an approved member to search by blood group.')
+                    : pick(`"${q.trim()}" — কিছু পাওয়া যায়নি।`, `No match for "${q.trim()}".`)}</p>
                   <button type="button" className="btn btn-sm btn-outline" onClick={() => open(`/students${qs({ q: q.trim() })}`)}>{pick('শিক্ষার্থী ডিরেক্টরিতে খুঁজুন', 'Search the student directory')} <Icon name="arrow" size={14} /></button>
                 </li>
               )}

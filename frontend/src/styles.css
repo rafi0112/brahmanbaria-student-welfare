@@ -1588,3 +1588,6 @@ html[lang='bn'] .sd-suggest h3, html[lang='bn'] .sd-group { font-size: .82rem; l
 .blood-txt { color: #b42318; font-weight: 800; }
 :root[data-theme='dark'] .chip-mini.chip-blood { color: #ff9b94; } :root[data-theme='dark'] .blood-txt { color: #ff9b94; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .chip-mini.chip-blood { color: #ff9b94; } :root:not([data-theme='light']) .blood-txt { color: #ff9b94; } }
+.sd-chips .sd-blood { color: #b42318; font-weight: 800; } .sd-chips .sd-blood svg { color: #b42318; }
+.sd-bg { flex: none; padding: 3px 8px; border-radius: 999px; color: #b42318; font: 800 .78rem/1.2 var(--font-body); }
+.sd-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: .86rem; color: var(--muted); }

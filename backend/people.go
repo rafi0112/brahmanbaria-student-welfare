@@ -281,8 +281,15 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 		if u := q.Get("upazila"); u != "" && s.Upazila != u {
 			continue
 		}
-		if t := strings.TrimSpace(q.Get("q")); t != "" && !contains(s.Name, t) && !contains(s.Department, t) {
-			continue
+		if t := strings.TrimSpace(q.Get("q")); t != "" {
+			pv := s.view(v) // search only what this viewer may see
+			phone, email, blood := "", "", ""
+			if pv.Details != nil {
+				phone, email, blood = pv.Details.Phone, pv.Details.Email, pv.Details.BloodGroup
+			}
+			if !searchHit(t, []string{s.Name, s.Department}, phone, email, blood) {
+				continue
+			}
 		}
 		out = append(out, s)
 	}

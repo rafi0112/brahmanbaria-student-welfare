@@ -52,7 +52,7 @@ export default function Students() {
         <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
           <label className="sbar-q">
             <Icon name="search" size={18} />
-            <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('students.search')} aria-label={t('students.search')} />
+            <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? pick('নাম, বিভাগ, রক্তের গ্রুপ (যেমন B+) বা ফোন…', 'Name, department, blood group (e.g. B+) or phone…') : t('students.search')} aria-label={t('students.search')} />
           </label>
           <div className="sbar-filters">
             <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>
