@@ -416,7 +416,7 @@ function Imported() {
           <DataTable caption={t('ad.stu.tab.imported')} rows={rows} rowKey={(r) => r.id}
             columns={[
               { id: 'member', label: t('ad.stu.col.member'), primary: true, cell: (r) => (
-                <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t(r.source === 'member' ? 'ad.vm.member' : 'ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{t(r.source === 'member' ? 'ad.imp.member' : r.source === 'manual' ? 'ad.imp.manual' : 'ad.imp.file')}{r.phone ? ` · ${r.phone}` : ''}</small></span></Link>
+                <Link to={`/admin/profile/${r.id}`} className="dt-person"><Avatar name={r.name} size={30} photo={r.private?.photoLink ? `/api/v1/students/${r.id}/photo` : undefined} /><span className="dt-twoline"><strong className="dt-clamp">{r.name}{r.verified && <VerifiedMark label={t(r.source === 'member' ? 'ad.vm.member' : 'ad.vm.imported')} />}</strong><small className="dt-sub dt-trunc">{t(r.source === 'member' ? 'ad.imp.member' : r.source === 'manual' ? 'ad.imp.manual' : 'ad.imp.file')}{r.phone ? ` · ${r.phone}` : ''}</small></span></Link>
               ) },
               { id: 'dept', label: t('students.dept'), width: '16%', cell: (r) => <Trunc>{r.department || '—'}</Trunc> },
               { id: 'batch', label: t('students.batch'), width: '70px', cell: (r) => (r.batch ? n(r.batch) : '—') },
@@ -463,6 +463,40 @@ function Imported() {
 }
 
 // Add or edit a hand-added directory record. This never creates an account or confirms an email address.
+// The photo of a record that came from the form: its saved public link, which the admin can replace or remove.
+function RecordPhotoLink({ row }) {
+  const { pick } = useApp()
+  const errText = useErrText()
+  const [link, setLink] = useState(row.private?.photoLink || '')
+  const [saved, setSaved] = useState(row.private?.photoLink || '')
+  const [ver, setVer] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const put = async (value) => {
+    setBusy(true); setMsg('')
+    try {
+      await api(`/admin/directory/${row.id}/photo-link`, { method: 'PUT', body: JSON.stringify({ photoLink: value }) })
+      setSaved(value); setLink(value); setVer((x) => x + 1)
+      setMsg(value ? pick('ছবির লিংক সংরক্ষণ হয়েছে।', 'Photo link saved.') : pick('ছবি সরানো হয়েছে।', 'Photo removed.'))
+    } catch (e) { setMsg(e.fields?.photoLink || errText(e)) } finally { setBusy(false) }
+  }
+  return (
+    <div className="photo-pick">
+      <Avatar name={row.name} size={64} photo={saved ? `/api/v1/students/${row.id}/photo?r=${ver}` : undefined} />
+      <div className="photo-pick-actions">
+        <Field label={<>{pick('ছবির লিংক', 'Photo link')} <span className="photo-rec">{pick('প্রস্তাবিত', 'Recommended')}</span></>}>{(id) => (
+          <span className="row">
+            <input id={id} type="url" inputMode="url" placeholder="https://drive.google.com/…" value={link} disabled={busy} onChange={(e) => setLink(e.target.value)} />
+            <button type="button" className="btn btn-dark btn-sm" disabled={busy || !link.trim() || link.trim() === saved} onClick={() => put(link.trim())}>{pick('সংরক্ষণ', 'Save')}</button>
+          </span>)}</Field>
+        {saved && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => put('')}>{pick('ছবি সরান', 'Remove photo')}</button>}
+        <small className="muted">{pick('ফর্মে দেওয়া ছবির লিংক। ছবিটি শিক্ষার্থী ও অ্যালামনাই পেজে সবার জন্য দেখানো হয়। Google Drive এ "Anyone with the link" করা থাকতে হবে।', 'The photo link from the form. The photo is shown to everyone on the Students and Alumni pages. A Google Drive file must be shared as "Anyone with the link".')}</small>
+        {msg && <small role="status">{msg}</small>}
+      </div>
+    </div>
+  )
+}
+
 export function ImportedForm({ row, depts, onClose, onSaved }) {
   const { t, n } = useApp()
   const errText = useErrText()
@@ -495,6 +529,7 @@ export function ImportedForm({ row, depts, onClose, onSaved }) {
   return (
     <Modal title={t(row ? 'ad.imp.editTitle' : 'ad.imp.addTitle')} onClose={onClose} drawer busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
       <p className="muted small">{t('ad.imp.formHelp')}</p>
+      {row?.source === 'file' && <RecordPhotoLink row={row} />}
       <form onSubmit={save} noValidate className="ad-form">
         <div className="ad-grid">
           <Field label={t('auth.name')} required error={errs.name} max={80} count={v.name.length}>{(id, bad) => <input id={id} value={v.name} onChange={text('name')} maxLength={80} aria-invalid={bad} />}</Field>

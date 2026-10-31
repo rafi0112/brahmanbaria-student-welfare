@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -46,5 +47,36 @@ func TestAlumniContactForMembersPhotoForEveryone(t *testing.T) {
 	// only people the page lists have a photo address
 	if rec := e.do("GET", "/api/v1/alumni/nobody/photo", nil, nil); rec.Code != 404 {
 		t.Fatalf("unknown alumnus photo: %d", rec.Code)
+	}
+}
+
+// A directory student's form photo link shows to everyone as the photo; an admin can remove or replace it.
+func TestDirectoryPhotoLinkPublicAndAdminCanRemove(t *testing.T) {
+	e := cmsApp(t)
+	ctx := context.Background()
+	b := func(n int) *int { return &n }
+	_, _, _ = e.mem.UpsertDirectoryRecords(ctx, []DirectoryRecord{{ID: "s-photo", Kind: "student", Name: "Photo Student", Batch: b(30), Department: "Finance",
+		Private: map[string]string{"phone": "01799999999", "photoLink": "https://example.org/student.jpg"}}})
+	_ = e.app.reloadLive(ctx)
+	path := `"photo":"/api/v1/students/s-photo/photo?v=`
+	pub := e.do("GET", "/api/v1/students?q=Photo+Student", nil, nil).Body.String()
+	if !strings.Contains(pub, path) || strings.Contains(pub, "example.org/student.jpg") || strings.Contains(pub, "01799999999") {
+		t.Fatalf("the public sees the photo address, never the link or the phone: %s", pub)
+	}
+	approvedMember(t, e, "member-token", idMember, "Member One")
+	if rec := e.do("PUT", "/api/v1/admin/directory/s-photo/photo-link", map[string]string{"photoLink": ""}, nil, bearer("member-token")...); rec.Code != 403 {
+		t.Fatalf("members cannot change a record's photo: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/directory/s-photo/photo-link", map[string]string{"photoLink": "http://plain.example"}); rec.Code != 422 {
+		t.Fatalf("only https links: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/directory/s-photo/photo-link", map[string]string{"photoLink": ""}); rec.Code != 200 {
+		t.Fatalf("admin removes the photo: %d %s", rec.Code, rec.Body)
+	}
+	if pub := e.do("GET", "/api/v1/students?q=Photo+Student", nil, nil).Body.String(); strings.Contains(pub, `"photo"`) {
+		t.Fatalf("the removed photo is gone: %s", pub)
+	}
+	if rec := e.do("GET", "/api/v1/students/s-photo/photo", nil, nil); rec.Code != 404 {
+		t.Fatalf("no photo after removal: %d", rec.Code)
 	}
 }

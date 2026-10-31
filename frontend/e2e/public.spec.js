@@ -28,7 +28,7 @@ test('desktop navigation: links, active state and the bar settling on scroll', a
   await expect(header).not.toHaveClass(/on-hero/)
 })
 
-test('hero: the full name, two actions, four scenes with a credit; search opens a dialog from the header', async ({ page }) => {
+test('hero: the full name, two actions, four scenes; search opens a dialog from the header', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: /ব্রাহ্মণবাড়িয়া জেলা ছাত্রকল্যাণ পরিষদ, জগন্নাথ বিশ্ববিদ্যালয়/ })).toBeVisible()
@@ -44,11 +44,9 @@ test('hero: the full name, two actions, four scenes with a credit; search opens 
   await expect(page.locator('.hs-tab')).toHaveCount(4)
   await page.locator('.hs-tab').nth(2).click()
   await expect(page.locator('.hs-tab').nth(2)).toHaveAttribute('aria-current', 'true')
-  await expect(page.locator('.hs-credit a')).toHaveAttribute('href', /commons\.wikimedia\.org/)
   await expect(page.locator('.hs-count')).toContainText('Islamic heritage')
   await page.getByRole('button', { name: 'Next scene' }).click()
   await expect(page.locator('.hs-tab').nth(3)).toHaveAttribute('aria-current', 'true')
-  await expect(page.locator('.hs-credit')).toContainText('Illustrative image')
   await page.getByRole('button', { name: 'Pause scenes' }).click()
   await expect(page.getByRole('button', { name: 'Play scenes' })).toHaveAttribute('aria-pressed', 'true')
   // search opens a dialog with suggestions; typing finds a student and Enter opens the profile

@@ -212,6 +212,7 @@ func (a *App) photoRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *ht
 	m.HandleFunc("GET /api/v1/students/{id}/photo", h(a.studentPhoto))
 	m.HandleFunc("POST /api/v1/admin/students/{id}/photo", adm(func(w http.ResponseWriter, r *http.Request, u User) { a.putPhoto(w, r, u, r.PathValue("id"), true) }))
 	m.HandleFunc("DELETE /api/v1/admin/students/{id}/photo", adm(func(w http.ResponseWriter, r *http.Request, u User) { a.dropPhoto(w, r, u, r.PathValue("id"), true) }))
+	m.HandleFunc("PUT /api/v1/admin/directory/{id}/photo-link", adm(a.putRecordPhotoLink))
 }
 
 func (a *App) servePhoto(w http.ResponseWriter, r *http.Request, userID string) {
@@ -232,25 +233,37 @@ func (a *App) servePhoto(w http.ResponseWriter, r *http.Request, userID string) 
 	_, _ = w.Write(data)
 }
 
-// studentPhoto serves a member's photo to exactly the viewers who may see their other personal details.
+// studentPhoto serves a student's photo to everyone. A member's uploaded photo shows once the member is approved and
+// listed in the directory (and always to the member and to admins); a directory record shows the photo link its
+// original form carried. Anything else answers "no photo", so nothing about the person is revealed.
 func (a *App) studentPhoto(w http.ResponseWriter, r *http.Request) {
-	uid, ok := strings.CutPrefix(r.PathValue("id"), "m-")
-	if !ok || a.Auth == nil || uid == "" || len(uid) > 64 { // the store rejects malformed ids itself
+	id := r.PathValue("id")
+	if a.Auth == nil || id == "" || len(id) > 80 {
 		apiError(w, http.StatusNotFound, "no photo")
 		return
 	}
-	v := a.whoIsViewing(r)
-	allowed := v.Kind == "admin" || v.ID == uid
-	if !allowed && v.Kind == "member" {
-		p, err := a.Auth.Store.ProfileByUser(r.Context(), uid)
-		u, uerr := a.Auth.Store.UserByID(r.Context(), uid)
-		allowed = err == nil && uerr == nil && p.Status == StatusApproved && p.ShowInDirectory && !u.Disabled
-	}
-	if !allowed {
-		apiError(w, http.StatusNotFound, "no photo") // the same answer as "no photo", so nothing is revealed
+	if uid, ok := strings.CutPrefix(id, "m-"); ok {
+		v := a.whoIsViewing(r)
+		allowed := uid != "" && (v.Kind == "admin" || v.ID == uid)
+		if !allowed && uid != "" {
+			p, err := a.Auth.Store.ProfileByUser(r.Context(), uid)
+			u, uerr := a.Auth.Store.UserByID(r.Context(), uid)
+			allowed = err == nil && uerr == nil && p.Status == StatusApproved && p.ShowInDirectory && !u.Disabled
+		}
+		if !allowed {
+			apiError(w, http.StatusNotFound, "no photo")
+			return
+		}
+		a.servePhoto(w, r, uid)
 		return
 	}
-	a.servePhoto(w, r, uid)
+	for _, p := range a.directoryPeople(r.Context()) {
+		if p.ID == id && p.Source == "directory" {
+			a.serveLinkedPhoto(w, r, id, p.Extra["photoLink"])
+			return
+		}
+	}
+	apiError(w, http.StatusNotFound, "no photo")
 }
 
 func (a *App) putPhoto(w http.ResponseWriter, r *http.Request, actor User, target string, byAdmin bool) {

@@ -64,6 +64,7 @@ type personPublic struct {
 	Department string `json:"department"`
 	Upazila    string `json:"upazila"`
 	Verified   bool   `json:"verified"` // the verified mark: an approved member with a confirmed email
+	Photo      string `json:"photo,omitempty"` // everyone sees it: a member's own photo, or the photo link the original form carried
 }
 
 type personDetails struct {
@@ -121,8 +122,17 @@ func levelAllows(level, viewerKind string) bool {
 	return false
 }
 
+// photoURL is where this person's photo is served: their uploaded photo (members), or the photo link the original form
+// carried (directory records); "" when there is none.
+func (p Person) photoURL() string {
+	if p.Source == "member" {
+		return studentPhotoURL(strings.TrimPrefix(p.ID, "m-"), p.PhotoVer)
+	}
+	return photoLinkURL("/api/v1/students/", p.ID, p.Extra["photoLink"])
+}
+
 func (p Person) view(v viewer) personView {
-	out := personView{personPublic: personPublic{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila, Verified: p.AccountVerified}, View: v.Kind}
+	out := personView{personPublic: personPublic{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila, Verified: p.AccountVerified, Photo: p.photoURL()}, View: v.Kind}
 	if v.Kind == "public" {
 		return out
 	}

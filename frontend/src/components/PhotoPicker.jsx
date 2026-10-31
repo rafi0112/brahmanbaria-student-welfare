@@ -55,6 +55,7 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
           {photo && <button type="button" className="btn-link is-danger" disabled={busy} onClick={remove}>{t('photo.remove')}</button>}
         </span>
         <small className="muted">{t('photo.hint')}</small>
+        <small className="muted">{t('photo.publicNote')}</small>
         {err && <small className="err" role="alert">{err}</small>}
       </div>
     </div>

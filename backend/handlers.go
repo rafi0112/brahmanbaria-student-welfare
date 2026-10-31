@@ -23,7 +23,7 @@ type App struct {
 	Auth       *Auth
 	mu         sync.Mutex
 	dataMu     sync.RWMutex // guards Store, which reloadLive swaps
-	// alumni photos fetched from saved links, keyed by id|link (see alumniPhoto)
+	// photos fetched from saved links, keyed by id|link (see serveLinkedPhoto)
 	alumniPhotos sync.Map
 }
 

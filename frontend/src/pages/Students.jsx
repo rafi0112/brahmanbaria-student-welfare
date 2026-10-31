@@ -162,7 +162,7 @@ export function StudentDetail() {
               <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
             </div>
             <div className="wrap sp-head">
-              <SpAvatar name={s.name} photo={d?.photoUrl} />
+              <SpAvatar name={s.name} photo={s.photo || d?.photoUrl} />
               <div className="sp-id">
                 <h1>{s.name}{s.verified && <VerifiedMark size={22} />}</h1>
                 <ul className="sp-chips">

@@ -55,7 +55,7 @@ export function StudentCard({ s, upazilas = [] }) {
   const base = useBase()
   const up = upazilas.find((u) => u.slug === s.upazila)
   const place = up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''
-  const photo = usePhoto(s.details?.photoUrl)
+  const photo = usePhoto(s.photo || s.details?.photoUrl)
   return (
     <Link to={`${base}/students/${s.id}`} className="student-card">
       <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true">{photo ? <img src={photo} alt="" /> : <b>{initials(s.name)}</b>}<span className="sc-go"><Icon name="arrow" size={15} /></span></span>

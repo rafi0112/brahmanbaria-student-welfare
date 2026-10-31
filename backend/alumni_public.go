@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -60,11 +62,7 @@ func (x alumnusExtra) photo(id string) string {
 	if x.Source == "member" && x.PhotoVer != "" {
 		return "/api/v1/alumni/" + id + "/photo?v=" + x.PhotoVer
 	}
-	if link := strings.TrimSpace(x.PhotoLink); strings.HasPrefix(strings.ToLower(link), "https://") {
-		sum := sha256.Sum256([]byte(link))
-		return "/api/v1/alumni/" + id + "/photo?v=" + hex.EncodeToString(sum[:4])
-	}
-	return ""
+	return photoLinkURL("/api/v1/alumni/", id, x.PhotoLink)
 }
 
 // contact is what this viewer may see; nil for the public and when there is nothing to show.
@@ -98,8 +96,7 @@ type cachedPhoto struct {
 	at   time.Time
 }
 
-// alumniPhoto serves one alumnus's photo. Only people the Alumni page lists have one here. A fetched link is kept for a
-// day (a failed fetch for ten minutes), so a slow or broken link is not fetched again on every view.
+// alumniPhoto serves one alumnus's photo. Only people the Alumni page lists have one here.
 func (a *App) alumniPhoto(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	listed := false
@@ -118,7 +115,24 @@ func (a *App) alumniPhoto(w http.ResponseWriter, r *http.Request) {
 		a.servePhoto(w, r, strings.TrimPrefix(id, "m-"))
 		return
 	}
-	link := strings.TrimSpace(x.PhotoLink)
+	a.serveLinkedPhoto(w, r, id, x.PhotoLink)
+}
+
+// photoLinkURL is the address of a photo kept as a saved link, under the given list's path ("" without a usable link).
+// The short hash changes when the link does, so browsers fetch the new picture.
+func photoLinkURL(base, id, link string) string {
+	link = strings.TrimSpace(link)
+	if !strings.HasPrefix(strings.ToLower(link), "https://") || len(link) > 1000 {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(link))
+	return base + id + "/photo?v=" + hex.EncodeToString(sum[:4])
+}
+
+// serveLinkedPhoto fetches a saved photo link (Google Drive or any public https image) once, keeps it for a day (a
+// failed fetch for ten minutes, so a broken link is not fetched on every view) and serves it as a square JPEG.
+func (a *App) serveLinkedPhoto(w http.ResponseWriter, r *http.Request, id, link string) {
+	link = strings.TrimSpace(link)
 	if a.Auth == nil || !strings.HasPrefix(strings.ToLower(link), "https://") || len(link) > 1000 {
 		apiError(w, http.StatusNotFound, "no photo")
 		return
@@ -153,4 +167,53 @@ func (a *App) alumniPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = w.Write(img)
+}
+
+// putRecordPhotoLink sets or clears the photo link of a directory record (a student or alumnus imported from the form,
+// or an alumni record). An empty link removes the photo. The record's other details are left as they are.
+func (a *App) putRecordPhotoLink(w http.ResponseWriter, r *http.Request, u User) {
+	var b struct {
+		PhotoLink string `json:"photoLink"`
+	}
+	if !decode(w, r, &b) {
+		return
+	}
+	link := strings.TrimSpace(b.PhotoLink)
+	if link != "" && (!strings.HasPrefix(strings.ToLower(link), "https://") || len(link) > 1000) {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": map[string]string{"photoLink": "Use a public https link to an image."}})
+		return
+	}
+	rec, err := a.findRecord(r.Context(), r.PathValue("id"))
+	if errors.Is(err, ErrNotFound) {
+		apiError(w, http.StatusNotFound, "not_found")
+		return
+	} else if err != nil {
+		log.Printf("photo link find: %v", err)
+		apiError(w, 500, "could not save")
+		return
+	}
+	priv := map[string]string{}
+	for k, v := range rec.Private {
+		priv[k] = v
+	}
+	if link == "" {
+		delete(priv, "photoLink")
+	} else {
+		priv["photoLink"] = link
+	}
+	rec.Private = priv
+	if _, _, err := a.Auth.Store.UpsertDirectoryRecords(r.Context(), []DirectoryRecord{rec}); err != nil {
+		log.Printf("photo link save: %v", err)
+		apiError(w, 500, "could not save")
+		return
+	}
+	action := "directory.photo.set"
+	if link == "" {
+		action = "directory.photo.remove"
+	}
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, action, "directory", rec.ID, map[string]any{"title": rec.Name})
+	if err := a.reloadLive(r.Context()); err != nil {
+		log.Printf("reload after photo link: %v", err)
+	}
+	writeJSON(w, 200, map[string]string{"photo": photoLinkURL("/api/v1/students/", rec.ID, link)})
 }

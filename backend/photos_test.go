@@ -147,8 +147,8 @@ func TestProfilePhotosFollowTheViewerRules(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := e.do("GET", path, nil, nil); got.Code != 404 {
-		t.Fatalf("the public never sees photos: %d", got.Code)
+	if got := e.do("GET", path, nil, nil); got.Code != 200 {
+		t.Fatalf("everyone sees an approved, listed member's photo: %d", got.Code)
 	}
 	if got := e.do("GET", path, nil, viewer); got.Code != 200 {
 		t.Fatalf("approved members see listed members' photos: %d", got.Code)
@@ -166,10 +166,17 @@ func TestProfilePhotosFollowTheViewerRules(t *testing.T) {
 	}
 	var pub struct{ Items []personView }
 	decodeBody(t, e.do("GET", "/api/v1/students?q=Test", nil, nil), &pub)
+	shown := false
 	for _, it := range pub.Items {
 		if it.Details != nil {
-			t.Fatal("public list has no details, so no photo")
+			t.Fatal("the public list carries no personal details")
 		}
+		if it.ID == "m-"+ownerU.ID {
+			shown = strings.HasPrefix(it.Photo, path)
+		}
+	}
+	if !shown {
+		t.Fatalf("the public list carries the photo address: %+v", pub.Items)
 	}
 	// an admin can replace and remove anyone's photo
 	if got := uploadPhoto(e, "/api/v1/admin/students/"+viewerU.ID+"/photo", testPNG(t, 300, 200), admin); got.Code != 200 || !strings.Contains(got.Body.String(), "photoUrl") {

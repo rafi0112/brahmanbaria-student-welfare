@@ -63,8 +63,6 @@ export default function HeroStage() {
   }, [reduce])
 
   const s = SCENES[i]
-  const credit = images[s.id]
-  const illustrative = credit?.author === 'Illustrative image'
 
   return (
     <div className={`hs${running ? ' is-running' : ''}`} ref={stage} style={{ '--boost': s.boost }}
@@ -102,7 +100,7 @@ export default function HeroStage() {
           </div>
         </div>
 
-        {/* chapter dock: count and title, previous / next / pause, four thumbnails with progress, the credit */}
+        {/* chapter dock: count and title, previous / next / pause, four thumbnails with progress */}
         <div className="hs-dock hs-e4" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocusCapture={() => setHeld(true)} onBlurCapture={() => setHeld(false)}>
           <div className="hs-now">
             <p className="hs-count"><span>{s.no}<small>/ {SCENES.at(-1).no}</small></span><em key={i}>{pick(s.bn, s.en)}</em></p>
@@ -123,13 +121,6 @@ export default function HeroStage() {
               </button>
             ))}
           </nav>
-          <p className="hs-credit">
-            {illustrative ? pick('প্রতীকী চিত্র', 'Illustrative image')
-              : credit && (credit.source
-                ? <a href={credit.source} target="_blank" rel="noreferrer">{pick('ছবি', 'Photo')}: {credit.author} · {credit.license}</a>
-                : <>{pick('ছবি', 'Photo')}: {credit.author}</>)}
-            <span className="sr-only"> ({n(i + 1)}/{n(SCENES.length)})</span>
-          </p>
         </div>
       </div>
     </div>
