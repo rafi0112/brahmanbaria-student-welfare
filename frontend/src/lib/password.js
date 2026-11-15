@@ -1,54 +1,18 @@
-// Password rules for new passwords (register, reset, activation), shared by the form checklist and the submit check.
-// The server repeats the same rules for its own accounts; Supabase enforces its project's password policy as well.
+// The rule for new passwords (register, reset, activation), shared by the form checklist and the submit check: 4 to 72
+// characters, nothing else (the association asked for no other restriction). The server repeats it for its own
+// accounts; Supabase applies its project's minimum length as well.
 
-export const MIN_LENGTH = 10
-export const MAX_LENGTH = 72 // bcrypt (and Supabase) only use the first 72 bytes
-
-// A short list of passwords and patterns people reach for first. The meter treats anything built on them as weak.
-const COMMON = ['password', 'passw0rd', 'qwerty', 'letmein', 'welcome', 'admin', 'iloveyou', 'monkey', 'dragon', 'football',
-  'bangladesh', 'dhaka', 'brahmanbaria', 'bswa', 'jagannath', 'jnu', 'student', 'abc123', '123456', '111111', '000000']
-
-const SEQUENCES = ['abcdefghijklmnopqrstuvwxyz', '0123456789', 'qwertyuiopasdfghjklzxcvbnm']
-
-function hasSequence(pw, n = 4) {
-  const s = pw.toLowerCase()
-  for (const seq of SEQUENCES) {
-    for (let i = 0; i + n <= seq.length; i++) {
-      const part = seq.slice(i, i + n)
-      if (s.includes(part) || s.includes([...part].reverse().join(''))) return true
-    }
-  }
-  return false
-}
-
-// Words from the person's own name and email that should not appear in the password.
-function personalWords({ email = '', name = '' } = {}) {
-  const local = String(email).split('@')[0] || ''
-  return [local, ...String(name).split(/\s+/), ...local.split(/[._\-+0-9]+/)]
-    .map((w) => w.trim().toLowerCase())
-    .filter((w) => w.length >= 3)
-}
+export const MIN_LENGTH = 4
+export const MAX_LENGTH = 72 // bytes: bcrypt (and Supabase) only use the first 72
 
 // Each rule: id (also the string key suffix), whether it passes, and whether it is required to submit.
-export function checkPassword(pw = '', who = {}) {
-  const lower = pw.toLowerCase()
-  const personal = personalWords(who)
-  const rules = [
-    { id: 'length', ok: pw.length >= MIN_LENGTH && pw.length <= MAX_LENGTH, required: true },
-    { id: 'lower', ok: /[a-z]/.test(pw), required: true },
-    { id: 'upper', ok: /[A-Z]/.test(pw), required: true },
-    { id: 'digit', ok: /\d/.test(pw), required: true },
-    { id: 'symbol', ok: /[^A-Za-z0-9\s]/.test(pw), required: true },
-    { id: 'personal', ok: pw.length > 0 && !personal.some((w) => lower.includes(w)), required: true },
-    { id: 'common', ok: pw.length > 0 && !COMMON.some((w) => lower.includes(w)) && !hasSequence(pw) && !/(.)\1\1/.test(pw), required: true },
-  ]
-  const ok = rules.every((r) => !r.required || r.ok)
-  // 0 empty, 1 weak, 2 fair, 3 good, 4 strong
-  let score = 0
-  if (pw) {
-    const passed = rules.filter((r) => r.ok).length
-    score = passed <= 3 ? 1 : passed <= 5 ? 2 : ok ? (pw.length >= 14 ? 4 : 3) : 2
-  }
+export function checkPassword(pw = '') {
+  const length = [...pw].length
+  const bytes = new TextEncoder().encode(pw).length
+  const rules = [{ id: 'length', ok: length >= MIN_LENGTH && bytes <= MAX_LENGTH, required: true }]
+  const ok = rules[0].ok
+  // the meter only informs, it never blocks: 0 empty, 1 too short, then by length: 2 (4+), 3 (10+), 4 (16+)
+  const score = !pw ? 0 : !ok ? 1 : length >= 16 ? 4 : length >= 10 ? 3 : 2
   return { rules, ok, score }
 }
 

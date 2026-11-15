@@ -95,6 +95,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.cmsRoutes(m, h)
 	a.alumniAdminRoutes(m, h)
 	a.settingsRoutes(m, h)
+	a.siteImagesRoutes(m, h)
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)
@@ -219,13 +220,19 @@ type registerReq struct {
 	Department string `json:"department"`
 	Upazila    string `json:"upazila"`
 	Union      string `json:"union"`
+	Occupation string `json:"occupation"` // profession; required with Workplace when the batch counts as alumni
+	Workplace  string `json:"workplace"`
 }
 
-// validateProfile checks the member details shared by registration and "complete my profile".
-func (a *App) validateProfile(q *registerReq) map[string]string {
+// validateProfile checks the member details shared by registration and "complete my profile". Name, batch, department
+// and upazila are what the directory and the membership review need; session, union, gender, blood group and phone are
+// optional and only checked when given. askWork: a new profile of a batch that already counts as alumni must also say
+// the profession and the workplace (a change request for an existing profile does not carry them).
+func (a *App) validateProfile(q *registerReq, askWork bool) map[string]string {
 	errs := map[string]string{}
-	if !sessionRx.MatchString(strings.TrimSpace(q.Session)) {
-		errs["session"] = "Enter your session, for example 2020-21."
+	q.Session = strings.TrimSpace(q.Session)
+	if q.Session != "" && !sessionRx.MatchString(q.Session) {
+		errs["session"] = "Write the session like 2020-21, or leave it blank."
 	}
 	if q.Gender != "" && q.Gender != "female" && q.Gender != "male" && q.Gender != "other" {
 		errs["gender"] = "Choose female, male or other, or leave it blank."
@@ -257,23 +264,32 @@ func (a *App) validateProfile(q *registerReq) map[string]string {
 	}
 	if !okUp {
 		errs["upazila"] = "Choose an upazila from the list."
-	} else if !okUn {
-		errs["union"] = "Choose a union of that upazila."
+	} else if q.Union != "" && !okUn {
+		errs["union"] = "Choose a union of that upazila, or leave it blank."
+	}
+	// a batch that already counts as alumni must say what the person does now and where
+	q.Occupation, q.Workplace = strings.Join(strings.Fields(q.Occupation), " "), strings.Join(strings.Fields(q.Workplace), " ")
+	alum := askWork && q.Batch >= 1 && a.data().graduated(&q.Batch)
+	if n := utf8.RuneCountInString(q.Occupation); n > 120 || (alum && n < 2) {
+		errs["occupation"] = "Write your profession (2-120 characters)."
+	}
+	if n := utf8.RuneCountInString(q.Workplace); n > 120 || (alum && n < 2) {
+		errs["workplace"] = "Write where you work now (2-120 characters)."
 	}
 	return errs
 }
 
-// validatePhone is required when a profile is first created (registration, activation); later edits may clear it.
+// validatePhone: the mobile number is optional; when given it must be a Bangladeshi mobile number.
 func validatePhone(q *registerReq) (string, bool) {
 	q.Phone = strings.TrimSpace(q.Phone)
-	if !phoneRx.MatchString(q.Phone) {
-		return "Enter your mobile number, 11 digits starting with 01.", false
+	if q.Phone != "" && !phoneRx.MatchString(q.Phone) {
+		return "Use an 11-digit mobile number starting with 01, or leave it blank.", false
 	}
 	return "", true
 }
 
 func (a *App) validateRegister(q *registerReq) map[string]string {
-	errs := a.validateProfile(q)
+	errs := a.validateProfile(q, true)
 	if msg, ok := validatePhone(q); !ok {
 		errs["phone"] = msg
 	}
@@ -311,7 +327,7 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := a.Auth.Store.CreateUser(r.Context(), NewUser{Email: q.Email, PasswordHash: hash, Role: RoleMember,
 		Profile: &Profile{Name: q.Name, Batch: q.Batch, Department: q.Department, Upazila: q.Upazila, Union: q.Union,
-			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone}})
+			Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone, Occupation: q.Occupation, Workplace: q.Workplace}})
 	switch err {
 	case nil:
 		if photo != nil {
@@ -529,7 +545,7 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	q.Name = strings.TrimSpace(q.Name)
-	errs := a.validateProfile(&q)
+	errs := a.validateProfile(&q, true)
 	if msg, ok := validatePhone(&q); !ok {
 		errs["phone"] = msg
 	}
@@ -548,6 +564,7 @@ func (a *App) createProfile(w http.ResponseWriter, r *http.Request, u User) {
 	if err := a.Auth.Store.UpsertProfile(r.Context(), u.ID, Profile{
 		UserID: u.ID, Name: q.Name, Batch: q.Batch, Department: q.Department,
 		Upazila: q.Upazila, Union: q.Union, Session: strings.TrimSpace(q.Session), Gender: q.Gender, BloodGroup: q.BloodGroup, Phone: q.Phone,
+		Occupation: q.Occupation, Workplace: q.Workplace,
 	}); err != nil {
 		log.Printf("profile upsert: %v", err)
 		apiError(w, http.StatusInternalServerError, "could not create profile")

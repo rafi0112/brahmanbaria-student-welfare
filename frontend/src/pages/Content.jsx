@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import images from '../data/images.json'
 import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { useSiteImages } from '../lib/site.jsx'
 import { useBase } from '../lib/base.js'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
@@ -21,7 +22,7 @@ export function Blog() {
   const cats = ['student-life', 'heritage', 'community']
   return (
     <>
-      <PageHero kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} src="/images/bswa/baul.webp">
+      <PageHero page="blog" kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} src="/images/bb-sunset-1280.jpg">
         <div className="banner-chips" role="group">
           <button className={`chip ${!cat ? 'on' : ''}`} onClick={() => setSp({})}>{t('blog.all')}</button>
           {cats.map((c) => <button key={c} className={`chip ${cat === c ? 'on' : ''}`} onClick={() => setSp({ category: c })}>{t(`cat.${c}`)}</button>)}
@@ -79,6 +80,7 @@ export function BlogPost() {
 /* ---------------- Gallery ---------------- */
 export function Gallery() {
   const { t, pick } = useApp()
+  const site = useSiteImages()
   const res = useApi('/gallery')
   const [album, setAlbum] = useState('')
   const [open, setOpen] = useState(null)
@@ -102,8 +104,18 @@ export function Gallery() {
   const m = open != null ? items[open] : null
   return (
     <>
-      <PageHero kicker={t('gallery.kicker')} title={t('gallery.title')} variant="collage" lede={t('gallery.lede')} src="/images/bswa/puppets.webp" />
+      <PageHero page="gallery" kicker={t('gallery.kicker')} title={t('gallery.title')} variant="collage" lede={t('gallery.lede')} src="/images/titas-sunset-1280.jpg" />
       <section className="section wrap">
+        {site.galleryFeatured && (() => {
+          // the picture an admin marked as featured; its caption comes from the gallery entry when it is one
+          const hit = all.find((it) => it.imageUrl === site.galleryFeatured || (it.image && site.galleryFeatured.includes(`/images/${it.image}-`)))
+          return (
+            <figure className="gal-feature">
+              <img src={site.galleryFeatured} alt={hit ? hit.alt || caption(hit) : pick('ফিচার্ড ছবি', 'Featured picture')} />
+              <figcaption><b>★ {pick('ফিচার্ড ছবি', 'Featured')}</b>{hit && <strong>{caption(hit)}</strong>}</figcaption>
+            </figure>
+          )
+        })()}
         <Data q={res} skeleton="masonry">
           {() => all.length === 0 ? <Empty>{t('gallery.empty')}</Empty> : (
             <>
@@ -158,7 +170,7 @@ export function About() {
   const values = [['v1', 'M9 8a3 3 0 1 0 0-.1M3 20c.7-3.6 3.2-5.5 6-5.5s5.3 1.9 6 5.5'], ['v2', 'M3 20h18M5 20V10M19 20V10M3 10l9-6 9 6'], ['v3', 'M3 10l9-5 9 5-9 5zM7 12v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4'], ['v4', 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z']]
   return (
     <>
-      <PageHero kicker={t('about.kicker')} title={t('about.title')} variant="vine" lede={t('about.p1')} src="/images/bswa/mosque.webp" />
+      <PageHero page="about" kicker={t('about.kicker')} title={t('about.title')} variant="vine" lede={t('about.p1')} src="/images/bswa/mosque.webp" />
       <section className="section wrap two-col">
         <div>
           <p className="lede">{t('about.p2')}</p>
@@ -209,7 +221,7 @@ export function HelpPage() {
   }, [hash])
   return (
     <>
-      <PageHero kicker={t('help.kicker')} title={t('help.title')} variant="tilt" lede={t('help.lede')} src="/images/bswa/baul.webp">
+      <PageHero page="help" kicker={t('help.kicker')} title={t('help.title')} variant="tilt" lede={t('help.lede')} src="/images/meghna-bridge-1280.jpg">
         <div className="banner-chips" role="group" aria-label={t('help.title')}>
           <a className="chip" href="#faq">{t('help.toFaq')}</a>
           <a className="chip" href="#contact">{t('help.toContact')}</a>

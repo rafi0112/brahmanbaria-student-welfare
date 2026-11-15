@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -42,6 +43,8 @@ type Person struct {
 	ShowEmail  string
 	ShowBlood  string
 	PhotoVer   string            // set when the member has a photo
+	Occupation string            // members: what a graduate does now, shown on the Alumni page
+	Workplace  string
 	Extra      map[string]string // directory records: the original form's private columns (admins only)
 	// AccountVerified: an approved member whose email is confirmed. Shown to everyone as the verified mark.
 	AccountVerified bool
@@ -54,7 +57,8 @@ func personFromProfile(p *Profile, email string) Person {
 		bp = &b
 	}
 	return Person{ID: "m-" + p.UserID, Source: "member", Name: p.Name, Batch: bp, Department: p.Department, Session: p.Session, Upazila: p.Upazila, Union: p.Union,
-		Gender: p.Gender, BloodGroup: p.BloodGroup, Phone: p.Phone, Email: email, Status: p.Status, ShowPhone: p.ShowPhone, ShowEmail: p.ShowEmail, ShowBlood: p.ShowBlood}
+		Gender: p.Gender, BloodGroup: p.BloodGroup, Phone: p.Phone, Email: email, Status: p.Status, ShowPhone: p.ShowPhone, ShowEmail: p.ShowEmail, ShowBlood: p.ShowBlood,
+		Occupation: p.Occupation, Workplace: p.Workplace}
 }
 
 type personPublic struct {
@@ -293,7 +297,8 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, s)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	// batch by batch, the senior batch first, then by name; people without a batch come last
+	sort.SliceStable(out, func(i, j int) bool { return batchNameLess(out[i].Batch, out[i].Name, out[j].Batch, out[j].Name) })
 	lo, hi, pages := window(len(out), pg, limit)
 	batches, depts := map[int]int{}, map[string]int{}
 	for _, s := range all {
@@ -308,7 +313,7 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{
 		"items": items, "total": len(out), "page": pg, "pages": pages, "sample": a.data().Sample, "view": v.Kind, "alumniUpToBatch": d.AlumniUpTo,
-		"facets": map[string]any{"batches": batches, "departments": depts},
+		"facets": map[string]any{"batches": batches, "departments": depts, "batchSessions": batchSessions(batches)},
 	})
 }
 
@@ -335,4 +340,32 @@ func (a *App) studentOne(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	apiError(w, 404, "student not found")
+}
+
+// batchNameLess orders people batch by batch (the senior batch, the lower number, first), then by name. No batch: last.
+func batchNameLess(bi *int, ni string, bj *int, nj string) bool {
+	x, y := 1<<30, 1<<30
+	if bi != nil {
+		x = *bi
+	}
+	if bj != nil {
+		y = *bj
+	}
+	if x != y {
+		return x < y
+	}
+	return ni < nj
+}
+
+// batchSessions gives the academic session of each batch that has people, shown beside the batch on the Students and
+// Alumni pages. It follows the university's numbering (batch 1 is session 2005-06, each batch one year later) and is
+// never read from a person's own record, so it cannot reveal what someone wrote privately.
+func batchSessions(batches map[int]int) map[int]string {
+	out := map[int]string{}
+	for b := range batches {
+		if b >= 1 && b <= 60 {
+			out[b] = fmt.Sprintf("%d-%02d", 2004+b, (5+b)%100)
+		}
+	}
+	return out
 }

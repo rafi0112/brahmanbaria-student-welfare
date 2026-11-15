@@ -4,7 +4,7 @@ import { useApi, qs, usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
-import { Badge, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
+import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { StudentCard } from '../components/cards.jsx'
@@ -47,7 +47,7 @@ export default function Students() {
 
   return (
     <>
-      <PageHero kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
+      <PageHero page="students" kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
       <div className="wrap">
         <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
           <label className="sbar-q">
@@ -57,7 +57,7 @@ export default function Students() {
           <div className="sbar-filters">
             <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>
               <option value="">{t('students.allBatches')}</option>
-              {Object.keys(facets?.batches || {}).sort((a, b) => b - a).map((b) => <option key={b} value={b}>{t('students.batch')} {n(b)} ({n(facets.batches[b])})</option>)}
+              {Object.keys(facets?.batches || {}).sort((a, b) => a - b).map((b) => <option key={b} value={b}>{t('students.batch')} {n(b)} ({n(facets.batches[b])})</option>)}
             </select>
             <select value={f.department} onChange={(e) => set({ department: e.target.value, page: 1 })} aria-label={t('students.dept')}>
               <option value="">{t('students.allDepts')}</option>
@@ -85,7 +85,11 @@ export default function Students() {
               <>
                 <p className="muted result-count" aria-live="polite">{n(d.total)} {t('students.found')}
                   {d.alumniUpToBatch > 0 && <> · {t('students.fromBatch').replace('{n}', n(d.alumniUpToBatch + 1))} <Link className="link-arrow" to="/alumni">{t('students.earlierAlumni').replace('{n}', n(d.alumniUpToBatch))} →</Link></>}</p>
-                {d.items.length === 0 ? <Empty /> : <div className="student-grid">{d.items.map((s, i) => <Reveal key={s.id} delay={(i % 3) * 50}><StudentCard s={s} upazilas={upazilas} /></Reveal>)}</div>}
+                {d.items.length === 0 ? <Empty /> : (
+                  <BatchGroups items={d.items} sessions={d.facets?.batchSessions} counts={!f.q && !f.department && !f.upazila ? d.facets?.batches : null} gridClass="student-grid">
+                    {(s, i) => <Reveal key={s.id} delay={(i % 3) * 50}><StudentCard s={s} upazilas={upazilas} /></Reveal>}
+                  </BatchGroups>
+                )}
                 <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />
               </>
             )}

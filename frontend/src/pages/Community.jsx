@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
-import { Avatar, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
+import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 
 /* ---------------- Alumni ---------------- */
@@ -29,7 +29,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="circle" lede={t('alumni.lede')} src="/images/bswa/river.webp">
+      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="circle" lede={t('alumni.lede')} src="/images/bswa/river.webp">
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? pick('নাম, পেশা, রক্তের গ্রুপ (যেমন B+) বা ফোন…', 'Name, profession, blood group (e.g. B+) or phone…') : t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -56,8 +56,8 @@ export function Alumni() {
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}
                 {d.alumniUpToBatch > 0 && <> · {t('alumni.upTo').replace('{n}', n(d.alumniUpToBatch))} <Link className="link-arrow" to="/students">{t('alumni.laterStudents').replace('{n}', n(d.alumniUpToBatch + 1))} →</Link></>}</p>
               {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (
-                <div className="cards-3">
-                  {d.items.map((a) => (
+                <BatchGroups items={d.items} sessions={d.facets?.batchSessions} counts={!f.q && !f.department ? d.facets?.batches : null} gridClass="cards-3">
+                  {(a) => (
                     <article key={a.id} className="alumni-card">
                       <header className="al-head">
                         <Avatar name={a.name} size={56} photo={a.photo} />
@@ -80,8 +80,8 @@ export function Alumni() {
                         </ul>
                       ) : d.view === 'public' && <p className="al-locked"><Icon name="lock" size={13} /> {pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details')}</p>}
                     </article>
-                  ))}
-                </div>
+                  )}
+                </BatchGroups>
               )}
               <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />
             </>
@@ -98,7 +98,7 @@ export function Committee() {
   const res = useApi('/executive-committee')
   return (
     <>
-      <PageHero kicker={t('committee.kicker')} title={t('committee.title')} variant="frame" lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
+      <PageHero page="committee" kicker={t('committee.kicker')} title={t('committee.title')} variant="frame" lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap">
         <Data q={res} skeleton="committee">
           {(d) => !d.committee || d.members.length === 0 ? <Empty icon="users" title={t('committee.emptyTitle')} action={<Link className="btn btn-outline" to="/help#contact">{t('footer.send')} <Icon name="arrow" size={16} className="arr" /></Link>}>{t('committee.empty')}</Empty> : (
@@ -237,7 +237,7 @@ export function Membership() {
   const { t, n } = useApp()
   return (
     <>
-      <PageHero kicker={t('member.kicker')} title={t('member.title')} lede={t('member.lede')} src="/images/bswa/mosque.webp" />
+      <PageHero page="member" kicker={t('member.kicker')} title={t('member.title')} lede={t('member.lede')} src="/images/bswa/mosque.webp" />
       <section className="section wrap two-col">
         <div>
           <h2>{t('member.who')}</h2>

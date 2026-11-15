@@ -15,9 +15,9 @@ export function AuthProvider({ children }) {
       if (!profile && d.user.role !== 'admin' && supabase) {
         // Email confirmation means sign-up returns no session, so the profile is created on first sign-in.
         const md = (await supabase.auth.getSession()).data.session?.user?.user_metadata
-        if (md?.name && md?.batch && md?.department && md?.upazila && md?.union) {
+        if (md?.name && md?.batch && md?.department && md?.upazila) {
           try {
-            const r = await api('/me/profile', { method: 'POST', body: JSON.stringify({ name: md.name, batch: Number(md.batch), department: md.department, session: md.session || '', gender: md.gender || '', bloodGroup: md.bloodGroup || '', phone: md.phone || '', photoLink: md.photoLink || '', upazila: md.upazila, union: md.union }) })
+            const r = await api('/me/profile', { method: 'POST', body: JSON.stringify({ name: md.name, batch: Number(md.batch), department: md.department, session: md.session || '', occupation: md.occupation || '', workplace: md.workplace || '', gender: md.gender || '', bloodGroup: md.bloodGroup || '', phone: md.phone || '', photoLink: md.photoLink || '', upazila: md.upazila, union: md.union }) })
             profile = r.profile
           } catch { /* the dashboard offers a form to complete it by hand */ }
         }

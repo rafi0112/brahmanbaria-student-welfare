@@ -393,7 +393,7 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
           </label>
           <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
           <div className="row">
-            <button type="button" className="btn-link" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
+            <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => input.current?.click()}><Icon name="upload" size={15} /> {t('photo.upload')}</button>
             {(value || local) && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal(''); setErr('') }}>{t('ad.removePhoto')}</button>}
           </div>
           <small className="muted">{hint || t('ad.photoHelp')}</small>
@@ -408,6 +408,35 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
         </div>
       </div>
     </fieldset>
+  )
+}
+
+// "Upload from this device" for a photo that is kept as a link (a directory record, an alumnus): the file goes to the
+// site's own storage and onUrl gets its public address, to be saved exactly like a pasted link.
+export function UploadAsLink({ onUrl, disabled }) {
+  const { t } = useApp()
+  const errText = useErrText()
+  const input = useRef(null)
+  const [progress, setProgress] = useState(null)
+  const [err, setErr] = useState('')
+  const busy = progress !== null
+  const pick = async (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    if (!ACCEPT.includes(f.type)) { setErr(t('ad.e.file_type')); return }
+    if (f.size > MAX) { setErr(t('ad.e.photo_too_big')); return }
+    setErr(''); setProgress(0)
+    try { const r = await uploadMedia({ file: f, onProgress: setProgress }); await onUrl(r.url) }
+    catch (ex) { setErr(errText(ex)) }
+    finally { setProgress(null) }
+  }
+  return (
+    <span className="upload-as-link">
+      <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
+      <button type="button" className="btn btn-outline btn-sm" disabled={busy || disabled} onClick={() => input.current?.click()}><Icon name="upload" size={15} /> {busy ? `${t('ad.uploading')} ${progress}%` : t('photo.upload')}</button>
+      {err && <small className="err" role="alert">{err}</small>}
+    </span>
   )
 }
 

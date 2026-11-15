@@ -13,7 +13,7 @@ test('desktop navigation: links, active state and the bar settling on scroll', a
   await expect(header).not.toHaveClass(/is-scrolled/)
   await expect(header).toHaveClass(/is-clear/) // clear over the hero photograph
   const main = page.getByRole('navigation', { name: 'Main' })
-  for (const label of ['Home', 'About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'Help & Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
+  for (const label of ['Home', 'About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
   await expect(main.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Login', exact: true }).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Register', exact: true }).first()).toBeVisible()

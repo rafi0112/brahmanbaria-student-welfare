@@ -238,6 +238,12 @@ func (m *memStore) UpsertProfile(_ context.Context, id string, p Profile) error 
 		if p.BloodGroup != "" {
 			cur.BloodGroup = p.BloodGroup
 		}
+		if p.Occupation != "" {
+			cur.Occupation = p.Occupation
+		}
+		if p.Workplace != "" {
+			cur.Workplace = p.Workplace
+		}
 		if cur.Status == StatusRejected {
 			cur.Status = StatusPending
 		}

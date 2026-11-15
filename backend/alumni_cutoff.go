@@ -157,7 +157,7 @@ func (a *App) shownAlumni(ctx context.Context) []Alumnus {
 			continue
 		}
 		seen[key(p.Name, p.Batch)] = true
-		out = append(out, Alumnus{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila})
+		out = append(out, Alumnus{ID: p.ID, Name: p.Name, Batch: p.Batch, Department: p.Department, Upazila: p.Upazila, Occupation: p.Occupation, Workplace: p.Workplace})
 	}
 	return out
 }

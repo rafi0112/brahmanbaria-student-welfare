@@ -2,13 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
 
-func TestRegistrationRequiresARealPhoneAndStoresIt(t *testing.T) {
+// The mobile number is optional; when given it must be a real Bangladeshi mobile number, and it is stored.
+func TestRegistrationChecksAGivenPhoneAndStoresIt(t *testing.T) {
 	e := authApp(t)
-	for name, phone := range map[string]string{"missing": "", "short": "0171234", "letters": "01abcdefghi", "wrong prefix": "02712345678", "spaces": "017 1234 5678"} {
+	none := validReg("nophone@example.com")
+	none["phone"] = ""
+	if rec := e.do("POST", "/api/v1/auth/register", none, nil); rec.Code != 201 {
+		t.Fatalf("the phone is optional: %d %s", rec.Code, rec.Body)
+	}
+	for name, phone := range map[string]string{"short": "0171234", "letters": "01abcdefghi", "wrong prefix": "02712345678", "spaces": "017 1234 5678"} {
 		b := validReg(name + "@example.com")
 		b["phone"] = phone
 		rec := e.do("POST", "/api/v1/auth/register", b, nil)
@@ -93,7 +100,7 @@ func TestDirectoryShowsOnlyRealDataAndHidesDetailsByRole(t *testing.T) {
 		if len(out.Items) != 1 {
 			t.Fatalf("%s: want one record, got %d", cookieName, len(out.Items))
 		}
-		if cookieName == "public" && (strings.Contains(rc.Body.String(), "01755555555") || strings.Contains(rc.Body.String(), "zqxw@example.org") || strings.Contains(rc.Body.String(), "2018-19")) {
+		if cookieName == "public" && (strings.Contains(rc.Body.String(), "01755555555") || strings.Contains(rc.Body.String(), "zqxw@example.org") || strings.Contains(itemsJSON(rc.Body.Bytes()), "2018-19")) {
 			t.Fatalf("the public list leaked details: %s", rc.Body)
 		}
 		return out.Items[0]
@@ -212,3 +219,11 @@ func peopleStoreSuite(t *testing.T, s AuthStore) {
 }
 
 func TestPeopleStoreMemory(t *testing.T) { peopleStoreSuite(t, newMemStore()) }
+
+// itemsJSON is the "items" part of a list response: the rows about people, without the facets (which carry each
+// batch's session by the university's numbering, public information).
+func itemsJSON(body []byte) string {
+	var v struct{ Items json.RawMessage }
+	_ = json.Unmarshal(body, &v)
+	return string(v.Items)
+}

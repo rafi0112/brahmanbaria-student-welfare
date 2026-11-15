@@ -30,7 +30,7 @@ export default function Heritage() {
   const upazilas = ups.data?.items || []
   return (
     <>
-      <PageHero kicker={t('heritage.kicker')} title={t('nav.heritage')} lede={t('heritage.lede')} src="/images/bswa/mosque.webp">
+      <PageHero page="heritage" kicker={t('heritage.kicker')} title={t('nav.heritage')} lede={t('heritage.lede')} src="/images/bswa/mosque.webp">
         <div className="banner-search" role="search">
           <input type="search" value={f.q} onChange={(e) => set({ q: e.target.value })} placeholder={t('heritage.search')} aria-label={t('heritage.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>

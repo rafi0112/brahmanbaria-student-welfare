@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import images from '../data/images.json'
 import { useApp } from '../lib/app.jsx'
+import { useSiteImages } from '../lib/site.jsx'
 
 const SCENE_MS = 8000
 
 // The four chapters. Captions name the place or subject only: people in the pictures are not presented as members of
 // the association. `wm` is the faint chapter word set into the picture, `pos` frames the photograph and `boost` adds
 // shade where the photograph is bright behind the type.
-const SCENES = [
+const BUILT_IN = [
   { id: 'dragon-boat', no: '01', bn: 'নৌকাবাইচ · আমাদের ঐতিহ্য', en: 'Boat race · Our heritage', wm: 'বাইচ', pos: '46% 40%', boost: 0 },
   { id: 'jnu-main', no: '02', bn: 'জগন্নাথ বিশ্ববিদ্যালয় · শিক্ষার্থী সমাজ', en: 'Jagannath University · Student community', wm: 'শিক্ষা', pos: '50% 35%', boost: 0.5 },
   { id: 'arifail-01', no: '03', bn: 'আড়িফাইল মসজিদ, সরাইল · ইসলামি ঐতিহ্য', en: 'Arifail Mosque, Sarail · Islamic heritage', wm: 'স্থাপত্য', pos: '50% 30%', boost: 0.85 },
   { id: 'folk-culture', no: '04', bn: 'বাউল গান ও পুতুল নাচ · আমাদের সংস্কৃতি', en: 'Baul song and puppet theatre · Our culture', wm: 'লোকজ', pos: '55% 35%', boost: 0.5 },
 ]
 
-const src = (id) => ({ src: `/images/${id}-1280.webp`, srcSet: `/images/${id}-640.webp 640w, /images/${id}-1280.webp 1280w${images[id]?.wide ? `, /images/${id}-1920.webp 1920w` : ''}` })
+// a built-in chapter has sized files; a slide an admin chose has one address
+const src = (sc) => (sc.url ? { src: sc.url } : { src: `/images/${sc.id}-1280.webp`, srcSet: `/images/${sc.id}-640.webp 640w, /images/${sc.id}-1280.webp 1280w${images[sc.id]?.wide ? `, /images/${sc.id}-1920.webp 1920w` : ''}` })
+const thumb = (sc) => sc.url || `/images/${sc.id}-640.webp`
+const two = (k) => String(k + 1).padStart(2, '0')
 
 const Arrow = ({ d = 'M5 12h14M13 6l6 6-6 6', size = 18, width = 2.2 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
@@ -27,6 +31,15 @@ const Arrow = ({ d = 'M5 12h14M13 6l6 6-6 6', size = 18, width = 2.2 }) => (
 // or focused, when the stage is off-screen or the tab hidden, or with the pause button, and never runs with reduced motion.
 export default function HeroStage() {
   const { pick, n } = useApp()
+  const site = useSiteImages()
+  // the slides an admin published, in their order; none published means the four built-in chapters. Until the answer
+  // arrives (at most a moment) nothing is drawn, so a visitor never sees one set swap for the other.
+  const [waited, setWaited] = useState(false)
+  useEffect(() => { const id = setTimeout(() => setWaited(true), 2500); return () => clearTimeout(id) }, [])
+  const custom = site.hero.length > 0
+  const SCENES = useMemo(() => (custom
+    ? site.hero.map((h, k) => ({ id: h.id, url: h.imageUrl, no: two(k), bn: h.captionBn || h.captionEn, en: h.captionEn || h.captionBn, wm: '', pos: '50% 45%', boost: 0.55 }))
+    : (site.ready || waited ? BUILT_IN : [])), [custom, site.hero, site.ready, waited])
   const [i, setI] = useState(0)
   const [prev, setPrev] = useState(null)
   const [held, setHeld] = useState(false)
@@ -35,7 +48,9 @@ export default function HeroStage() {
   const [inView, setInView] = useState(true)
   const [reduce] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
   const stage = useRef(null)
-  const go = useCallback((k) => setI((cur) => { const next = ((k % SCENES.length) + SCENES.length) % SCENES.length; if (next !== cur) setPrev(cur); return next }), [])
+  const count = SCENES.length
+  const go = useCallback((k) => setI((cur) => { if (!count) return cur; const next = ((k % count) + count) % count; if (next !== cur) setPrev(cur); return next }), [count])
+  useEffect(() => { setI(0); setPrev(null) }, [custom, count])
 
   useEffect(() => {
     const v = () => setHidden(document.hidden)
@@ -44,7 +59,7 @@ export default function HeroStage() {
     if (stage.current) io.observe(stage.current)
     return () => { document.removeEventListener('visibilitychange', v); io.disconnect() }
   }, [])
-  const running = !reduce && !paused && !held && !hidden && inView
+  const running = !reduce && !paused && !held && !hidden && inView && count > 1
   useEffect(() => {
     if (!running) return undefined
     const id = setTimeout(() => go(i + 1), SCENE_MS)
@@ -62,7 +77,7 @@ export default function HeroStage() {
     return () => { window.removeEventListener('scroll', on); cancelAnimationFrame(raf) }
   }, [reduce])
 
-  const s = SCENES[i]
+  const s = SCENES[i] || SCENES[0] || { no: '01', bn: '', en: '', boost: 0.5 }
 
   return (
     <div className={`hs${running ? ' is-running' : ''}`} ref={stage} style={{ '--boost': s.boost }}
@@ -71,12 +86,12 @@ export default function HeroStage() {
       <div className="hs-stage" aria-hidden="true">
         {SCENES.map((sc, k) => (
           <div key={sc.id} className={`hs-fr${k === i ? ' is-on' : k === prev ? ' is-prev' : ''}`}>
-            <img {...src(sc.id)} sizes="100vw" alt="" decoding="async" fetchpriority={k === 0 ? 'high' : undefined} style={{ objectPosition: sc.pos }} />
+            <img {...src(sc)} sizes="100vw" alt="" decoding="async" fetchpriority={k === 0 ? 'high' : undefined} style={{ objectPosition: sc.pos }} />
           </div>
         ))}
         <div className="hs-shade" /><div className="hs-boost" />
         <svg className="hs-grain"><filter id="hs-grain-f"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch" /></filter><rect width="100%" height="100%" filter="url(#hs-grain-f)" /></svg>
-        {SCENES.map((sc, k) => <p key={sc.id} className={`hs-wm${k === i ? ' is-on' : ''}`} lang="bn">{sc.wm}</p>)}
+        {SCENES.map((sc, k) => sc.wm && <p key={sc.id} className={`hs-wm${k === i ? ' is-on' : ''}`} lang="bn">{sc.wm}</p>)}
       </div>
       <p className="sr-only" aria-live="polite">{pick(s.bn, s.en)}</p>
 
@@ -101,9 +116,9 @@ export default function HeroStage() {
         </div>
 
         {/* chapter dock: count and title, previous / next / pause, four thumbnails with progress */}
-        <div className="hs-dock hs-e4" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocusCapture={() => setHeld(true)} onBlurCapture={() => setHeld(false)}>
+        {count > 1 && <div className="hs-dock hs-e4" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocusCapture={() => setHeld(true)} onBlurCapture={() => setHeld(false)}>
           <div className="hs-now">
-            <p className="hs-count"><span>{s.no}<small>/ {SCENES.at(-1).no}</small></span><em key={i}>{pick(s.bn, s.en)}</em></p>
+            <p className="hs-count"><span>{s.no}<small>/ {two(Math.max(count, 1) - 1)}</small></span><em key={i}>{pick(s.bn, s.en)}</em></p>
             <button type="button" className="hs-ctl hs-step" onClick={() => go(i - 1)} aria-label={pick('আগের দৃশ্য', 'Previous scene')}><Arrow d="M15 5l-7 7 7 7" size={16} width={1.9} /></button>
             <button type="button" className="hs-ctl hs-step" onClick={() => go(i + 1)} aria-label={pick('পরের দৃশ্য', 'Next scene')}><Arrow d="M9 5l7 7-7 7" size={16} width={1.9} /></button>
             <button type="button" className="hs-ctl" onClick={() => setPaused(!paused)} aria-pressed={paused}
@@ -115,13 +130,13 @@ export default function HeroStage() {
           <nav className="hs-strip" aria-label={pick('দৃশ্য', 'Scenes')}>
             {SCENES.map((sc, k) => (
               <button key={sc.id} type="button" className={`hs-tab${k === i ? ' is-on' : ''}`} aria-current={k === i ? 'true' : undefined} onClick={() => go(k)} title={pick(sc.bn, sc.en)}>
-                <img src={`/images/${sc.id}-640.webp`} alt="" loading="lazy" decoding="async" style={{ objectPosition: sc.pos }} />
+                <img src={thumb(sc)} alt="" loading="lazy" decoding="async" style={{ objectPosition: sc.pos }} />
                 <span className="sr-only">{sc.no} {pick(sc.bn, sc.en)}</span>
                 <span className="hs-bar" aria-hidden="true"><i key={k === i ? `${i}-${running}` : 'off'} style={{ animationDuration: `${SCENE_MS}ms` }} /></span>
               </button>
             ))}
           </nav>
-        </div>
+        </div>}
       </div>
     </div>
   )

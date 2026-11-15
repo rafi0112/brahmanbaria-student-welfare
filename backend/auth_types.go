@@ -55,6 +55,9 @@ type Profile struct {
 	PhotoURL        string `json:"photoUrl,omitempty"` // filled by the API, not stored
 	Session         string `json:"session"`
 	Gender          string `json:"gender"` // '' = unspecified; only ever set explicitly
+	// what a graduate does now; required at registration for batches that count as alumni
+	Occupation string `json:"occupation"`
+	Workplace  string `json:"workplace"`
 	// the latest membership decision; internal, never sent to the member
 	ReviewedAt, ReviewedBy, ReviewNote string `json:"-"`
 }

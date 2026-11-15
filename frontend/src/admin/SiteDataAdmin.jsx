@@ -3,7 +3,7 @@ import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, Data, MediaPhoto } from '../components/ui.jsx'
 import { ContentList } from './content.jsx'
-import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, RowMenu, SkeletonRows, StatusBadge, UploadAsLink, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
 import Icon from './icons.jsx'
@@ -334,6 +334,11 @@ function AlumnusEditor({ row, depts, ups, onClose, onSaved }) {
           <Field label={<>{t('ad.al.p.photoLink')} <span className="photo-rec">{t('photo.recommended')}</span></>} error={errs.photoLink}>{(id, bad) => (
             <input id={id} type="url" inputMode="url" placeholder="https://drive.google.com/…" value={v.private.photoLink || ''} aria-invalid={bad}
               onChange={(e) => setV({ ...v, private: { ...v.private, photoLink: e.target.value } })} />)}</Field>
+          <span className="row">
+            <UploadAsLink onUrl={(url) => setV((x) => ({ ...x, private: { ...x.private, photoLink: url } }))} />
+            {v.private.photoLink && <button type="button" className="btn-link is-danger" onClick={() => setV({ ...v, private: { ...v.private, photoLink: '' } })}>{pick('ছবি সরান', 'Remove photo')}</button>}
+          </span>
+          {v.private.photoLink && v.private.photoLink !== (row?.private?.photoLink || '') && <small className="ok-text" role="status">{pick('ছবি প্রস্তুত। নিচের Save চাপলে সংরক্ষণ হবে।', 'Photo ready. It is saved when you press Save below.')}</small>}
           <small className="muted">{pick('Google Drive এ ছবিটি "Anyone with the link" করে শেয়ার করে লিংকটি দিন। ছবিটি অ্যালামনাই পেজে সবার জন্য দেখানো হবে। লিংক মুছে দিলে ছবিও সরে যাবে।', 'Share the photo on Google Drive as "Anyone with the link" and paste the link. The photo is shown to everyone on the Alumni page; clearing the link removes it.')}</small>
         </div>
       </div>

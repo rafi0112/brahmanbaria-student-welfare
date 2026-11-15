@@ -32,6 +32,10 @@ export default function Activate() {
   const [msg, setMsg] = useState('')
   const depts = useApi(step === 'profile' ? '/departments' : null)
   const ups = useApi(step === 'profile' ? '/upazilas' : null)
+  // a batch that already counts as alumni is asked for the profession and the workplace (both required then)
+  const site = useApi(step === 'profile' ? '/stats' : null)
+  const alumniUpTo = site.data?.alumniUpToBatch || 0
+  const isAlum = !!v?.batch && alumniUpTo > 0 && Number(v.batch) <= alumniUpTo
 
   useEffect(() => {
     if (!supabaseConfigured || urlAuthError) return undefined
@@ -50,7 +54,7 @@ export default function Activate() {
     const d = await api('/me/invitation')
     if (d.invited) {
       setInvite(d)
-      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', upazila: d.profile.upazila || '', union: d.profile.union || '', gender: d.profile.gender || '', bloodGroup: d.profile.bloodGroup || '', phone: d.profile.phone || '', photoLink: '' })
+      setV({ name: d.profile.name || '', batch: d.profile.batch ? String(d.profile.batch) : '', department: d.profile.department || '', session: d.profile.session || '', occupation: d.profile.occupation || '', workplace: d.profile.workplace || '', upazila: d.profile.upazila || '', union: d.profile.union || '', gender: d.profile.gender || '', bloodGroup: d.profile.bloodGroup || '', phone: d.profile.phone || '', photoLink: '' })
       setStep('profile')
     } else setStep(d.hasProfile ? 'has' : 'nothing')
   }
@@ -66,7 +70,7 @@ export default function Activate() {
       if (error) throw error
       await loadProfile()
     } catch (err) {
-      setPwErr(err?.code === 'weak_password' ? t('pw.e.rules') : err?.code === 'same_password' ? t('auth.e.samePass') : t('ad.act2.passFailed'))
+      setPwErr(err?.code === 'weak_password' ? t('pw.e.server') : err?.code === 'same_password' ? t('auth.e.samePass') : t('ad.act2.passFailed'))
     } finally { setBusy(false) }
   }
 
@@ -79,9 +83,11 @@ export default function Activate() {
     if (busy) return
     const bad = {}
     if (v.name.trim().length < 2) bad.name = t('auth.e.name')
-    for (const k of ['batch', 'department', 'upazila', 'union']) if (!v[k]) bad[k] = t('auth.e.select')
-    if (!/^\d{4}-\d{2}$/.test(v.session.trim())) bad.session = t('auth.sessionHint')
-    if (!/^01\d{9}$/.test((v.phone || '').trim())) bad.phone = t('auth.e.phone')
+    // required: name, batch, department, upazila. Session, union and phone are optional and only checked when filled in.
+    for (const k of ['batch', 'department', 'upazila']) if (!v[k]) bad[k] = t('auth.e.select')
+    if (v.session.trim() && !/^\d{4}-\d{2}$/.test(v.session.trim())) bad.session = t('auth.sessionHint')
+    if ((v.phone || '').trim() && !/^01\d{9}$/.test((v.phone || '').trim())) bad.phone = t('auth.e.phone')
+    if (isAlum) for (const k of ['occupation', 'workplace']) if ((v[k] || '').trim().length < 2) bad[k] = t(`auth.e.${k}`)
     setErrs(bad); setMsg('')
     if (Object.keys(bad).length) return
     setBusy(true)
@@ -94,8 +100,9 @@ export default function Activate() {
     } finally { setBusy(false) }
   }
 
+  const OPTIONAL = { session: true, union: true, gender: true, bloodGroup: true, phone: true }
   const field = (k, label, input, hint) => (
-    <label className="field" key={k}><span>{label}</span>{input}{hint && !errs[k] && <small className="muted">{hint}</small>}{errs[k] && <small className="err">{errs[k]}</small>}</label>
+    <label className="field" key={k}><span>{label}{k === 'photoLink' ? null : OPTIONAL[k] ? <small className="field-opt"> {t('ad.optional')}</small> : <b className="field-req" aria-hidden="true"> *</b>}</span>{input}{hint && !errs[k] && <small className="muted">{hint}</small>}{errs[k] && <small className="err">{errs[k]}</small>}</label>
   )
   const select = (k, opts, optional) => (
     <select value={v[k]} onChange={text(k)} aria-invalid={!!errs[k]} disabled={k === 'union' && !v.upazila}>
@@ -138,8 +145,10 @@ export default function Activate() {
             {field('batch', t('auth.batch'), select('batch', Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [String(b), `${t('auth.batch')} ${n(b)}`])))}
             {field('department', t('auth.dept'), select('department', (depts.data?.items || []).map((d) => [d, d])))}
             {field('session', t('auth.session'), <input value={v.session} onChange={text('session')} placeholder="2020-21" maxLength={7} aria-invalid={!!errs.session} />)}
+            {isAlum && field('occupation', t('auth.occupation'), <input value={v.occupation || ''} onChange={text('occupation')} maxLength={120} aria-invalid={!!errs.occupation} aria-required="true" />, t('auth.alumHint').replace('{n}', n(alumniUpTo)))}
+            {isAlum && field('workplace', t('auth.workplace'), <input value={v.workplace || ''} onChange={text('workplace')} maxLength={120} aria-invalid={!!errs.workplace} aria-required="true" />)}
             {field('upazila', t('auth.upazila'), select('upazila', upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)])))}
-            {field('union', t('auth.union'), select('union', unions.map((x) => [x, x])))}
+            {field('union', t('auth.union'), select('union', unions.map((x) => [x, x]), true))}
             {field('gender', t('auth.gender'), select('gender', [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]], true))}
             {field('bloodGroup', t('auth.blood'), select('bloodGroup', BLOOD.map((b) => [b, b]), true))}
             {field('photoLink', t('photo.linkLabel'), <input type="url" inputMode="url" value={v.photoLink} onChange={text('photoLink')} placeholder="https://drive.google.com/…" aria-invalid={!!errs.photoLink} />, t('photo.linkHint'))}

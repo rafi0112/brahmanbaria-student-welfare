@@ -37,10 +37,14 @@ export default function Auth({ mode }) {
   const auth = useAuth()
   const [sp] = useSearchParams()
   const token = sp.get('token') || ''
-  const cfg = MODES[mode]
   const depts = useApi(mode === 'register' ? '/departments' : null)
   const ups = useApi(mode === 'register' ? '/upazilas' : null)
-  const [v, setV] = useState({ name: '', phone: '', photoLink: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', email: '', password: '', confirm: '', terms: false, remember: false })
+  const [v, setV] = useState({ name: '', phone: '', photoLink: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', occupation: '', workplace: '', email: '', password: '', confirm: '', terms: false, remember: false })
+  // a batch that already counts as alumni is asked what the person does now and where; both are required then
+  const site = useApi(mode === 'register' ? '/stats' : null)
+  const alumniUpTo = site.data?.alumniUpToBatch || 0
+  const isAlum = mode === 'register' && !!v.batch && alumniUpTo > 0 && Number(v.batch) <= alumniUpTo
+  const cfg = isAlum ? { ...MODES.register, fields: MODES.register.fields.flatMap((f) => (f === 'session' ? [f, 'occupation', 'workplace'] : [f])) } : MODES[mode]
   const [errs, setErrs] = useState({})
   const [notice, setNotice] = useState(null) // { tone: 'ok' | 'bad', key }
   const [busy, setBusy] = useState(false)
@@ -64,9 +68,11 @@ export default function Auth({ mode }) {
   const validate = () => {
     const e = {}
     if (cfg.fields.includes('name') && v.name.trim().length < 2) e.name = t('auth.e.name')
-    for (const k of ['batch', 'department', 'upazila', 'union']) if (cfg.fields.includes(k) && !v[k]) e[k] = t('auth.e.select')
-    if (cfg.fields.includes('session') && !/^\d{4}-\d{2}$/.test(v.session.trim())) e.session = t('auth.sessionHint')
-    if (cfg.fields.includes('phone') && !/^01\d{9}$/.test(v.phone.trim())) e.phone = t('auth.e.phone')
+    // required: name, batch, department, upazila. Session, union and phone are optional and only checked when filled in.
+    for (const k of ['batch', 'department', 'upazila']) if (cfg.fields.includes(k) && !v[k]) e[k] = t('auth.e.select')
+    if (cfg.fields.includes('session') && v.session.trim() && !/^\d{4}-\d{2}$/.test(v.session.trim())) e.session = t('auth.sessionHint')
+    if (cfg.fields.includes('phone') && v.phone.trim() && !/^01\d{9}$/.test(v.phone.trim())) e.phone = t('auth.e.phone')
+    for (const k of ['occupation', 'workplace']) if (cfg.fields.includes(k) && v[k].trim().length < 2) e[k] = t(`auth.e.${k}`)
     if (cfg.fields.includes('email') && !emailOk(v.email)) e.email = t('auth.e.email')
     if (cfg.fields.includes('password')) {
       if (mode === 'login') { if (!v.password) e.password = t('auth.e.passEmpty') }
@@ -87,7 +93,7 @@ export default function Auth({ mode }) {
     if (mode === 'reset' && !supabaseConfigured && !token) { setNotice({ tone: 'bad', key: 'auth.noToken' }); return }
     setBusy(true)
     try {
-      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, session: v.session.trim(), upazila: v.upazila, union: v.union, gender: v.gender, bloodGroup: v.bloodGroup, phone: v.phone.trim(), photoLink: v.photoLink.trim() }
+      const profile = { name: v.name.trim(), batch: Number(v.batch), department: v.department, session: v.session.trim(), upazila: v.upazila, union: v.union, gender: v.gender, bloodGroup: v.bloodGroup, phone: v.phone.trim(), photoLink: v.photoLink.trim(), occupation: isAlum ? v.occupation.trim() : '', workplace: isAlum ? v.workplace.trim() : '' }
       const email = v.email.trim()
       if (mode === 'register' && supabaseConfigured) {
         // The member details travel as user metadata; the profile is created at first sign-in (see AuthProvider).
@@ -134,7 +140,7 @@ export default function Auth({ mode }) {
     } catch (err) {
       if (err.fields) setErrs(err.fields)
       if (err.code === 'user_already_exists' || err.code === 'email_exists') { setErrs({ email: t('auth.e.exists') }); setNotice({ tone: 'bad', key: 'auth.e.existsNote' }) }
-      else if (err.code === 'weak_password') setErrs({ password: t('pw.e.rules') })
+      else if (err.code === 'weak_password') setErrs({ password: t('pw.e.server') })
       else if (err.code === 'same_password') setErrs({ password: t('auth.e.samePass') })
       else if (err.message === 'email_not_verified' || err.status === 403) { setNeedVerify(true); setNotice({ tone: 'bad', key: 'auth.notVerified' }) }
       else if (err.status === 401) setNotice({ tone: 'bad', key: 'auth.badLogin' })
@@ -156,10 +162,14 @@ export default function Auth({ mode }) {
     gender: [['female', t('ad.mem.female')], ['male', t('ad.mem.male')], ['other', t('ad.mem.other')]],
     bloodGroup: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => [b, b]),
   }
-  const optional = { gender: true, bloodGroup: true }
+  const optional = { session: true, union: true, gender: true, bloodGroup: true, phone: true, photoLink: true }
+  // on the sign-up form every label says whether the field is needed: a star for required, "(optional)" otherwise
+  const mark = (f) => (mode !== 'register' ? null : optional[f]
+    ? (f === 'photoLink' ? null : <small className="field-opt"> {t('ad.optional')}</small>)
+    : <b className="field-req" aria-hidden="true"> *</b>)
   const setSel = (k) => (e) => setV({ ...v, [k]: e.target.value, ...(k === 'upazila' ? { union: '' } : {}) })
   const bind = (k) => ({ value: v[k], onChange: (e) => setV({ ...v, [k]: e.target.value }), 'aria-invalid': !!errs[k], 'aria-describedby': errs[k] ? `${k}-err` : undefined })
-  const label = { session: 'auth.session', gender: 'auth.gender', bloodGroup: 'auth.blood', batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', phone: 'auth.phone', photoLink: 'photo.linkLabel', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
+  const label = { session: 'auth.session', gender: 'auth.gender', bloodGroup: 'auth.blood', batch: 'auth.batch', department: 'auth.dept', upazila: 'auth.upazila', union: 'auth.union', name: 'auth.name', occupation: 'auth.occupation', workplace: 'auth.workplace', phone: 'auth.phone', photoLink: 'photo.linkLabel', email: 'auth.email', password: 'auth.password', confirm: 'auth.confirm' }
 
   const resend = async () => {
     try { await resendConfirmation(v.email); setNotice({ tone: 'ok', key: 'auth.resent' }) }
@@ -186,11 +196,12 @@ export default function Auth({ mode }) {
         {done && <Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link>}
         {showForm && (
           <form onSubmit={submit} noValidate>
+            {mode === 'register' && <p className="field-legend"><b className="field-req" aria-hidden="true">*</b> {pick('চিহ্নিত ঘরগুলো আবশ্যক। বাকিগুলো পরে প্রোফাইল থেকেও দেওয়া যাবে।', 'marks a required field. The rest can also be added later from your profile.')}</p>}
             <div className={mode === 'register' ? 'form-grid' : undefined}>
             {cfg.fields.filter((f) => f !== 'terms').map((f) => (options[f] ? (
               <label key={f} className="field">
-                <span>{t(label[f])}</span>
-                <select id={f} value={v[f]} onChange={setSel(f)} aria-invalid={!!errs[f]} disabled={f === 'union' && !v.upazila}>
+                <span>{t(label[f])}{mark(f)}</span>
+                <select id={f} value={v[f]} onChange={setSel(f)} aria-invalid={!!errs[f]} aria-required={mode === 'register' && !optional[f] ? true : undefined} disabled={f === 'union' && !v.upazila}>
                   <option value="">{t(optional[f] ? 'auth.genderNone' : 'auth.select')}</option>
                   {options[f].map(([val, text]) => <option key={val} value={val}>{text}</option>)}
                 </select>
@@ -198,12 +209,13 @@ export default function Auth({ mode }) {
               </label>
             ) : (
               <label key={f} className={`field${f === 'name' || f === 'photoLink' || (f === 'password' && mode === 'register') ? ' span-2' : ''}`}>
-                <span>{t(label[f])}</span>
+                <span>{t(label[f])}{mark(f)}</span>
                 {(() => {
-                  const props = { id: f, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'off' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
+                  const props = { id: f, 'aria-required': mode === 'register' && !optional[f] ? true : undefined, autoComplete: f === 'email' ? 'email' : f === 'name' ? 'name' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'off' : mode === 'login' ? 'current-password' : 'new-password', ...bind(f) }
                   return f === 'password' || f === 'confirm' ? <PasswordInput {...props} /> : <input type={f === 'email' ? 'email' : f === 'phone' ? 'tel' : f === 'photoLink' ? 'url' : 'text'} inputMode={f === 'phone' ? 'numeric' : f === 'photoLink' ? 'url' : undefined} maxLength={f === 'phone' ? 11 : undefined} placeholder={f === 'session' ? '2020-21' : f === 'phone' ? '01XXXXXXXXX' : f === 'photoLink' ? 'https://drive.google.com/…' : undefined} {...props} />
                 })()}
                 {f === 'photoLink' && !errs[f] && <small className="muted">{t('photo.linkHint')}</small>}
+                {f === 'occupation' && !errs[f] && <small className="muted">{t('auth.alumHint').replace('{n}', n(alumniUpTo))}</small>}
                 {f === 'password' && mode !== 'login' && <PasswordHelp value={v.password} who={{ email: v.email, name: v.name }} onSuggest={(pw) => setV((x) => ({ ...x, password: pw, confirm: pw }))} />}
                 {f === 'confirm' && <ConfirmHint password={v.password} confirm={v.confirm} />}
                 {errs[f] && <small className="err" id={`${f}-err`}>{errs[f]}</small>}

@@ -127,8 +127,8 @@ func (s *pgStore) CreateUser(ctx context.Context, n NewUser) (User, error) {
 	}
 	u.EmailVerified = verified != nil
 	if p := n.Profile; p != nil {
-		if _, err := tx.Exec(ctx, `INSERT INTO profiles (user_id, name, batch, department, upazila, union_name, session, gender, phone, blood_group)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, u.ID, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Session, p.Gender, p.Phone, p.BloodGroup); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO profiles (user_id, name, batch, department, upazila, union_name, session, gender, phone, blood_group, occupation, workplace)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, u.ID, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Session, p.Gender, p.Phone, p.BloodGroup, p.Occupation, p.Workplace); err != nil {
 			return User{}, err
 		}
 	}
@@ -265,11 +265,11 @@ func (s *pgStore) DeleteUserSessions(ctx context.Context, userID string) error {
 }
 
 const profCols = `user_id::text, name, batch, department, upazila, union_name, phone, blood_group, status,
-	show_in_directory, show_phone, show_email, show_blood, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), session, gender`
+	show_in_directory, show_phone, show_email, show_blood, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), session, gender, occupation, workplace`
 
 func scanProfile(row pgx.Row, p *Profile) error {
 	return row.Scan(&p.UserID, &p.Name, &p.Batch, &p.Department, &p.Upazila, &p.Union, &p.Phone, &p.BloodGroup, &p.Status,
-		&p.ShowInDirectory, &p.ShowPhone, &p.ShowEmail, &p.ShowBlood, &p.CreatedAt, &p.Session, &p.Gender)
+		&p.ShowInDirectory, &p.ShowPhone, &p.ShowEmail, &p.ShowBlood, &p.CreatedAt, &p.Session, &p.Gender, &p.Occupation, &p.Workplace)
 }
 
 func (s *pgStore) ProfileByUser(ctx context.Context, id string) (*Profile, error) {
@@ -297,22 +297,23 @@ func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) 
 func (s *pgStore) UpsertProfile(ctx context.Context, id string, p Profile) error {
 	_, err := s.db.Exec(ctx, `INSERT INTO profiles
 		(user_id, name, batch, department, upazila, union_name, phone, blood_group, status,
-		 show_in_directory, show_phone, show_email, show_blood, session, gender)
+		 show_in_directory, show_phone, show_email, show_blood, session, gender, occupation, workplace)
 		VALUES ($1::uuid, $2, $3, $4, $5, $6, COALESCE($7, ''), COALESCE($8, ''),
-			'pending', true, 'members', 'members', 'members', $9, $10)
+			'pending', true, 'members', 'members', 'members', $9, $10, $11, $12)
 		ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name, batch = EXCLUDED.batch,
 			department = EXCLUDED.department, upazila = EXCLUDED.upazila, union_name = EXCLUDED.union_name,
 			session = COALESCE(NULLIF(EXCLUDED.session, ''), profiles.session), gender = COALESCE(NULLIF(EXCLUDED.gender, ''), profiles.gender),
+			occupation = COALESCE(NULLIF(EXCLUDED.occupation, ''), profiles.occupation), workplace = COALESCE(NULLIF(EXCLUDED.workplace, ''), profiles.workplace),
 			phone = COALESCE(NULLIF(EXCLUDED.phone, ''), profiles.phone), blood_group = COALESCE(NULLIF(EXCLUDED.blood_group, ''), profiles.blood_group),
 			status = CASE WHEN profiles.status = 'rejected' THEN 'pending' ELSE profiles.status END`,
-		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.Session, p.Gender)
+		id, p.Name, p.Batch, p.Department, p.Upazila, p.Union, p.Phone, p.BloodGroup, p.Session, p.Gender, p.Occupation, p.Workplace)
 	return err
 }
 
 func (s *pgStore) ListMembers(ctx context.Context, status string) ([]MemberRow, error) {
 	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.upazila, p.union_name, p.phone, p.blood_group, p.status,
 		p.show_in_directory, p.show_phone, p.show_email, p.show_blood, to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-		u.email, u.email_verified_at IS NOT NULL, p.session, p.gender
+		u.email, u.email_verified_at IS NOT NULL, p.session, p.gender, p.occupation, p.workplace
 		FROM profiles p JOIN users u ON u.id = p.user_id
 		WHERE ($1 = '' OR p.status = $1) ORDER BY p.created_at`, status)
 	if err != nil {
@@ -323,7 +324,7 @@ func (s *pgStore) ListMembers(ctx context.Context, status string) ([]MemberRow, 
 	for rows.Next() {
 		var m MemberRow
 		if err := rows.Scan(&m.UserID, &m.Name, &m.Batch, &m.Department, &m.Upazila, &m.Union, &m.Phone, &m.BloodGroup, &m.Status,
-			&m.ShowInDirectory, &m.ShowPhone, &m.ShowEmail, &m.ShowBlood, &m.CreatedAt, &m.Email, &m.EmailVerified, &m.Session, &m.Gender); err != nil {
+			&m.ShowInDirectory, &m.ShowPhone, &m.ShowEmail, &m.ShowBlood, &m.CreatedAt, &m.Email, &m.EmailVerified, &m.Session, &m.Gender, &m.Occupation, &m.Workplace); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -341,7 +342,7 @@ func (s *pgStore) ReviewProfile(ctx context.Context, id, status string) error {
 
 func (s *pgStore) ApprovedPeople(ctx context.Context) ([]Person, error) {
 	rows, err := s.db.Query(ctx, `SELECT p.user_id::text, p.name, p.batch, p.department, p.session, p.upazila, p.union_name, p.gender, p.blood_group, p.phone,
-		p.show_phone, p.show_email, p.show_blood, u.email, u.email_verified_at IS NOT NULL
+		p.show_phone, p.show_email, p.show_blood, u.email, u.email_verified_at IS NOT NULL, p.occupation, p.workplace
 		FROM profiles p JOIN users u ON u.id = p.user_id
 		WHERE p.status = 'approved' AND p.show_in_directory AND u.disabled_at IS NULL ORDER BY p.name`)
 	if err != nil {
@@ -353,7 +354,7 @@ func (s *pgStore) ApprovedPeople(ctx context.Context) ([]Person, error) {
 		var x Person
 		var id string
 		var b int
-		if err := rows.Scan(&id, &x.Name, &b, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.ShowPhone, &x.ShowEmail, &x.ShowBlood, &x.Email, &x.AccountVerified); err != nil {
+		if err := rows.Scan(&id, &x.Name, &b, &x.Department, &x.Session, &x.Upazila, &x.Union, &x.Gender, &x.BloodGroup, &x.Phone, &x.ShowPhone, &x.ShowEmail, &x.ShowBlood, &x.Email, &x.AccountVerified, &x.Occupation, &x.Workplace); err != nil {
 			return nil, err
 		}
 		x.ID, x.Batch, x.Source, x.Status = "m-"+id, &b, "member", StatusApproved

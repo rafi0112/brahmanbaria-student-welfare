@@ -1,0 +1,198 @@
+import { useEffect, useState } from 'react'
+import { api, useApi } from '../lib/api.js'
+import { useApp } from '../lib/app.jsx'
+import { forgetSiteImages } from '../lib/site.jsx'
+import { Data } from '../components/ui.jsx'
+import { ImagePicker, Modal, Notice, PageHeader, useErrText, useNotice } from './kit.jsx'
+import Icon from './icons.jsx'
+
+// The pictures of the public site that admins choose: the home page slides (order, published or not), the picture at
+// the top of each page, the Gallery page's featured picture and the "Explore Brahmanbaria" picture. A picture comes
+// from this device, from a link, or from the gallery. Nothing changes on the site until "Save" is pressed.
+
+const PAGES = [
+  ['students', 'শিক্ষার্থী', 'Students'], ['alumni', 'অ্যালামনাই', 'Alumni'], ['committee', 'কমিটি', 'Committee'], ['events', 'ইভেন্ট', 'Events'],
+  ['gallery', 'গ্যালারি', 'Gallery'], ['heritage', 'ঐতিহ্য', 'Heritage'], ['blog', 'ব্লগ', 'Blog'], ['about', 'আমাদের সম্পর্কে', 'About'],
+  ['help', 'যোগাযোগ', 'Contact'], ['directory', 'উপজেলা ডিরেক্টরি', 'Upazila directory'], ['member', 'সদস্যপদ', 'Membership'],
+]
+
+const legacyUrl = (ref) => (ref && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
+const thumbOf = (x) => x?.imageUrl || legacyUrl(x?.image) || ''
+
+// Choose one picture from the gallery (published and hidden pictures alike; archived ones are left out).
+function GalleryPick({ onPick, onClose }) {
+  const { pick } = useApp()
+  const list = useApi('/admin/content/image?limit=100&sort=order')
+  return (
+    <Modal title={pick('গ্যালারি থেকে ছবি বাছুন', 'Choose a picture from the gallery')} onClose={onClose} wide>
+      <Data q={list}>
+        {(d) => (d.items.length === 0
+          ? <p className="muted">{pick('গ্যালারিতে এখনো কোনো ছবি নেই। আগে গ্যালারিতে ছবি যোগ করুন, অথবা ডিভাইস থেকে আপলোড করুন।', 'The gallery has no pictures yet. Add pictures to the gallery first, or upload one from this device.')}</p>
+          : (
+            <ul className="si-pick">
+              {d.items.map((e) => (
+                <li key={e.id}>
+                  <button type="button" onClick={() => onPick({ image: e.data.image, imageUrl: thumbOf(e.data), captionBn: e.data.captionBn || '', captionEn: e.data.captionEn || '' })}>
+                    <img src={thumbOf(e.data)} alt="" loading="lazy" />
+                    <span>{pick(e.data.captionBn, e.data.captionEn) || e.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ))}
+      </Data>
+    </Modal>
+  )
+}
+
+// One picture slot: upload / link (ImagePicker) plus "choose from the gallery".
+function Slot({ label, hint, value, onChange }) {
+  const { pick } = useApp()
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="si-slot">
+      <ImagePicker label={label} value={value?.image || ''} url={value?.imageUrl} legacyUrl={legacyUrl(value?.image)} hint={hint}
+        onChange={(m) => onChange(m ? { image: m.path, imageUrl: m.url } : null)} />
+      <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setOpen(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
+      {open && <GalleryPick onClose={() => setOpen(false)} onPick={(g) => { onChange({ image: g.image, imageUrl: g.imageUrl }); setOpen(false) }} />}
+    </div>
+  )
+}
+
+export default function SiteImagesAdmin() {
+  const { pick, n } = useApp()
+  const errText = useErrText()
+  const res = useApi('/admin/settings/site-images')
+  const { notice, ok, bad, clear } = useNotice()
+  const [v, setV] = useState(null)
+  const [saved, setSaved] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [fresh, setFresh] = useState(null) // a new slide's picture from upload or link, before it joins the list
+
+  const take = (d) => {
+    const next = { hero: d.hero || [], pages: d.pages || {}, galleryFeatured: d.galleryFeatured || null, explore: d.explore || null }
+    setV(next); setSaved(JSON.stringify(next))
+  }
+  useEffect(() => { if (res.data) take(res.data) }, [res.data])
+  const dirty = v && JSON.stringify(v) !== saved
+  useEffect(() => {
+    if (!dirty) return undefined
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  const slide = (i, patch) => setV({ ...v, hero: v.hero.map((h, k) => (k === i ? { ...h, ...patch } : h)) })
+  const move = (i, by) => {
+    const hero = [...v.hero]
+    const j = i + by
+    if (j < 0 || j >= hero.length) return
+    ;[hero[i], hero[j]] = [hero[j], hero[i]]
+    setV({ ...v, hero })
+  }
+  // put slide i at position pos (1 = shown first); the others keep their order
+  const moveTo = (i, pos) => {
+    const hero = [...v.hero]
+    const [h] = hero.splice(i, 1)
+    hero.splice(pos - 1, 0, h)
+    setV({ ...v, hero })
+  }
+  const addSlide = (g) => {
+    if (v.hero.length >= 12) { bad(pick('সর্বোচ্চ ১২টি স্লাইড রাখা যায়।', 'At most 12 slides.')); return }
+    setV({ ...v, hero: [...v.hero, { id: '', image: g.image, imageUrl: g.imageUrl, captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
+  }
+  const save = async () => {
+    setBusy(true); clear()
+    try {
+      const body = {
+        hero: v.hero.map(({ id, image, captionBn, captionEn, published }) => ({ id, image, captionBn, captionEn, published })),
+        pages: Object.fromEntries(Object.entries(v.pages).filter(([, x]) => x?.image).map(([k, x]) => [k, x.image])),
+        galleryFeatured: v.galleryFeatured?.image || '', explore: v.explore?.image || '',
+      }
+      take(await api('/admin/settings/site-images', { method: 'PUT', body: JSON.stringify(body) }))
+      forgetSiteImages()
+      ok(pick('সংরক্ষণ হয়েছে। সাইটে এখনই দেখা যাবে।', 'Saved. The site shows it now.'))
+    } catch (e) { bad(Object.values(e.fields || {})[0] || errText(e)) } finally { setBusy(false) }
+  }
+  const live = v ? v.hero.filter((h) => h.published).length : 0
+
+  return (
+    <>
+      <PageHeader title={pick('সাইটের ছবি', 'Site pictures')} desc={pick('হোম পেজের স্লাইড, প্রতিটি পাতার উপরের ছবি, গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” অংশের ছবি এখান থেকে বদলান। ছবি ডিভাইস থেকে আপলোড করুন, লিংক দিন, অথবা গ্যালারি থেকে বেছে নিন।', 'Change the home page slides, the picture at the top of each page, the gallery’s featured picture and the “Explore Brahmanbaria” picture. Upload from this device, paste a link, or choose from the gallery.')}
+        action={<button type="button" className="btn btn-dark btn-sm" disabled={busy || !dirty} onClick={save}>{busy ? pick('সংরক্ষণ হচ্ছে…', 'Saving…') : pick('সংরক্ষণ করুন', 'Save')}</button>} />
+      <Notice notice={notice} onClose={clear} />
+      <Data q={res}>
+        {() => v && (
+          <div className="si">
+            <section className="si-card" aria-labelledby="si-hero">
+              <h2 id="si-hero">{pick('হোম পেজের স্লাইড', 'Home page slides')}</h2>
+              <p className="muted small">{live > 0
+                ? pick(`এখন ${n(live)}টি স্লাইড প্রকাশিত। উপরের স্লাইডটি প্রথমে দেখায়; তীর দিয়ে ক্রম বদলান।`, `${live} slide${live === 1 ? ' is' : 's are'} published. The top slide shows first; use the arrows to change the order.`)
+                : pick('কোনো স্লাইড প্রকাশিত নেই, তাই সাইট এখন আগের চারটি ডিফল্ট ছবি দেখাচ্ছে। নিজের স্লাইড যোগ করে প্রকাশ করলে সেগুলোই দেখাবে।', 'No slide is published, so the site shows its four built-in pictures. Add and publish your own slides to replace them.')}</p>
+              {v.hero.length > 0 && (
+                <ol className="si-slides">
+                  {v.hero.map((h, i) => (
+                    <li key={h.id || `new-${i}`} className={h.published ? '' : 'is-off'}>
+                      <label className="si-pos"><span>{pick('নম্বর', 'Number')}</span>
+                        <select value={i + 1} onChange={(e) => moveTo(i, Number(e.target.value))} aria-label={pick('এই ছবি কত নম্বরে দেখাবে', 'At which number this picture shows')}>
+                          {v.hero.map((_, k) => <option key={k} value={k + 1}>{n(k + 1)}</option>)}
+                        </select></label>
+                      <img src={thumbOf(h)} alt="" />
+                      <div className="si-cap">
+                        <label><span>{pick('ক্যাপশন (বাংলা)', 'Caption (Bangla)')}</span><input value={h.captionBn} maxLength={120} onChange={(e) => slide(i, { captionBn: e.target.value })} placeholder="নৌকাবাইচ · আমাদের ঐতিহ্য" /></label>
+                        <label><span>{pick('ক্যাপশন (ইংরেজি)', 'Caption (English)')}</span><input value={h.captionEn} maxLength={120} onChange={(e) => slide(i, { captionEn: e.target.value })} placeholder="Boat race · Our heritage" /></label>
+                      </div>
+                      <div className="si-acts">
+                        <span className={`si-state ${h.published ? 'is-on' : ''}`}>{h.published ? pick('প্রকাশিত', 'Published') : pick('অপ্রকাশিত', 'Unpublished')}</span>
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => slide(i, { published: !h.published })}>{h.published ? pick('আনপাবলিশ', 'Unpublish') : pick('পাবলিশ', 'Publish')}</button>
+                        <button type="button" className="ad-iconbtn" disabled={i === 0} onClick={() => move(i, -1)} aria-label={pick('উপরে নিন', 'Move up')}><Icon name="up" size={16} /></button>
+                        <button type="button" className="ad-iconbtn" disabled={i === v.hero.length - 1} onClick={() => move(i, 1)} aria-label={pick('নিচে নিন', 'Move down')}><Icon name="down" size={16} /></button>
+                        <button type="button" className="ad-iconbtn is-danger" onClick={() => setV({ ...v, hero: v.hero.filter((_, k) => k !== i) })} aria-label={pick('স্লাইড মুছুন', 'Delete slide')}><Icon name="trash" size={16} /></button>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <div className="si-add">
+                <h3>{pick('নতুন স্লাইড যোগ করুন', 'Add a slide')}</h3>
+                <p className="muted small">{pick('চওড়া (ল্যান্ডস্কেপ) ছবি সবচেয়ে ভালো দেখায়, অন্তত ১৬০০ পিক্সেল চওড়া।', 'A wide (landscape) picture looks best, at least 1600 pixels wide.')}</p>
+                <div className="si-slot">
+                  <ImagePicker label={pick('ছবি', 'Picture')} value={fresh?.image || ''} url={fresh?.imageUrl}
+                    onChange={(m) => { if (m) { addSlide({ image: m.path, imageUrl: m.url }); setFresh(null) } }} />
+                  <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setAdding(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
+                </div>
+                {adding && <GalleryPick onClose={() => setAdding(false)} onPick={(g) => { addSlide(g); setAdding(false) }} />}
+              </div>
+            </section>
+
+            <section className="si-card" aria-labelledby="si-feat">
+              <h2 id="si-feat">{pick('গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন” অংশ', 'Gallery featured picture and the “Explore” section')}</h2>
+              <div className="si-grid">
+                <Slot label={pick('গ্যালারি পাতার ফিচার্ড ছবি', 'Featured picture of the Gallery page')} value={v.galleryFeatured} onChange={(x) => setV({ ...v, galleryFeatured: x })}
+                  hint={pick('গ্যালারি পাতার শুরুতে বড় করে দেখানো হয়। খালি রাখলে ফিচার্ড অংশ দেখায় না।', 'Shown large at the start of the Gallery page. Leave empty to show no featured picture.')} />
+                <Slot label={pick('হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” ছবি', 'Home page “Explore Brahmanbaria” picture')} value={v.explore} onChange={(x) => setV({ ...v, explore: x })}
+                  hint={pick('খালি রাখলে সাইটের ডিফল্ট ছবি দেখায়।', 'Leave empty to show the built-in picture.')} />
+              </div>
+            </section>
+
+            <section className="si-card" aria-labelledby="si-pages">
+              <h2 id="si-pages">{pick('প্রতিটি পাতার উপরের ছবি', 'Picture at the top of each page')}</h2>
+              <p className="muted small">{pick('যে পাতার ছবি বদলাবেন শুধু সেটিতে ছবি দিন। খালি থাকলে সেই পাতা ডিফল্ট ছবি দেখায়।', 'Set a picture only for the pages you want to change. A page left empty shows its built-in picture.')}</p>
+              <div className="si-grid">
+                {PAGES.map(([key, bn, en]) => (
+                  <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => setV({ ...v, pages: { ...v.pages, [key]: x } })} />
+                ))}
+              </div>
+            </section>
+
+            <div className="si-foot">
+              <button type="button" className="btn btn-dark" disabled={busy || !dirty} onClick={save}>{busy ? pick('সংরক্ষণ হচ্ছে…', 'Saving…') : pick('সংরক্ষণ করুন', 'Save')}</button>
+              {dirty && <small className="muted">{pick('পরিবর্তন এখনো সংরক্ষণ হয়নি।', 'Your changes are not saved yet.')}</small>}
+            </div>
+          </div>
+        )}
+      </Data>
+    </>
+  )
+}

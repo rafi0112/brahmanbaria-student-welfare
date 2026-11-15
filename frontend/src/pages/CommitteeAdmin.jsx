@@ -103,7 +103,7 @@ function PhotoPicker({ value, onChange }) {
           </label>
           <input ref={input} type="file" accept="image/jpeg,image/png" onChange={pick} hidden />
           <div className="row">
-            <button type="button" className="btn-link" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
+            <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
             {value && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal('') }}>{t('cm.removePhoto')}</button>}
           </div>
           <small className="muted">{t('cm.photoHelp')}</small>

@@ -211,7 +211,7 @@ func (a *App) submitProfileChange(w http.ResponseWriter, r *http.Request, u User
 		apiError(w, http.StatusConflict, "not_approved") // members who are not approved yet edit their details directly
 		return
 	}
-	if errs := a.validateProfile(&q); len(errs) > 0 {
+	if errs := a.validateProfile(&q, false); len(errs) > 0 {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
 		return
 	}

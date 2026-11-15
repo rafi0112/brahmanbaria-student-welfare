@@ -15,6 +15,8 @@ import { HeritageList } from './admin/HeritageAdmin.jsx'
 import GalleryAdmin from './admin/GalleryAdmin.jsx'
 import ActivityPage from './admin/ActivityPage.jsx'
 import ContactInbox from './admin/ContactInbox.jsx'
+import SiteImagesAdmin from './admin/SiteImagesAdmin.jsx'
+import AdminManual from './admin/Manual.jsx'
 import { AlumniAdmin, EventsAdmin, FAQAdmin, ReferenceAdmin } from './admin/SiteDataAdmin.jsx'
 import { Alumni, Committee, Membership } from './pages/Community.jsx'
 import { EventDetail, Events } from './pages/EventsPages.jsx'
@@ -75,6 +77,8 @@ export default function App() {
         <Route path="faq" element={<FAQAdmin />} />
         <Route path="alumni" element={<AlumniAdmin />} />
         <Route path="places-data" element={<ReferenceAdmin />} />
+        <Route path="site-images" element={<SiteImagesAdmin />} />
+        <Route path="manual" element={<AdminManual />} />
       </Route>
     </Routes>
   )

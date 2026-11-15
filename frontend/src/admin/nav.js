@@ -50,6 +50,8 @@ export const NAV = [
     { id: 'published', label: 'ad.status.published', query: { status: 'published' } },
     { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
   ] },
+  { id: 'siteImages', to: '/admin/site-images', icon: 'image', label: 'ad.nav.siteImages', group: 'content' },
+  { id: 'manual', to: '/admin/manual', icon: 'book', label: 'ad.nav.manual', group: 'overview' },
 ]
 
 export const GROUPS = [

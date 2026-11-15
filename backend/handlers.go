@@ -157,7 +157,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		}
 		depts[s.Department]++
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sort.SliceStable(out, func(i, j int) bool { return batchNameLess(out[i].Batch, out[i].Name, out[j].Batch, out[j].Name) })
 	lo, hi, pages := window(len(out), pg, limit)
 	items := make([]alumnusView, 0, hi-lo)
 	for _, al := range out[lo:hi] {
@@ -165,7 +165,7 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		items = append(items, alumnusView{Alumnus: al, Photo: x.photo(al.ID), Contact: x.contact(v)})
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "total": len(out), "page": pg, "pages": pages, "view": v.Kind, "alumniUpToBatch": a.data().AlumniUpTo,
-		"facets": map[string]any{"batches": batches, "departments": depts}})
+		"facets": map[string]any{"batches": batches, "departments": depts, "batchSessions": batchSessions(batches)}})
 }
 
 // withPlaceCounts sets each upazila's place count from what is actually published.

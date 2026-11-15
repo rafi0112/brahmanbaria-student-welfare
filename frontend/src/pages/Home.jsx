@@ -11,6 +11,7 @@ import UpazilaMap from '../components/UpazilaMap.jsx'
 import { PostCard } from '../components/cards.jsx'
 import EventCarousel from '../components/EventCarousel.jsx'
 import HeroStage from '../components/HeroStage.jsx'
+import { usePageTitle, useSiteImages } from '../lib/site.jsx'
 
 function MapPanel({ u }) {
   const { t, n, pick } = useApp()
@@ -85,7 +86,9 @@ function StatsBand({ items }) {
 }
 
 export default function Home() {
-  const { t, n, pick } = useApp()
+  const { t, n, pick, lang } = useApp()
+  const site = useSiteImages()
+  usePageTitle('', lang)
   const { user } = useAuth()
   const nav = useNavigate()
   const joinTo = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'
@@ -128,10 +131,14 @@ export default function Home() {
       {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
       <section className="explore2" aria-labelledby="explore-h">
         <div className="explore2-grid">
-          <Reveal className="ex-media ex-exact">
-            {/* the supplied artwork as designed: photograph, brushed edge, sprigs and the lettering are one picture */}
-            <img data-parallax="0.06" src="/images/bswa/explore-mockup.webp" width="1878" height="1196" loading="lazy" decoding="async"
-              alt={pick('তিতাসের তীরে সূর্যাস্ত, মসজিদ ও নৌকা — নদী, ঐতিহ্য, মানুষ', 'Sunset on the river with a mosque and boats — rivers, heritage, people')} />
+          <Reveal className="ex-media ex-frame">
+            {/* a photograph in a soft frame with a smaller one tucked over its corner; admins choose the main picture */}
+            <figure className="ex-main">
+              <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.jpg'} width="1280" height="853" loading="lazy" decoding="async"
+                alt={pick('তিতাস নদীর সন্ধ্যা', 'Evening on the Titas river')} />
+              <figcaption><Icon name="pin" size={14} /> {pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</figcaption>
+            </figure>
+            <img className="ex-inset" src="/images/arifail-front-640.jpg" width="640" height="427" loading="lazy" decoding="async" alt={pick('আড়িফাইল মসজিদ, সরাইল', 'Arifail Mosque, Sarail')} />
           </Reveal>
           <div className="ex-copy">
             <Reveal>

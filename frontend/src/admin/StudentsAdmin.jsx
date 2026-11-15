@@ -4,7 +4,7 @@ import { api, downloadFile, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { Avatar, Badge, Data } from '../components/ui.jsx'
-import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, TypeConfirm, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
+import { Confirm, EmptyState, Field, Modal, Notice, PageHeader, Pager, RowMenu, SearchBox, Select, SkeletonRows, StatusBadge, TypeConfirm, UploadAsLink, useErrText, useFilters, useNotice, useWhen } from './kit.jsx'
 import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
@@ -489,7 +489,10 @@ function RecordPhotoLink({ row }) {
             <input id={id} type="url" inputMode="url" placeholder="https://drive.google.com/…" value={link} disabled={busy} onChange={(e) => setLink(e.target.value)} />
             <button type="button" className="btn btn-dark btn-sm" disabled={busy || !link.trim() || link.trim() === saved} onClick={() => put(link.trim())}>{pick('সংরক্ষণ', 'Save')}</button>
           </span>)}</Field>
-        {saved && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => put('')}>{pick('ছবি সরান', 'Remove photo')}</button>}
+        <span className="row">
+          <UploadAsLink disabled={busy} onUrl={put} />
+          {saved && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => put('')}>{pick('ছবি সরান', 'Remove photo')}</button>}
+        </span>
         <small className="muted">{pick('ফর্মে দেওয়া ছবির লিংক। ছবিটি শিক্ষার্থী ও অ্যালামনাই পেজে সবার জন্য দেখানো হয়। Google Drive এ "Anyone with the link" করা থাকতে হবে।', 'The photo link from the form. The photo is shown to everyone on the Students and Alumni pages. A Google Drive file must be shared as "Anyone with the link".')}</small>
         {msg && <small role="status">{msg}</small>}
       </div>

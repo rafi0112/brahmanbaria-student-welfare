@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import images from '../data/images.json'
 import { usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { usePageTitle, useSiteImages } from '../lib/site.jsx'
 import Icon from './Icon.jsx'
 import { Skeleton, SplitText } from './Motion.jsx'
 
@@ -154,8 +155,11 @@ export function Crumbs({ items }) {
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
 // variant gives each page its own picture treatment: vine, bleed, arch, circle, frame, collage, tilt, wave
-export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', children }) {
-  const { t } = useApp()
+export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', page, children }) {
+  const { t, lang } = useApp()
+  const site = useSiteImages()
+  if (page && site.pages?.[page]) src = site.pages[page] // the picture an admin chose for this page
+  usePageTitle(typeof title === 'string' ? title : '', lang)
   let head = title, last = ''
   if (typeof title === 'string' && title.includes(' ')) {
     const i = title.lastIndexOf(' ')
@@ -223,4 +227,27 @@ export function PageLeaves() {
 export function VerifiedMark({ size = 16 }) {
   const { t } = useApp()
   return <span className="vmark" title={t('verified.mark')} aria-label={t('verified.mark')} role="img"><Icon name="verified" size={size} /></span>
+}
+
+// People listed batch by batch: one heading per batch (with its academic session and, when the list is not narrowed by a
+// search, how many people it has), then that batch's cards. `items` arrive already ordered by batch from the server.
+export function BatchGroups({ items, sessions = {}, counts, gridClass, children }) {
+  const { t, n, pick } = useApp()
+  const groups = []
+  for (const it of items) {
+    const b = it.batch || 0
+    if (!groups.length || groups[groups.length - 1].batch !== b) groups.push({ batch: b, items: [] })
+    groups[groups.length - 1].items.push(it)
+  }
+  let k = 0
+  return groups.map((g) => (
+    <section key={g.batch} className="batch-group" aria-labelledby={`batch-${g.batch}`}>
+      <h2 className="batch-head" id={`batch-${g.batch}`}>
+        <span className="batch-no">{g.batch ? <>{t('students.batch')} {n(g.batch)}</> : pick('ব্যাচ উল্লেখ নেই', 'Batch not given')}</span>
+        {g.batch > 0 && sessions[g.batch] && <span className="batch-year">{pick('সেশন', 'Session')} {n(sessions[g.batch])}</span>}
+        {g.batch > 0 && counts?.[g.batch] > 0 && <span className="batch-count">{n(counts[g.batch])} {pick('জন', counts[g.batch] === 1 ? 'person' : 'people')}</span>}
+      </h2>
+      <div className={gridClass}>{g.items.map((it) => children(it, k++))}</div>
+    </section>
+  ))
 }

@@ -17,9 +17,10 @@ func normBlood(s string) string {
 		"POSITIVE", "+", "NEGATIVE", "-", "(+)", "+", "(-)", "-", "+VE", "+", "-VE", "-", "POS", "+", "NEG", "-",
 		"−", "-", "–", "-",
 	).Replace(s)
-	for bn, en := range map[string]string{"এবি": "AB", "বি": "B", "এ": "A", "ও": "O"} {
-		if strings.HasPrefix(s, bn) {
-			s = en + strings.TrimPrefix(s, bn)
+	// longest first: "এবি" (AB) must be tried before "এ" (A)
+	for _, p := range [][2]string{{"এবি", "AB"}, {"বি", "B"}, {"এ", "A"}, {"ও", "O"}} {
+		if strings.HasPrefix(s, p[0]) {
+			s = p[1] + strings.TrimPrefix(s, p[0])
 			break
 		}
 	}

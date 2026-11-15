@@ -145,12 +145,40 @@ func TestMembershipRequestsAndMembersViews(t *testing.T) {
 	}
 }
 
-func TestRegistrationRequiresSessionAndKeepsGenderOptional(t *testing.T) {
+// Session, union and gender are optional at registration: blank is accepted and stored blank, a malformed value is refused.
+func TestRegistrationKeepsSessionUnionAndGenderOptional(t *testing.T) {
 	e := authApp(t)
-	bad := validReg("nosession@example.com")
-	delete(bad, "session")
+	bare := validReg("bare@example.com")
+	delete(bare, "session")
+	delete(bare, "union")
+	if rec := e.do("POST", "/api/v1/auth/register", bare, nil); rec.Code != 201 {
+		t.Fatalf("session and union are optional: %d %s", rec.Code, rec.Body)
+	}
+	bu, _ := e.mem.UserByEmail(context.Background(), "bare@example.com")
+	if bp, _ := e.mem.ProfileByUser(context.Background(), bu.ID); bp.Session != "" || bp.Union != "" || bp.Upazila == "" {
+		t.Fatalf("blank optional fields are stored blank, required ones kept: %+v", bp)
+	}
+	bad := validReg("badsession@example.com")
+	bad["session"] = "twenty-twenty"
 	if rec := e.do("POST", "/api/v1/auth/register", bad, nil); rec.Code != 422 || !strings.Contains(rec.Body.String(), "session") {
-		t.Fatalf("session is required: %d %s", rec.Code, rec.Body)
+		t.Fatalf("a malformed session is refused: %d %s", rec.Code, rec.Body)
+	}
+	bad = validReg("badunion@example.com")
+	bad["union"] = "Not A Union"
+	if rec := e.do("POST", "/api/v1/auth/register", bad, nil); rec.Code != 422 || !strings.Contains(rec.Body.String(), "union") {
+		t.Fatalf("a union outside the upazila is refused: %d %s", rec.Code, rec.Body)
+	}
+	// what the directory and the membership review need stays required (checked directly: sign-ups are rate-limited)
+	errs := e.app.validateProfile(&registerReq{}, true)
+	for _, field := range []string{"name", "batch", "department", "upazila"} {
+		if errs[field] == "" {
+			t.Fatalf("%s stays required: %v", field, errs)
+		}
+	}
+	for _, field := range []string{"session", "union", "gender", "bloodGroup"} {
+		if errs[field] != "" {
+			t.Fatalf("%s is optional: %v", field, errs)
+		}
 	}
 	bad = validReg("badgender@example.com")
 	bad["gender"] = "robot"
@@ -277,3 +305,32 @@ func memberViewsSuite(t *testing.T, s AuthStore) {
 }
 
 func TestMemMemberViewsSuite(t *testing.T) { memberViewsSuite(t, newMemStore()) }
+
+// A batch that already counts as alumni must say what the person does now and where; a later batch need not.
+func TestRegistrationAsksAlumniBatchesForTheirWork(t *testing.T) {
+	e := authApp(t)
+	cur := e.app.data()
+	next := *cur
+	next.AlumniUpTo = 15
+	swap := func(s *Store) { e.app.dataMu.Lock(); e.app.Store = s; e.app.dataMu.Unlock() }
+	swap(&next)
+	t.Cleanup(func() { swap(cur) })
+	alum := registerReq{Batch: 12}
+	errs := e.app.validateProfile(&alum, true)
+	if errs["occupation"] == "" || errs["workplace"] == "" {
+		t.Fatalf("batch 12 (alumni) must be asked for profession and workplace, got %v", errs)
+	}
+	alum = registerReq{Batch: 12, Occupation: "  Lecturer ", Workplace: "Dhaka   College"}
+	errs = e.app.validateProfile(&alum, true)
+	if errs["occupation"] != "" || errs["workplace"] != "" || alum.Occupation != "Lecturer" || alum.Workplace != "Dhaka College" {
+		t.Fatalf("given work must pass and be tidied: %v %q %q", errs, alum.Occupation, alum.Workplace)
+	}
+	student := registerReq{Batch: 18}
+	if errs := e.app.validateProfile(&student, true); errs["occupation"] != "" || errs["workplace"] != "" {
+		t.Fatalf("batch 18 (a current student) must not be asked for work: %v", errs)
+	}
+	change := registerReq{Batch: 12}
+	if errs := e.app.validateProfile(&change, false); errs["occupation"] != "" || errs["workplace"] != "" {
+		t.Fatalf("a change request does not carry work details and must not be asked: %v", errs)
+	}
+}

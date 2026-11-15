@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /activate
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://brahmanbaria-student-welfare.pages.dev/sitemap.xml

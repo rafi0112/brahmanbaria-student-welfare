@@ -1,7 +1,7 @@
 import {
   Activity, ArrowDown, BadgeCheck, BookUser, ArrowUp, Bookmark, Check, ChevronDown, ChevronRight, Download, Ellipsis, ExternalLink, Folder, FolderInput, FolderPlus, Globe, History,
   Images, Landmark, LayoutDashboard, Mail, ListFilter, LogOut, Menu, Moon, Newspaper, PanelLeft, Pencil, Plus, Search, ShieldCheck, Star, Sun, Trash2, TriangleAlert,
-  Users, UsersRound, X,
+  Upload, Users, UsersRound, X, BookOpen, Image as ImageIcon,
 } from 'lucide-react'
 
 // One icon library, one stroke weight. Names describe the idea, not the shape.
@@ -9,7 +9,7 @@ const MAP = {
   dashboard: LayoutDashboard, activity: Activity, users: Users, committee: UsersRound, shield: ShieldCheck, landmark: Landmark, blog: Newspaper, gallery: Images,
   star: Star, folder: Folder, folderPlus: FolderPlus, folderMove: FolderInput, chevron: ChevronRight, chevronDown: ChevronDown, search: Search, filter: ListFilter,
   external: ExternalLink, plus: Plus, x: X, bookmark: Bookmark, clock: History, download: Download, menu: Menu, panel: PanelLeft, logout: LogOut, moon: Moon, sun: Sun,
-  verified: BadgeCheck, directory: BookUser, mail: Mail, globe: Globe, check: Check, alert: TriangleAlert, more: Ellipsis, pencil: Pencil, trash: Trash2, up: ArrowUp, down: ArrowDown,
+  verified: BadgeCheck, directory: BookUser, mail: Mail, globe: Globe, check: Check, alert: TriangleAlert, more: Ellipsis, pencil: Pencil, trash: Trash2, up: ArrowUp, down: ArrowDown, upload: Upload, book: BookOpen, image: ImageIcon,
 }
 
 export default function AdminIcon({ name, size = 16, className = '' }) {

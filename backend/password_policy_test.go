@@ -3,32 +3,18 @@ package main
 import "testing"
 
 func TestPasswordPolicyMatchesTheForm(t *testing.T) {
-	ok := []string{"Kp7#mQ2vRt", "Xq9#mvTz!Lp4", "Correct#Horse91"}
-	for _, pw := range ok {
+	// length is the only rule: anything of 4 to 72 characters passes
+	for _, pw := range []string{"1234", "abcd", "aaaa", "password", "Kp7#mQ2vRt", "amar sonar bangla", "নিরাপদ", "nusrat@example.com", "Nusrat Jahan"} {
 		if msg := passwordProblem(pw, "nusrat@example.com", "Nusrat Jahan"); msg != "" {
 			t.Errorf("%q should pass: %s", pw, msg)
 		}
 	}
-	bad := map[string]string{
-		"Kp7#mQ2v":       "length",
-		"kp7#mq2vrtx":    "no uppercase",
-		"Kp7mQ2vRtxy":    "no symbol",
-		"Password#2024":  "common word",
-		"Xy#1234zQwv":    "sequence",
-		"Xy#aaa9zQwvK":   "repeat",
-		"Nusrat#Strong9": "own name",
-		"Xq9#example!Lp": "fine: example is the domain, not the local part",
+	for _, pw := range []string{"", "a", "123", "অআই"} {
+		if msg := passwordProblem(pw, "", ""); msg == "" {
+			t.Errorf("%q is shorter than 4 and must be refused", pw)
+		}
 	}
-	for pw, why := range bad {
-		msg := passwordProblem(pw, "nusrat@example.com", "Nusrat Jahan")
-		if why == "fine: example is the domain, not the local part" {
-			if msg != "" {
-				t.Errorf("%q: %s", pw, msg)
-			}
-			continue
-		}
-		if msg == "" {
-			t.Errorf("%q should fail (%s)", pw, why)
-		}
+	if msg := passwordProblem(string(make([]byte, 73)), "", ""); msg == "" {
+		t.Error("more than 72 bytes must be refused, since only the first 72 are used")
 	}
 }

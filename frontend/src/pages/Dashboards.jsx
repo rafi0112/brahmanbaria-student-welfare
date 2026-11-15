@@ -32,7 +32,11 @@ function CompleteProfile({ defaultName, onDone }) {
   const { t, n, pick } = useApp()
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
-  const [v, setV] = useState({ name: defaultName, batch: '', department: '', upazila: '', union: '', phone: '', gender: '', bloodGroup: '', photoLink: '' })
+  const [v, setV] = useState({ name: defaultName, batch: '', department: '', upazila: '', union: '', phone: '', gender: '', bloodGroup: '', photoLink: '', occupation: '', workplace: '' })
+  // a batch that already counts as alumni is asked for the profession and the workplace (both required then)
+  const site = useApi('/stats')
+  const alumniUpTo = site.data?.alumniUpToBatch || 0
+  const isAlum = !!v.batch && alumniUpTo > 0 && Number(v.batch) <= alumniUpTo
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -49,9 +53,11 @@ function CompleteProfile({ defaultName, onDone }) {
     e.preventDefault()
     const bad = {}
     if (v.name.trim().length < 2) bad.name = t('auth.e.name')
-    for (const k of ['batch', 'department', 'upazila', 'union']) if (!v[k]) bad[k] = t('auth.e.select')
-    if (!/^\d{4}-\d{2}$/.test((v.session || '').trim())) bad.session = t('auth.sessionHint')
-    if (!/^01\d{9}$/.test(v.phone.trim())) bad.phone = t('auth.e.phone')
+    // required: name, batch, department, upazila. Session, union and phone are optional and only checked when filled in.
+    for (const k of ['batch', 'department', 'upazila']) if (!v[k]) bad[k] = t('auth.e.select')
+    if ((v.session || '').trim() && !/^\d{4}-\d{2}$/.test((v.session || '').trim())) bad.session = t('auth.sessionHint')
+    if (v.phone.trim() && !/^01\d{9}$/.test(v.phone.trim())) bad.phone = t('auth.e.phone')
+    if (isAlum) for (const k of ['occupation', 'workplace']) if (v[k].trim().length < 2) bad[k] = t(`auth.e.${k}`)
     setErrs(bad); setMsg(null)
     if (Object.keys(bad).length) return
     setBusy(true)
@@ -79,6 +85,12 @@ function CompleteProfile({ defaultName, onDone }) {
             {opt[k].map(([val, text]) => <option key={val} value={val}>{text}</option>)}
           </select>
           {errs[k] && <small className="err">{errs[k]}</small>}
+        </label>
+      ))}
+      {isAlum && ['occupation', 'workplace'].map((k) => (
+        <label key={k} className="field"><span>{t(`auth.${k}`)}<b className="field-req" aria-hidden="true"> *</b></span>
+          <input value={v[k]} maxLength={120} onChange={(e) => setV({ ...v, [k]: e.target.value })} aria-invalid={!!errs[k]} aria-required="true" />
+          {errs[k] ? <small className="err">{errs[k]}</small> : k === 'occupation' && <small className="muted">{t('auth.alumHint').replace('{n}', n(alumniUpTo))}</small>}
         </label>
       ))}
       <label className="field"><span>{t('auth.phone')}</span>
