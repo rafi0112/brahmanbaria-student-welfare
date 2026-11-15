@@ -126,7 +126,7 @@ export default function AdminManual() {
               <li>{T('চাইলে বাংলা ও ইংরেজি ক্যাপশন লিখুন।', 'Write a Bangla and an English caption if you like.')}</li>
               <li>{T('প্রতিটি স্লাইডের “নম্বর” ঘর থেকে বেছে নিন সেটি কত নম্বরে দেখাবে (১ সবার আগে)। তীর চিহ্ন (↑ ↓) দিয়েও ক্রম বদলানো যায়।', 'Pick from each slide’s “Number” box at which number it shows (1 shows first). The arrows (↑ ↓) also change the order.')}</li>
               <li>{T('পাবলিশ / আনপাবলিশ দিয়ে কোনো স্লাইড দেখানো বা লুকানো যায়; ডাস্টবিন চিহ্ন দিয়ে মুছে ফেলা যায়।', 'Publish / Unpublish shows or hides a slide; the bin icon deletes it.')}</li>
-              <li>{T('সবশেষে সংরক্ষণ করুন চাপুন।', 'Finally press Save.')}</li>
+              <li>{T('ছবি বাছা, আপলোড, পাবলিশ/আনপাবলিশ, ক্রম বদল ও মোছা সাথে সাথে সংরক্ষণ হয় এবং সাইটে দেখা যায়, আলাদা করে Save চাপতে হয় না। ক্যাপশন লিখে ঘরের বাইরে ক্লিক করলে সংরক্ষণ হয়।', 'Choosing, uploading, publishing/unpublishing, reordering and deleting are saved at once and show on the site; there is no separate Save step. A caption is saved when you click out of its field.')}</li>
             </ol>
             <p>{T('কোনো স্লাইড প্রকাশিত না থাকলে সাইট নিজের চারটি ডিফল্ট ছবি দেখায়। চওড়া (ল্যান্ডস্কেপ) ও পরিষ্কার ছবি ব্যবহার করুন, অন্তত ১৬০০ পিক্সেল চওড়া।',
               'If no slide is published, the site shows its four built-in pictures. Use wide (landscape), clear pictures, at least 1600 pixels wide.')}</p>

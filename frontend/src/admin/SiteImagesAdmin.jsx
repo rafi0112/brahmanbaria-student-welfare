@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { forgetSiteImages } from '../lib/site.jsx'
@@ -83,37 +83,57 @@ export default function SiteImagesAdmin() {
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  // Every choice (a picture picked, uploaded or removed; a slide published, moved or deleted) is saved at once, so the site
+  // shows it without another step. Saves run one after another; the last state always wins. Typing a caption is saved when
+  // the field is left (or with the Save button).
+  const pending = useRef(null)
+  const running = useRef(false)
+  const toBody = (x) => ({
+    hero: x.hero.map(({ id, image, captionBn, captionEn, published }) => ({ id, image, captionBn, captionEn, published })),
+    pages: Object.fromEntries(Object.entries(x.pages).filter(([, y]) => y?.image).map(([k, y]) => [k, y.image])),
+    galleryFeatured: x.galleryFeatured?.image || '', explore: x.explore?.image || '',
+  })
+  const persist = async (next) => {
+    pending.current = next
+    if (running.current) return
+    running.current = true
+    setBusy(true); clear()
+    let last = null
+    try {
+      while (pending.current) {
+        const cur = pending.current
+        pending.current = null
+        last = await api('/admin/settings/site-images', { method: 'PUT', body: JSON.stringify(toBody(cur)) })
+        forgetSiteImages()
+      }
+      take(last)
+      ok(pick('সংরক্ষণ হয়েছে। সাইটে এখনই দেখা যাবে।', 'Saved. The site shows it now.'))
+    } catch (e) {
+      pending.current = null
+      bad(`${pick('সংরক্ষণ হয়নি: ', 'Not saved: ')}${Object.values(e.fields || {})[0] || errText(e)}`)
+    } finally { running.current = false; setBusy(false) }
+  }
+  const commit = (next) => { setV(next); persist(next) }
+  const save = () => persist(v)
   const slide = (i, patch) => setV({ ...v, hero: v.hero.map((h, k) => (k === i ? { ...h, ...patch } : h)) })
+  const slideNow = (i, patch) => commit({ ...v, hero: v.hero.map((h, k) => (k === i ? { ...h, ...patch } : h)) })
   const move = (i, by) => {
     const hero = [...v.hero]
     const j = i + by
     if (j < 0 || j >= hero.length) return
     ;[hero[i], hero[j]] = [hero[j], hero[i]]
-    setV({ ...v, hero })
+    commit({ ...v, hero })
   }
   // put slide i at position pos (1 = shown first); the others keep their order
   const moveTo = (i, pos) => {
     const hero = [...v.hero]
     const [h] = hero.splice(i, 1)
     hero.splice(pos - 1, 0, h)
-    setV({ ...v, hero })
+    commit({ ...v, hero })
   }
   const addSlide = (g) => {
     if (v.hero.length >= 12) { bad(pick('সর্বোচ্চ ১২টি স্লাইড রাখা যায়।', 'At most 12 slides.')); return }
-    setV({ ...v, hero: [...v.hero, { id: '', image: g.image, imageUrl: g.imageUrl, captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
-  }
-  const save = async () => {
-    setBusy(true); clear()
-    try {
-      const body = {
-        hero: v.hero.map(({ id, image, captionBn, captionEn, published }) => ({ id, image, captionBn, captionEn, published })),
-        pages: Object.fromEntries(Object.entries(v.pages).filter(([, x]) => x?.image).map(([k, x]) => [k, x.image])),
-        galleryFeatured: v.galleryFeatured?.image || '', explore: v.explore?.image || '',
-      }
-      take(await api('/admin/settings/site-images', { method: 'PUT', body: JSON.stringify(body) }))
-      forgetSiteImages()
-      ok(pick('সংরক্ষণ হয়েছে। সাইটে এখনই দেখা যাবে।', 'Saved. The site shows it now.'))
-    } catch (e) { bad(Object.values(e.fields || {})[0] || errText(e)) } finally { setBusy(false) }
+    commit({ ...v, hero: [...v.hero, { id: '', image: g.image, imageUrl: g.imageUrl, captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
   }
   const live = v ? v.hero.filter((h) => h.published).length : 0
 
@@ -140,15 +160,15 @@ export default function SiteImagesAdmin() {
                         </select></label>
                       <img src={thumbOf(h)} alt="" />
                       <div className="si-cap">
-                        <label><span>{pick('ক্যাপশন (বাংলা)', 'Caption (Bangla)')}</span><input value={h.captionBn} maxLength={120} onChange={(e) => slide(i, { captionBn: e.target.value })} placeholder="নৌকাবাইচ · আমাদের ঐতিহ্য" /></label>
-                        <label><span>{pick('ক্যাপশন (ইংরেজি)', 'Caption (English)')}</span><input value={h.captionEn} maxLength={120} onChange={(e) => slide(i, { captionEn: e.target.value })} placeholder="Boat race · Our heritage" /></label>
+                        <label><span>{pick('ক্যাপশন (বাংলা)', 'Caption (Bangla)')}</span><input value={h.captionBn} maxLength={120} onChange={(e) => slide(i, { captionBn: e.target.value })} onBlur={() => dirty && persist(v)} placeholder="নৌকাবাইচ · আমাদের ঐতিহ্য" /></label>
+                        <label><span>{pick('ক্যাপশন (ইংরেজি)', 'Caption (English)')}</span><input value={h.captionEn} maxLength={120} onChange={(e) => slide(i, { captionEn: e.target.value })} onBlur={() => dirty && persist(v)} placeholder="Boat race · Our heritage" /></label>
                       </div>
                       <div className="si-acts">
                         <span className={`si-state ${h.published ? 'is-on' : ''}`}>{h.published ? pick('প্রকাশিত', 'Published') : pick('অপ্রকাশিত', 'Unpublished')}</span>
-                        <button type="button" className="btn btn-outline btn-sm" onClick={() => slide(i, { published: !h.published })}>{h.published ? pick('আনপাবলিশ', 'Unpublish') : pick('পাবলিশ', 'Publish')}</button>
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => slideNow(i, { published: !h.published })}>{h.published ? pick('আনপাবলিশ', 'Unpublish') : pick('পাবলিশ', 'Publish')}</button>
                         <button type="button" className="ad-iconbtn" disabled={i === 0} onClick={() => move(i, -1)} aria-label={pick('উপরে নিন', 'Move up')}><Icon name="up" size={16} /></button>
                         <button type="button" className="ad-iconbtn" disabled={i === v.hero.length - 1} onClick={() => move(i, 1)} aria-label={pick('নিচে নিন', 'Move down')}><Icon name="down" size={16} /></button>
-                        <button type="button" className="ad-iconbtn is-danger" onClick={() => setV({ ...v, hero: v.hero.filter((_, k) => k !== i) })} aria-label={pick('স্লাইড মুছুন', 'Delete slide')}><Icon name="trash" size={16} /></button>
+                        <button type="button" className="ad-iconbtn is-danger" onClick={() => commit({ ...v, hero: v.hero.filter((_, k) => k !== i) })} aria-label={pick('স্লাইড মুছুন', 'Delete slide')}><Icon name="trash" size={16} /></button>
                       </div>
                     </li>
                   ))}
@@ -169,9 +189,9 @@ export default function SiteImagesAdmin() {
             <section className="si-card" aria-labelledby="si-feat">
               <h2 id="si-feat">{pick('গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন” অংশ', 'Gallery featured picture and the “Explore” section')}</h2>
               <div className="si-grid">
-                <Slot label={pick('গ্যালারি পাতার ফিচার্ড ছবি', 'Featured picture of the Gallery page')} value={v.galleryFeatured} onChange={(x) => setV({ ...v, galleryFeatured: x })}
+                <Slot label={pick('গ্যালারি পাতার ফিচার্ড ছবি', 'Featured picture of the Gallery page')} value={v.galleryFeatured} onChange={(x) => commit({ ...v, galleryFeatured: x })}
                   hint={pick('গ্যালারি পাতার শুরুতে বড় করে দেখানো হয়। খালি রাখলে ফিচার্ড অংশ দেখায় না।', 'Shown large at the start of the Gallery page. Leave empty to show no featured picture.')} />
-                <Slot label={pick('হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” ছবি', 'Home page “Explore Brahmanbaria” picture')} value={v.explore} onChange={(x) => setV({ ...v, explore: x })}
+                <Slot label={pick('হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” ছবি', 'Home page “Explore Brahmanbaria” picture')} value={v.explore} onChange={(x) => commit({ ...v, explore: x })}
                   hint={pick('খালি রাখলে সাইটের ডিফল্ট ছবি দেখায়।', 'Leave empty to show the built-in picture.')} />
               </div>
             </section>
@@ -181,7 +201,7 @@ export default function SiteImagesAdmin() {
               <p className="muted small">{pick('যে পাতার ছবি বদলাবেন শুধু সেটিতে ছবি দিন। খালি থাকলে সেই পাতা ডিফল্ট ছবি দেখায়।', 'Set a picture only for the pages you want to change. A page left empty shows its built-in picture.')}</p>
               <div className="si-grid">
                 {PAGES.map(([key, bn, en]) => (
-                  <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => setV({ ...v, pages: { ...v.pages, [key]: x } })} />
+                  <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => commit({ ...v, pages: { ...v.pages, [key]: x } })} />
                 ))}
               </div>
             </section>
