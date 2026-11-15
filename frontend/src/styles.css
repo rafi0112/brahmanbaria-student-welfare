@@ -1625,3 +1625,20 @@ html[lang='bn'] .sd-suggest h3, html[lang='bn'] .sd-group { font-size: .82rem; l
 
 /* sign-up grid: a field with a hint under it must not stretch its neighbour */
 .form-grid { align-items: start; }
+
+/* ---------- Student profile: the picture opens in a viewer with zoom ---------- */
+button.sp-avatar { padding: 0; border: 0; cursor: zoom-in; font: inherit; }
+.sp-zoom-ic { position: absolute; right: 8px; bottom: 8px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(12, 14, 16, .6); color: #fff; font-size: 15px; opacity: 0; transform: scale(.85); transition: opacity .2s, transform .2s; pointer-events: none; }
+button.sp-avatar:hover .sp-zoom-ic, button.sp-avatar:focus-visible .sp-zoom-ic { opacity: 1; transform: none; }
+@media (hover: none) { .sp-zoom-ic { opacity: 1; transform: none; } }
+button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.pv { position: fixed; inset: 0; z-index: 200; display: grid; grid-template-rows: auto 1fr auto; background: rgba(8, 10, 9, .94); animation: lb-fade .2s ease both; }
+.pv-bar { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px 16px; }
+.pv-btn { min-width: 40px; height: 40px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .22); border-radius: 99px; background: rgba(255, 255, 255, .08); color: #fff; font-size: 1.15rem; line-height: 1; cursor: pointer; }
+.pv-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .18); } .pv-btn:disabled { opacity: .35; cursor: default; }
+.pv-txt { font-size: .82rem; font-weight: 600; } .pv-close { margin-left: 14px; }
+.pv-pct { min-width: 52px; text-align: center; color: #fff; font-weight: 600; font-size: .88rem; }
+.pv-stage { position: relative; overflow: hidden; display: grid; place-items: center; touch-action: none; user-select: none; }
+.pv-stage img { max-width: min(92vw, 900px); max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 14px; will-change: transform; }
+.pv-hint { margin: 0; padding: 10px 16px 14px; text-align: center; color: rgba(255, 255, 255, .6); font-size: .78rem; }
+@media (prefers-reduced-motion: reduce) { .pv, .pv-stage img { animation: none; transition: none !important; } }

@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
 import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import PhotoViewer from '../components/PhotoViewer.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { StudentCard } from '../components/cards.jsx'
 
@@ -131,9 +132,20 @@ export default function Students() {
   )
 }
 
+// The profile picture. With a photo it is a button: a click opens the full-screen viewer, where it can be zoomed.
 function SpAvatar({ name, photo }) {
+  const { pick } = useApp()
   const src = usePhoto(photo)
-  return <span className="sp-avatar" aria-hidden="true">{src ? <img src={src} alt="" /> : initials(name)}</span>
+  const [open, setOpen] = useState(false)
+  if (!src) return <span className="sp-avatar" aria-hidden="true">{initials(name)}</span>
+  return (
+    <>
+      <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${pick('ছবি বড় করে দেখুন', 'View the photo larger')}: ${name}`}>
+        <img src={src} alt="" /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
+      </button>
+      {open && <PhotoViewer src={src} alt={name} onClose={() => setOpen(false)} />}
+    </>
+  )
 }
 
 export function StudentDetail() {

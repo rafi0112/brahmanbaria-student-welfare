@@ -278,7 +278,11 @@ func (a *App) uploadImage(w http.ResponseWriter, r *http.Request, u User, bucket
 		}
 	}
 
-	clean, ext, ct, err := cleanImage(data)
+	side := mediaMaxSide
+	if bucket == photoBucket {
+		side = personMaxSide // portraits are shown small
+	}
+	clean, ext, ct, err := storableImage(data, side)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrPhotoTooBig):
@@ -290,11 +294,7 @@ func (a *App) uploadImage(w http.ResponseWriter, r *http.Request, u User, bucket
 		}
 		return
 	}
-	name, err := newObjectName(ext)
-	if err != nil {
-		apiError(w, http.StatusInternalServerError, "could not save the photo")
-		return
-	}
+	name := contentName(clean, ext)
 	if err := a.Auth.Images.Put(r.Context(), token, bucket, name, ct, clean); err != nil {
 		log.Printf("photo upload: %v", err)
 		apiError(w, http.StatusBadGateway, "storage_failed")

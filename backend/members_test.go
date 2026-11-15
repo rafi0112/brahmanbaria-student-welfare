@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"context"
 	"net/http"
 	"strings"
@@ -332,5 +333,131 @@ func TestRegistrationAsksAlumniBatchesForTheirWork(t *testing.T) {
 	change := registerReq{Batch: 12}
 	if errs := e.app.validateProfile(&change, false); errs["occupation"] != "" || errs["workplace"] != "" {
 		t.Fatalf("a change request does not carry work details and must not be asked: %v", errs)
+	}
+}
+
+// A new member shows up in the right list, under the right batch, with the details their batch needs.
+func TestNewMembersAppearBatchWiseOnceApproved(t *testing.T) {
+	e := authApp(t)
+	ctx := context.Background()
+	cur := e.app.data()
+	next := *cur
+	next.AlumniUpTo = 15
+	swap := func(s *Store) { e.app.dataMu.Lock(); e.app.Store = s; e.app.dataMu.Unlock() }
+	swap(&next)
+	t.Cleanup(func() { swap(cur) })
+	admin := e.admin(t)
+
+	register := func(email, name string, batch int, extra map[string]any) string {
+		t.Helper()
+		body := validReg(email)
+		body["name"], body["batch"] = name, batch
+		for k, v := range extra {
+			body[k] = v
+		}
+		if rec := e.do("POST", "/api/v1/auth/register", body, nil); rec.Code != 201 {
+			t.Fatalf("register %s: %d %s", name, rec.Code, rec.Body)
+		}
+		if rec := e.do("POST", "/api/v1/auth/verify-email", map[string]string{"token": tokenIn(t, e.mail.last())}, nil); rec.Code != 200 {
+			t.Fatalf("verify %s: %d", name, rec.Code)
+		}
+		e.mem.mu.Lock()
+		id := e.mem.byEmail[email]
+		e.mem.mu.Unlock()
+		if id == "" {
+			t.Fatalf("%s not found after registering", name)
+		}
+		return id
+	}
+	approve := func(id string) {
+		t.Helper()
+		if err := e.mem.ReviewMember(ctx, "", id, StatusApproved); err != nil {
+			t.Fatal(err)
+		}
+	}
+	names := func(path string) map[string]map[string]any { // name -> the person's row, over every page
+		m := map[string]map[string]any{}
+		for pg := 1; ; pg++ {
+			var out struct {
+				Items []map[string]any
+				Pages int
+			}
+			decodeBody(t, e.do("GET", fmt.Sprintf("%s?limit=40&page=%d", path, pg), nil, nil), &out)
+			for _, it := range out.Items {
+				m[it["name"].(string)] = it
+			}
+			if pg >= out.Pages {
+				return m
+			}
+		}
+	}
+
+	// an alumni batch must give profession and workplace, and lands on the Alumni page under its batch
+	bad := validReg("noword@example.com")
+	bad["batch"] = 12
+	if rec := e.do("POST", "/api/v1/auth/register", bad, nil); rec.Code != 422 {
+		t.Fatalf("batch 12 without work details must be refused, got %d", rec.Code)
+	}
+	alum := register("alum@example.com", "Qvx Alumnus", 12, map[string]any{"occupation": "Lecturer", "workplace": "Dhaka College"})
+	stud := register("stud@example.com", "Qvx Student", 21, nil)
+	register("pending@example.com", "Qvx Pending", 20, nil)
+
+	if _, ok := names("/api/v1/alumni")["Qvx Alumnus"]; ok {
+		t.Fatal("a member who is not approved yet must not be listed")
+	}
+	approve(alum)
+	approve(stud)
+
+	a := names("/api/v1/alumni")
+	row, ok := a["Qvx Alumnus"]
+	if !ok {
+		t.Fatal("the approved alumni-batch member must be on the Alumni page")
+	}
+	if row["batch"].(float64) != 12 || row["occupation"] != "Lecturer" || row["workplace"] != "Dhaka College" {
+		t.Fatalf("the alumni row lacks batch or work details: %v", row)
+	}
+	if _, ok := names("/api/v1/students")["Qvx Alumnus"]; ok {
+		t.Fatal("an alumni-batch member must not be on the Students page")
+	}
+
+	s := names("/api/v1/students")
+	if _, ok := s["Qvx Student"]; !ok {
+		t.Fatal("the approved student must be on the Students page")
+	}
+	if _, ok := s["Qvx Pending"]; ok {
+		t.Fatal("the member who was not approved must not be listed")
+	}
+	if _, ok := names("/api/v1/alumni")["Qvx Student"]; ok {
+		t.Fatal("a student must not be on the Alumni page")
+	}
+
+	// the list is ordered batch by batch, the senior batch first, and the batch's session is given
+	var list struct {
+		Items  []map[string]any
+		Facets struct {
+			Batches       map[string]int
+			BatchSessions map[string]string
+		}
+	}
+	decodeBody(t, e.do("GET", "/api/v1/students?limit=40", nil, nil), &list)
+	prev := -1.0
+	for _, it := range list.Items {
+		if b, _ := it["batch"].(float64); b < prev {
+			t.Fatalf("students are not ordered batch by batch: %v after %v", b, prev)
+		} else {
+			prev = b
+		}
+	}
+	if list.Facets.Batches["21"] < 1 || list.Facets.BatchSessions["21"] == "" {
+		t.Fatalf("batch 21 must be counted and carry its session: %v %v", list.Facets.Batches, list.Facets.BatchSessions)
+	}
+	// an admin adds a directory record by hand: it is listed under its batch too
+	up := e.app.Store.Upazilas[0]
+	rec := e.do("POST", "/api/v1/admin/imported-students", map[string]any{"name": "Qvx Added", "batch": 19, "department": e.app.Store.Depts[0], "upazila": up.Slug}, admin)
+	if rec.Code != 201 && rec.Code != 200 {
+		t.Fatalf("admin add: %d %s", rec.Code, rec.Body)
+	}
+	if row, ok := names("/api/v1/students")["Qvx Added"]; !ok || row["batch"].(float64) != 19 {
+		t.Fatalf("a record added by an admin must be listed under its batch: %v", row)
 	}
 }

@@ -144,6 +144,7 @@ func (a *App) serveLinkedPhoto(w http.ResponseWriter, r *http.Request, id, link 
 		if (cp.data != nil && time.Since(cp.at) < 24*time.Hour) || (cp.data == nil && time.Since(cp.at) < 10*time.Minute) {
 			img = cp.data
 			if img == nil {
+				w.Header().Set("Cache-Control", "public, max-age=600")
 				apiError(w, http.StatusNotFound, "no photo")
 				return
 			}
@@ -158,6 +159,7 @@ func (a *App) serveLinkedPhoto(w http.ResponseWriter, r *http.Request, id, link 
 		}
 		if err != nil {
 			a.alumniPhotos.Store(key, cachedPhoto{at: time.Now()})
+			w.Header().Set("Cache-Control", "public, max-age=600") // the browser need not ask again for ten minutes
 			apiError(w, http.StatusNotFound, "no photo")
 			return
 		}

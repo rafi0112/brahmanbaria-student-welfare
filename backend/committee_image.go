@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -25,6 +26,8 @@ const (
 	maxPhotoBytes = 5 << 20
 	maxPhotoSide  = 8000
 	minPhotoSide  = 64
+	mediaMaxSide  = 2000 // pictures of the site (gallery, slides, page tops): sharp on a large screen, far smaller than a camera photo
+	personMaxSide = 1000 // portraits (executives)
 )
 
 var (
@@ -76,6 +79,8 @@ func (s *supabaseStorage) Put(ctx context.Context, userToken, bucket, name, cont
 	req.Header.Set("Authorization", "Bearer "+userToken)
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("x-upsert", "false") // never overwrite an existing object
+	// a file is named after its content and never changes, so browsers and the CDN may keep it for a year
+	req.Header.Set("cache-control", "max-age=31536000")
 	res, err := s.client.Do(req)
 	if err != nil {
 		return err
@@ -83,6 +88,10 @@ func (s *supabaseStorage) Put(ctx context.Context, userToken, bucket, name, cont
 	defer res.Body.Close()
 	if res.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(io.LimitReader(res.Body, 300))
+		// the same picture was stored before: its name is its content, so the existing file is exactly this one
+		if res.StatusCode == http.StatusConflict || strings.Contains(string(b), "already exists") || strings.Contains(string(b), "Duplicate") {
+			return nil
+		}
 		return fmt.Errorf("storage returned %d: %s", res.StatusCode, strings.TrimSpace(string(b)))
 	}
 	return nil
@@ -118,14 +127,93 @@ func cleanImage(data []byte) (out []byte, ext, contentType string, err error) {
 	return buf.Bytes(), ".jpg", "image/jpeg", nil
 }
 
-func newObjectName(ext string) (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
+// storableImage validates an upload (cleanImage) and returns what is worth keeping: at most maxSide pixels on the longer
+// side, a JPEG unless the picture really has transparency (a PNG photo is several times larger as PNG), quality 82.
+func storableImage(data []byte, maxSide int) (out []byte, ext, contentType string, err error) {
+	if _, _, _, err = cleanImage(data); err != nil {
+		return nil, "", "", err
 	}
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x%s", b[0:4], b[4:6], b[6:8], b[8:10], b[10:], ext), nil
+	src, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, "", "", ErrPhotoInvalid
+	}
+	src = scaleDown(src, maxSide)
+	var buf bytes.Buffer
+	if hasAlpha(src) {
+		if err := png.Encode(&buf, src); err != nil {
+			return nil, "", "", ErrPhotoInvalid
+		}
+		return buf.Bytes(), ".png", "image/png", nil
+	}
+	if err := jpeg.Encode(&buf, src, &jpeg.Options{Quality: 82}); err != nil {
+		return nil, "", "", ErrPhotoInvalid
+	}
+	return buf.Bytes(), ".jpg", "image/jpeg", nil
+}
+
+// hasAlpha reports whether any pixel is not fully opaque.
+func hasAlpha(img image.Image) bool {
+	if o, ok := img.(interface{ Opaque() bool }); ok && o.Opaque() {
+		return false
+	}
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if _, _, _, a := img.At(x, y).RGBA(); a != 0xffff {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// scaleDown shrinks a picture so that its longer side is at most maxSide pixels (a box filter: every new pixel is the
+// average of the pixels it covers). A smaller picture is returned as it is.
+func scaleDown(src image.Image, maxSide int) image.Image {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w <= maxSide && h <= maxSide {
+		return src
+	}
+	nw, nh := maxSide, maxSide*h/w
+	if h > w {
+		nw, nh = maxSide*w/h, maxSide
+	}
+	if nw < 1 {
+		nw = 1
+	}
+	if nh < 1 {
+		nh = 1
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, nw, nh))
+	for dy := 0; dy < nh; dy++ {
+		sy0, sy1 := b.Min.Y+dy*h/nh, b.Min.Y+(dy+1)*h/nh
+		if sy1 <= sy0 {
+			sy1 = sy0 + 1
+		}
+		for dx := 0; dx < nw; dx++ {
+			sx0, sx1 := b.Min.X+dx*w/nw, b.Min.X+(dx+1)*w/nw
+			if sx1 <= sx0 {
+				sx1 = sx0 + 1
+			}
+			var r, g, bl, a, n uint64
+			for y := sy0; y < sy1; y++ {
+				for x := sx0; x < sx1; x++ {
+					cr, cg, cb, ca := src.At(x, y).RGBA()
+					r, g, bl, a, n = r+uint64(cr), g+uint64(cg), bl+uint64(cb), a+uint64(ca), n+1
+				}
+			}
+			dst.Set(dx, dy, color.RGBA64{R: uint16(r / n), G: uint16(g / n), B: uint16(bl / n), A: uint16(a / n)})
+		}
+	}
+	return dst
+}
+
+// contentName names a stored picture after its content: the same picture always gets the same name, so uploading it
+// again (or choosing it for another section) never stores a second copy. The name keeps the shape of a UUID.
+func contentName(data []byte, ext string) string {
+	h := sha256.Sum256(data)
+	return fmt.Sprintf("%x-%x-%x-%x-%x%s", h[0:4], h[4:6], h[6:8], h[8:10], h[10:16], ext)
 }
 
 var driveIDRx = regexp.MustCompile(`^[A-Za-z0-9_-]{20,80}$`)
