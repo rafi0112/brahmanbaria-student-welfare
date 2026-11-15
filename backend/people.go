@@ -299,7 +299,11 @@ func (a *App) students(w http.ResponseWriter, r *http.Request) {
 	}
 	// batch by batch, the senior batch first, then by name; people without a batch come last
 	sort.SliceStable(out, func(i, j int) bool { return batchNameLess(out[i].Batch, out[i].Name, out[j].Batch, out[j].Name) })
-	lo, hi, pages := window(len(out), pg, limit)
+	bs := make([]*int, len(out))
+	for i := range out {
+		bs[i] = out[i].Batch
+	}
+	lo, hi, pages := batchWindow(bs, pg, limit)
 	batches, depts := map[int]int{}, map[string]int{}
 	for _, s := range all {
 		if s.Batch != nil {
@@ -368,4 +372,35 @@ func batchSessions(batches map[int]int) map[int]string {
 		}
 	}
 	return out
+}
+
+// batchWindow pages a list that is already ordered batch by batch so that a page never ends in the middle of a batch:
+// a page takes whole batches until it holds at least `limit` people, then the next batch starts a new page. Everyone of
+// one batch is therefore always on the same page, however many they are.
+func batchWindow(batches []*int, pg, limit int) (lo, hi, pages int) {
+	same := func(i, j int) bool {
+		if batches[i] == nil || batches[j] == nil {
+			return batches[i] == batches[j]
+		}
+		return *batches[i] == *batches[j]
+	}
+	starts := []int{0}
+	for i := 1; i < len(batches); i++ {
+		if !same(i, i-1) && i-starts[len(starts)-1] >= limit {
+			starts = append(starts, i)
+		}
+	}
+	pages = len(starts)
+	if pg < 1 {
+		pg = 1
+	}
+	if pg > pages {
+		pg = pages
+	}
+	lo = starts[pg-1]
+	hi = len(batches)
+	if pg < pages {
+		hi = starts[pg]
+	}
+	return
 }

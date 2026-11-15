@@ -25,7 +25,7 @@ export function Alumni() {
     setSp(out, { replace: true })
   }
   useEffect(() => { if (dq !== f.q) set({ q: dq, page: 1 }) /* eslint-disable-line */ }, [dq])
-  const res = useApi(`/alumni${qs({ ...f, limit: 12 })}`)
+  const res = useApi(`/alumni${qs({ ...f, limit: 40 })}`)
   const facets = res.data?.facets
   return (
     <>

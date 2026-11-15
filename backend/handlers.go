@@ -158,7 +158,11 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 		depts[s.Department]++
 	}
 	sort.SliceStable(out, func(i, j int) bool { return batchNameLess(out[i].Batch, out[i].Name, out[j].Batch, out[j].Name) })
-	lo, hi, pages := window(len(out), pg, limit)
+	bs := make([]*int, len(out))
+	for i := range out {
+		bs[i] = out[i].Batch
+	}
+	lo, hi, pages := batchWindow(bs, pg, limit)
 	items := make([]alumnusView, 0, hi-lo)
 	for _, al := range out[lo:hi] {
 		x := extras[al.ID]

@@ -38,7 +38,7 @@ export default function Students() {
     Object.entries(next).forEach(([k, v]) => { if (v && !(k === 'page' && v === 1)) out[k] = v })
     setSp(out, { replace: true })
   }
-  const res = useApi(`/students${qs({ ...f, page: f.page, limit: 12 })}`)
+  const res = useApi(`/students${qs({ ...f, page: f.page, limit: 40 })}`)
   const ups = useApi('/upazilas')
   const upazilas = ups.data?.items || []
   const facets = res.data?.facets

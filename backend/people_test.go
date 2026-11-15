@@ -227,3 +227,31 @@ func itemsJSON(body []byte) string {
 	_ = json.Unmarshal(body, &v)
 	return string(v.Items)
 }
+
+// A page never ends in the middle of a batch: everyone of a batch is on one page.
+func TestBatchWindowKeepsABatchOnOnePage(t *testing.T) {
+	b := func(n int) *int { return &n }
+	var list []*int
+	for _, c := range [][2]int{{1, 28}, {2, 5}, {3, 30}, {4, 2}} {
+		for i := 0; i < c[1]; i++ {
+			list = append(list, b(c[0]))
+		}
+	}
+	seen := map[int]int{} // batch -> the page it was on
+	_, _, pages := batchWindow(list, 1, 12)
+	for pg := 1; pg <= pages; pg++ {
+		lo, hi, _ := batchWindow(list, pg, 12)
+		for _, x := range list[lo:hi] {
+			if p, ok := seen[*x]; ok && p != pg {
+				t.Fatalf("batch %d is split over pages %d and %d", *x, p, pg)
+			}
+			seen[*x] = pg
+		}
+	}
+	if len(seen) != 4 {
+		t.Fatalf("every batch must appear, got %v", seen)
+	}
+	if lo, hi, pages := batchWindow(nil, 1, 12); lo != 0 || hi != 0 || pages != 1 {
+		t.Fatalf("empty list: %d %d %d", lo, hi, pages)
+	}
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"encoding/json"
 	"net/http/httptest"
 	"path/filepath"
@@ -29,20 +30,38 @@ func get(t *testing.T, a *App, url string) (int, map[string]any) {
 
 func TestStudentsPaginationAndFilter(t *testing.T) {
 	a := testApp(t)
+	// pages end only at the end of a batch, so a batch is never split: every batch is on exactly one page
 	code, v := get(t, a, "/api/v1/students?limit=5&page=1")
-	if code != 200 || len(v["items"].([]any)) > 5 {
+	if code != 200 {
 		t.Fatalf("bad page: %d", code)
 	}
-	total := int(v["total"].(float64))
+	total, pages := int(v["total"].(float64)), int(v["pages"].(float64))
+	seen, count := map[float64]int{}, 0
+	for pg := 1; pg <= pages; pg++ {
+		_, p := get(t, a, fmt.Sprintf("/api/v1/students?limit=5&page=%d", pg))
+		for _, it := range p["items"].([]any) {
+			count++
+			b, _ := it.(map[string]any)["batch"].(float64)
+			if was, ok := seen[b]; ok && was != pg {
+				t.Fatalf("batch %v is on pages %d and %d", b, was, pg)
+			}
+			seen[b] = pg
+		}
+	}
+	if count != total {
+		t.Fatalf("the pages hold %d people, the total says %d", count, total)
+	}
 	_, f := get(t, a, "/api/v1/students?q=zzzzzz-nothing")
 	if int(f["total"].(float64)) != 0 || total == 0 {
 		t.Fatal("filter or total wrong")
 	}
 	_, big := get(t, a, "/api/v1/students?limit=100000")
-	if len(big["items"].([]any)) > 12 {
+	_, def := get(t, a, "/api/v1/students")
+	if big["pages"] != def["pages"] {
 		t.Fatal("limit above max must fall back to default")
 	}
 }
+
 
 func TestStudentsHidePrivateFields(t *testing.T) {
 	a := testApp(t)
