@@ -3,12 +3,13 @@ import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { forgetSiteImages } from '../lib/site.jsx'
 import { Data } from '../components/ui.jsx'
+import { builtInSlides } from '../data/heroSlides.js'
 import { ImagePicker, Modal, Notice, PageHeader, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
 
 // The pictures of the public site that admins choose: the home page slides (order, published or not), the picture at
 // the top of each page, the Gallery page's featured picture and the "Explore Brahmanbaria" picture. A picture comes
-// from this device, from a link, or from the gallery. Nothing changes on the site until "Save" is pressed.
+// from this device, from a link, or from the gallery. Every change is saved at once; the Save button is there for typed captions.
 
 const PAGES = [
   ['students', 'শিক্ষার্থী', 'Students'], ['alumni', 'অ্যালামনাই', 'Alumni'], ['committee', 'কমিটি', 'Committee'], ['events', 'ইভেন্ট', 'Events'],
@@ -71,7 +72,8 @@ export default function SiteImagesAdmin() {
   const [fresh, setFresh] = useState(null) // a new slide's picture from upload or link, before it joins the list
 
   const take = (d) => {
-    const next = { hero: d.hero || [], pages: d.pages || {}, galleryFeatured: d.galleryFeatured || null, explore: d.explore || null }
+    // until an admin has saved a list of their own, the site shows its built-in slides, so the panel starts from those
+    const next = { hero: d.hero?.length ? d.hero : builtInSlides(), pages: d.pages || {}, galleryFeatured: d.galleryFeatured || null, explore: d.explore || null }
     setV(next); setSaved(JSON.stringify(next))
   }
   useEffect(() => { if (res.data) take(res.data) }, [res.data])
@@ -148,8 +150,8 @@ export default function SiteImagesAdmin() {
             <section className="si-card" aria-labelledby="si-hero">
               <h2 id="si-hero">{pick('হোম পেজের স্লাইড', 'Home page slides')}</h2>
               <p className="muted small">{live > 0
-                ? pick(`এখন ${n(live)}টি স্লাইড প্রকাশিত। উপরের স্লাইডটি প্রথমে দেখায়; তীর দিয়ে ক্রম বদলান।`, `${live} slide${live === 1 ? ' is' : 's are'} published. The top slide shows first; use the arrows to change the order.`)
-                : pick('কোনো স্লাইড প্রকাশিত নেই, তাই সাইট এখন আগের চারটি ডিফল্ট ছবি দেখাচ্ছে। নিজের স্লাইড যোগ করে প্রকাশ করলে সেগুলোই দেখাবে।', 'No slide is published, so the site shows its four built-in pictures. Add and publish your own slides to replace them.')}</p>
+                ? pick(`এখন ${n(live)}টি স্লাইড প্রকাশিত। উপরের স্লাইডটি প্রথমে দেখায়; তীর বা নম্বর দিয়ে ক্রম বদলান। সব স্লাইড মুছলে তিনটি ডিফল্ট ছবি ফিরে আসে।`, `${live} slide${live === 1 ? ' is' : 's are'} published. The top slide shows first; use the arrows or the number to change the order. Delete every slide and the three built-in pictures come back.`)
+                : pick('কোনো স্লাইড প্রকাশিত নেই, তাই সাইট এখন তিনটি ডিফল্ট ছবি দেখাচ্ছে। একটি স্লাইড প্রকাশ করলে শুধু প্রকাশিত স্লাইডগুলোই দেখাবে।', 'No slide is published, so the site shows its three built-in pictures. Publish a slide and the site shows only the published ones.')}</p>
               {v.hero.length > 0 && (
                 <ol className="si-slides">
                   {v.hero.map((h, i) => (

@@ -65,6 +65,8 @@ test('choosing from the gallery in the admin goes live without pressing Save', a
   try {
     await page.goto('/admin/site-images')
     await page.waitForSelector('.si-card')
+    // the three built-in slides are listed, ready to be edited like any other
+    await expect(page.locator('.si-slides li')).toHaveCount(3)
     // the Gallery page's featured picture
     const featured = page.locator('.si-card').nth(1).locator('.si-slot').first()
     await featured.getByRole('button', { name: /Choose from the gallery/ }).click()
@@ -73,9 +75,9 @@ test('choosing from the gallery in the admin goes live without pressing Save', a
     // a slide, then its caption (saved when the field is left)
     await page.locator('.si-add .si-from').click()
     await page.locator('.si-pick button').nth(1).click()
-    await expect(page.locator('.si-slides li')).toHaveCount(1)
-    await page.locator('.si-slides li input').nth(1).fill('Caption typed')
-    await page.locator('.si-slides li input').nth(1).blur()
+    await expect(page.locator('.si-slides li')).toHaveCount(4)
+    await page.locator('.si-slides li').last().locator('input').nth(1).fill('Caption typed')
+    await page.locator('.si-slides li').last().locator('input').nth(1).blur()
     await expect(page.locator('.notice.ok')).toContainText('Saved')
 
     const visitor = await (await browser.newContext()).newPage()
@@ -83,16 +85,25 @@ test('choosing from the gallery in the admin goes live without pressing Save', a
     await visitor.goto('/gallery')
     await expect(visitor.locator('.gal-feature img')).toBeVisible()
     await visitor.goto('/')
-    await expect(visitor.locator('.hs-fr')).toHaveCount(1)
-    await expect(visitor.locator('.sr-only[aria-live]').first()).toContainText('Caption typed')
+    await expect(visitor.locator('.hs-fr')).toHaveCount(4)
 
-    // unpublishing and deleting are saved at once too
+    // a built-in slide can be deleted like any other, and it is saved at once
+    await page.locator('.si-slides li').first().getByRole('button', { name: 'Delete slide' }).click()
+    await expect(page.locator('.notice.ok')).toContainText('Saved')
+    await expect(page.locator('.si-slides li')).toHaveCount(3)
+    await visitor.goto('/')
+    await expect(visitor.locator('.hs-fr')).toHaveCount(3)
+    // unpublishing is saved at once too
     await page.locator('.si-slides li').first().getByRole('button', { name: 'Unpublish' }).click()
     await expect(page.locator('.notice.ok')).toContainText('Saved')
     await visitor.goto('/')
-    await expect(visitor.locator('.hs-fr')).toHaveCount(4) // no slide is published: the four built-in chapters
-    await page.locator('.si-slides li').first().getByRole('button', { name: 'Delete slide' }).click()
-    await expect(page.locator('.si-slides li')).toHaveCount(0)
+    await expect(visitor.locator('.hs-fr')).toHaveCount(2)
+    // deleting every slide brings the three built-in pictures back
+    for (let k = 0; k < 3; k++) await page.locator('.si-slides li').first().getByRole('button', { name: 'Delete slide' }).click()
+    await expect(page.locator('.si-slides li')).toHaveCount(3)
+    await visitor.goto('/')
+    await expect(visitor.locator('.hs-fr')).toHaveCount(3)
+    await expect(visitor.locator('.hs-count')).toContainText('Boat race')
     await visitor.close()
   } finally {
     await clear()

@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import images from '../data/images.json'
+import { BUILT_IN } from '../data/heroSlides.js'
 import { useApp } from '../lib/app.jsx'
 import { useSiteImages } from '../lib/site.jsx'
 
 const SCENE_MS = 8000
-
-// The four chapters. Captions name the place or subject only: people in the pictures are not presented as members of
-// the association. `wm` is the faint chapter word set into the picture, `pos` frames the photograph and `boost` adds
-// shade where the photograph is bright behind the type.
-const BUILT_IN = [
-  { id: 'dragon-boat', no: '01', bn: 'নৌকাবাইচ · আমাদের ঐতিহ্য', en: 'Boat race · Our heritage', wm: 'বাইচ', pos: '46% 40%', boost: 0 },
-  { id: 'jnu-main', no: '02', bn: 'জগন্নাথ বিশ্ববিদ্যালয় · শিক্ষার্থী সমাজ', en: 'Jagannath University · Student community', wm: 'শিক্ষা', pos: '50% 35%', boost: 0.5 },
-  { id: 'arifail-01', no: '03', bn: 'আড়িফাইল মসজিদ, সরাইল · ইসলামি ঐতিহ্য', en: 'Arifail Mosque, Sarail · Islamic heritage', wm: 'স্থাপত্য', pos: '50% 30%', boost: 0.85 },
-  { id: 'folk-culture', no: '04', bn: 'বাউল গান ও পুতুল নাচ · আমাদের সংস্কৃতি', en: 'Baul song and puppet theatre · Our culture', wm: 'লোকজ', pos: '55% 35%', boost: 0.5 },
-]
 
 // a built-in chapter has sized files; a slide an admin chose has one address
 const src = (sc) => (sc.url ? { src: sc.url } : { src: `/images/${sc.id}-1280.webp`, srcSet: `/images/${sc.id}-640.webp 640w, /images/${sc.id}-1280.webp 1280w${images[sc.id]?.wide ? `, /images/${sc.id}-1920.webp 1920w` : ''}` })
@@ -32,14 +23,14 @@ const Arrow = ({ d = 'M5 12h14M13 6l6 6-6 6', size = 18, width = 2.2 }) => (
 export default function HeroStage() {
   const { pick, n } = useApp()
   const site = useSiteImages()
-  // the slides an admin published, in their order; none published means the four built-in chapters. Until the answer
+  // the slides an admin published, in their order; none published means the three built-in chapters. Until the answer
   // arrives (at most a moment) nothing is drawn, so a visitor never sees one set swap for the other.
   const [waited, setWaited] = useState(false)
   useEffect(() => { const id = setTimeout(() => setWaited(true), 2500); return () => clearTimeout(id) }, [])
   const custom = site.hero.length > 0
   const SCENES = useMemo(() => (custom
-    ? site.hero.map((h, k) => ({ id: h.id, url: h.imageUrl, no: two(k), bn: h.captionBn || h.captionEn, en: h.captionEn || h.captionBn, wm: '', pos: '50% 45%', boost: 0.55 }))
-    : (site.ready || waited ? BUILT_IN : [])), [custom, site.hero, site.ready, waited])
+    ? site.hero.map((h, k) => { const b = BUILT_IN.find((x) => x.id === h.image); return { id: h.id, url: h.imageUrl, no: two(k), bn: h.captionBn || h.captionEn, en: h.captionEn || h.captionBn, wm: b?.wm || '', pos: b?.pos || '50% 45%', boost: b?.boost ?? 0.55 } })
+    : (site.ready || waited ? BUILT_IN.map((b, k) => ({ ...b, no: two(k) })) : [])), [custom, site.hero, site.ready, waited])
   const [i, setI] = useState(0)
   const [prev, setPrev] = useState(null)
   const [held, setHeld] = useState(false)
@@ -115,7 +106,7 @@ export default function HeroStage() {
           </div>
         </div>
 
-        {/* chapter dock: count and title, previous / next / pause, four thumbnails with progress */}
+        {/* chapter dock: count and title, previous / next / pause, a thumbnail each with progress */}
         {count > 1 && <div className="hs-dock hs-e4" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocusCapture={() => setHeld(true)} onBlurCapture={() => setHeld(false)}>
           <div className="hs-now">
             <p className="hs-count"><span>{s.no}<small>/ {two(Math.max(count, 1) - 1)}</small></span><em key={i}>{pick(s.bn, s.en)}</em></p>
