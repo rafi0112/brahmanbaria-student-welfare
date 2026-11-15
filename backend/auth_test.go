@@ -157,7 +157,7 @@ func TestRegisterValidation(t *testing.T) {
 	bad["union"] = "Kaitala North" // belongs to Nabinagar, so this one is fine; break upazila instead
 	bad["upazila"] = "sarail"
 	bad["department"] = "Underwater Basket Weaving"
-	bad["password"] = "abc"
+	bad["password"] = "abcde"
 	rec := e.do("POST", "/api/v1/auth/register", bad, nil)
 	if rec.Code != 422 {
 		t.Fatalf("want 422 got %d", rec.Code)
@@ -239,7 +239,7 @@ func TestPasswordReset(t *testing.T) {
 	c := e.member(t, "r@example.com")
 	e.do("POST", "/api/v1/auth/forgot-password", map[string]string{"email": "r@example.com"}, nil)
 	tok := tokenIn(t, e.mail.last())
-	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "abc"}, nil); rec.Code != 422 {
+	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "abcde"}, nil); rec.Code != 422 {
 		t.Fatalf("weak password should be 422, got %d", rec.Code)
 	}
 	if rec := e.do("POST", "/api/v1/auth/reset-password", map[string]string{"token": tok, "password": "Brand#New9Words"}, nil); rec.Code != 200 {

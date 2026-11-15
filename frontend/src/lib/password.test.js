@@ -4,18 +4,18 @@ import { checkPassword, suggestPassword, MIN_LENGTH } from './password.js'
 
 const failed = (pw, who) => checkPassword(pw, who).rules.filter((r) => !r.ok).map((r) => r.id)
 
-test('length is the only rule: 4 to 72 characters, anything else is allowed', () => {
-  for (const pw of ['1234', 'abcd', 'aaaa', 'password', 'Kp7#mQ2vRt', 'amar sonar bangla', 'নিরাপদ']) assert.deepEqual(failed(pw), [], pw)
+test('length is the only rule: 6 to 72 characters, anything else is allowed', () => {
+  for (const pw of ['123456', 'abcdef', 'aaaaaa', 'password', 'Kp7#mQ2vRt', 'amar sonar bangla', 'নিরাপদ']) assert.deepEqual(failed(pw), [], pw)
   assert.deepEqual(failed('Rafiul Islam', { name: 'Rafiul Islam' }), [])
-  assert.ok(failed('abc').includes('length'))
+  assert.ok(failed('abcde').includes('length'))
   assert.ok(failed('x'.repeat(73)).includes('length'))
-  assert.equal(MIN_LENGTH, 4)
+  assert.equal(MIN_LENGTH, 6)
 })
 
 test('the meter is weak only when too short, then grows with length', () => {
   assert.equal(checkPassword('').score, 0)
-  assert.equal(checkPassword('abc').score, 1)
-  assert.equal(checkPassword('1234').score, 2)
+  assert.equal(checkPassword('abcde').score, 1)
+  assert.equal(checkPassword('123456').score, 2)
   assert.equal(checkPassword('Kp7#mQ2vRt').score, 3)
   assert.equal(checkPassword('correct horse battery').score, 4)
 })

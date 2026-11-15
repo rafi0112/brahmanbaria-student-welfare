@@ -1,8 +1,8 @@
-// The rule for new passwords (register, reset, activation), shared by the form checklist and the submit check: 4 to 72
+// The rule for new passwords (register, reset, activation), shared by the form checklist and the submit check: 6 to 72
 // characters, nothing else (the association asked for no other restriction). The server repeats it for its own
 // accounts; Supabase applies its project's minimum length as well.
 
-export const MIN_LENGTH = 4
+export const MIN_LENGTH = 6
 export const MAX_LENGTH = 72 // bytes: bcrypt (and Supabase) only use the first 72
 
 // Each rule: id (also the string key suffix), whether it passes, and whether it is required to submit.
