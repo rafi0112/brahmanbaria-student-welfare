@@ -155,10 +155,11 @@ export function Crumbs({ items }) {
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
 // variant gives each page its own picture treatment: vine, bleed, arch, circle, frame, collage, tilt, wave
-export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', page, children }) {
+export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', page, noMedia, children }) {
   const { t, lang } = useApp()
   const site = useSiteImages()
   if (page && site.pages?.[page]) src = site.pages[page] // the picture an admin chose for this page
+  const bare = noMedia && !src // no picture of its own, and none chosen by an admin: the heading simply has the full width
   usePageTitle(typeof title === 'string' ? title : '', lang)
   let head = title, last = ''
   if (typeof title === 'string' && title.includes(' ')) {
@@ -167,7 +168,7 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, va
     last = title.slice(i + 1)
   }
   return (
-    <header className={`phero-wrap phero-v-${variant}`}>
+    <header className={`phero-wrap phero-v-${variant}${bare ? ' phero-bare' : ''}`}>
       <div className="wrap phero">
         <div className="phero-copy">
           <nav className="phero-crumbs" aria-label={t('nav.breadcrumb')}><Link to="/">{t('nav.home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{kicker || head}</span></nav>
@@ -176,9 +177,9 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, va
           {lede && <p className="phero-lede">{lede}</p>}
           {children}
         </div>
-        <div className="phero-media">
+        {!bare && <div className="phero-media">
           {src ? <img className="phero-img" src={src} alt="" width="700" height="460" fetchpriority="high" /> : <MediaPhoto id={image} url={imageUrl} eager sizes="(min-width: 1000px) 48vw, 100vw" alt="" />}
-        </div>
+        </div>}
         {script && <p className="phero-script" aria-hidden="true">{script}</p>}
         <span className="phero-deco phero-deco-a" aria-hidden="true" /><span className="phero-deco phero-deco-b" aria-hidden="true" />
       </div>

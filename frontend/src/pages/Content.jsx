@@ -22,7 +22,7 @@ export function Blog() {
   const cats = ['student-life', 'heritage', 'community']
   return (
     <>
-      <PageHero page="blog" kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} src="/images/bb-sunset-1280.jpg">
+      <PageHero page="blog" kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} src="/images/bb-sunset-1280.webp">
         <div className="banner-chips" role="group">
           <button className={`chip ${!cat ? 'on' : ''}`} onClick={() => setSp({})}>{t('blog.all')}</button>
           {cats.map((c) => <button key={c} className={`chip ${cat === c ? 'on' : ''}`} onClick={() => setSp({ category: c })}>{t(`cat.${c}`)}</button>)}
@@ -104,7 +104,7 @@ export function Gallery() {
   const m = open != null ? items[open] : null
   return (
     <>
-      <PageHero page="gallery" kicker={t('gallery.kicker')} title={t('gallery.title')} variant="collage" lede={t('gallery.lede')} src="/images/titas-sunset-1280.jpg" />
+      <PageHero page="gallery" kicker={t('gallery.kicker')} title={t('gallery.title')} variant="collage" lede={t('gallery.lede')} noMedia />
       <section className="section wrap">
         {site.galleryFeatured && (() => {
           // the picture an admin marked as featured; its caption comes from the gallery entry when it is one
@@ -221,7 +221,7 @@ export function HelpPage() {
   }, [hash])
   return (
     <>
-      <PageHero page="help" kicker={t('help.kicker')} title={t('help.title')} variant="tilt" lede={t('help.lede')} src="/images/meghna-bridge-1280.jpg">
+      <PageHero page="help" kicker={t('help.kicker')} title={t('help.title')} variant="tilt" lede={t('help.lede')} src="/images/meghna-bridge-1280.webp">
         <div className="banner-chips" role="group" aria-label={t('help.title')}>
           <a className="chip" href="#faq">{t('help.toFaq')}</a>
           <a className="chip" href="#contact">{t('help.toContact')}</a>

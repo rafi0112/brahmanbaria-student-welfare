@@ -1642,3 +1642,5 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 .pv-stage img { max-width: min(92vw, 900px); max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 14px; will-change: transform; }
 .pv-hint { margin: 0; padding: 10px 16px 14px; text-align: center; color: rgba(255, 255, 255, .6); font-size: .78rem; }
 @media (prefers-reduced-motion: reduce) { .pv, .pv-stage img { animation: none; transition: none !important; } }
+
+.phero-bare { grid-template-columns: 1fr; min-height: 0; } .phero-bare .phero-lede { max-width: 62ch; }

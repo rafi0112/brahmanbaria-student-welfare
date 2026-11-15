@@ -134,11 +134,11 @@ export default function Home() {
           <Reveal className="ex-media ex-frame">
             {/* a photograph in a soft frame with a smaller one tucked over its corner; admins choose the main picture */}
             <figure className="ex-main">
-              <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.jpg'} width="1280" height="853" loading="lazy" decoding="async"
+              <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.webp'} width="1280" height="853" loading="lazy" decoding="async"
                 alt={pick('তিতাস নদীর সন্ধ্যা', 'Evening on the Titas river')} />
               <figcaption><Icon name="pin" size={14} /> {pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</figcaption>
             </figure>
-            <img className="ex-inset" src="/images/arifail-front-640.jpg" width="640" height="427" loading="lazy" decoding="async" alt={pick('আড়িফাইল মসজিদ, সরাইল', 'Arifail Mosque, Sarail')} />
+            <img className="ex-inset" src="/images/arifail-front-640.webp" width="640" height="427" loading="lazy" decoding="async" alt={pick('আড়িফাইল মসজিদ, সরাইল', 'Arifail Mosque, Sarail')} />
           </Reveal>
           <div className="ex-copy">
             <Reveal>
