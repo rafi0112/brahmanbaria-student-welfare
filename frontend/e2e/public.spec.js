@@ -34,8 +34,8 @@ test('hero: the full name, two actions, three scenes; search opens a dialog from
   await expect(page.getByRole('heading', { level: 1, name: /ব্রাহ্মণবাড়িয়া জেলা ছাত্রকল্যাণ পরিষদ, জগন্নাথ বিশ্ববিদ্যালয়/ })).toBeVisible()
   await expect(page.locator('.hs-fr.is-on img')).toBeVisible()
   await expect(page.locator('.hs-count')).toContainText('Boat race')
-  await page.getByRole('link', { name: /Explore Brahmanbaria/ }).click()
-  await expect(page).toHaveURL(/\/heritage$/)
+  await page.getByRole('link', { name: /Explore BSWA/ }).click()
+  await expect(page).toHaveURL(/\/gallery$/)
   await page.goto('/')
   await page.getByRole('link', { name: 'Connect with students' }).click()
   await expect(page).toHaveURL(/\/students$/)
@@ -66,7 +66,7 @@ test('hero: the full name, two actions, three scenes; search opens a dialog from
   // on a phone the actions are full width and nothing scrolls sideways
   await page.setViewportSize({ width: 360, height: 740 })
   await page.goto('/')
-  await expect(page.locator('.hs-actions').getByRole('link', { name: /Explore Brahmanbaria/ })).toBeVisible()
+  await expect(page.locator('.hs-actions').getByRole('link', { name: /Explore BSWA/ })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
@@ -179,4 +179,35 @@ test('responsive: no page scrolls sideways on a small phone, a tablet or a lapto
       expect(over, `${p} at ${w}px`).toBe(0)
     }
   }
+})
+
+test('home: no "Together We Grow" line, slides last 6 seconds, the Facebook page is easy to find', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await expect(page.locator('.hs-actions')).toBeVisible()
+  await expect(page.getByText(/Together We Grow/i)).toHaveCount(0)
+  await expect(page.locator('.hs-tag')).toHaveCount(0)
+  // the slide changes on its own about 6 seconds after it appears (it was 8): measured in the page
+  const at = await page.evaluate(() => new Promise((res) => {
+    const t0 = performance.now(); const first = document.querySelector('.hs-count')?.innerText
+    const id = setInterval(() => { if (document.querySelector('.hs-count')?.innerText !== first) { clearInterval(id); res(performance.now() - t0) } }, 50)
+    setTimeout(() => { clearInterval(id); res(-1) }, 9000)
+  }))
+  expect(at).toBeGreaterThan(5000)
+  expect(at).toBeLessThan(7000)
+  // the Facebook page: a clear button in the community band and a small link in the footer, both to the configured page, in a new tab
+  for (const link of [page.locator('.cband .fb-btn'), page.locator('.site-footer .fb-foot')]) {
+    await link.scrollIntoViewIfNeeded()
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute('href', 'https://www.facebook.com/bswa.e2e.test')
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).toHaveAttribute('rel', /noopener/)
+  }
+  // phone width: the button fits inside the screen once the section has faded in, and nothing scrolls sideways
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/')
+  const btn = page.locator('.cband .fb-btn')
+  await btn.scrollIntoViewIfNeeded()
+  await expect.poll(async () => { const r = await btn.boundingBox(); return r.x >= 0 && r.x + r.width <= 375 }).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })

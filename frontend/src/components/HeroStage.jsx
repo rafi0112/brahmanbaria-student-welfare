@@ -5,7 +5,7 @@ import { BUILT_IN } from '../data/heroSlides.js'
 import { useApp } from '../lib/app.jsx'
 import { useSiteImages } from '../lib/site.jsx'
 
-const SCENE_MS = 8000
+const SCENE_MS = 6000
 
 // a built-in chapter has sized files; a slide an admin chose has one address
 const src = (sc) => (sc.url ? { src: sc.url } : { src: `/images/${sc.id}-1280.webp`, srcSet: `/images/${sc.id}-640.webp 640w, /images/${sc.id}-1280.webp 1280w${images[sc.id]?.wide ? `, /images/${sc.id}-1920.webp 1920w` : ''}` })
@@ -95,11 +95,10 @@ export default function HeroStage() {
               <span className="hs-uni"><span className="hs-w" style={{ animationDelay: '.38s' }}>জগন্নাথ বিশ্ববিদ্যালয়</span><small className="hs-w" lang="en" style={{ animationDelay: '.46s' }}>Jagannath University · Dhaka</small></span>
             </span>
           </h1>
-          <p className="hs-tag hs-e1">Together We Grow, Together We Belong.</p>
           <p className="hs-tagbn hs-e2" lang="bn">ঐক্য, সহযোগিতা ও শিক্ষার্থীদের কল্যাণে আমরা একসাথে।</p>
           <div className="hs-actions hs-e3">
-            <Link className="hs-b1" to="/heritage">
-              <span><b>{pick('ঘুরে দেখুন ব্রাহ্মণবাড়িয়া', 'Explore Brahmanbaria')}</b><small>{pick('Explore Brahmanbaria', 'ঘুরে দেখুন ব্রাহ্মণবাড়িয়া')}</small></span>
+            <Link className="hs-b1" to="/gallery">
+              <span><b>{pick('BSWA ঘুরে দেখুন', 'Explore BSWA')}</b><small>{pick('Explore BSWA', 'BSWA ঘুরে দেখুন')}</small></span>
               <span className="hs-orb"><span className="hs-a1"><Arrow /></span><span className="hs-a2"><Arrow /></span></span>
             </Link>
             <Link className="hs-b2" to="/students">{pick('শিক্ষার্থীদের সাথে যুক্ত হোন', 'Connect with students')} <i><Arrow d="M7 17L17 7M9 7h8v8" size={16} width={2} /></i></Link>

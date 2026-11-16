@@ -30,7 +30,7 @@ export default defineConfig({
       port: WEB,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { JK_E2E_PORT: String(WEB), JK_E2E_API: `http://localhost:${API}`, VITE_SUPABASE_URL: '', VITE_SUPABASE_PUBLISHABLE_KEY: '', VITE_API_BASE: '' },
+      env: { JK_E2E_PORT: String(WEB), JK_E2E_API: `http://localhost:${API}`, VITE_SUPABASE_URL: '', VITE_SUPABASE_PUBLISHABLE_KEY: '', VITE_API_BASE: '', VITE_FACEBOOK_PAGE_URL: 'https://www.facebook.com/bswa.e2e.test' },
     },
   ],
 })

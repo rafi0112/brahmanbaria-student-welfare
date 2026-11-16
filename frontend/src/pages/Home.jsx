@@ -11,6 +11,7 @@ import UpazilaMap from '../components/UpazilaMap.jsx'
 import { PostCard } from '../components/cards.jsx'
 import EventCarousel from '../components/EventCarousel.jsx'
 import HeroStage from '../components/HeroStage.jsx'
+import FacebookLink from '../components/FacebookLink.jsx'
 import { usePageTitle, useSiteImages } from '../lib/site.jsx'
 
 function MapPanel({ u }) {
@@ -213,6 +214,7 @@ export default function Home() {
               <Link className="btn btn-dark" to="/students">{t('community.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
               <Link className="btn btn-on-dark" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('BSWA-তে যোগ দিন', 'Join BSWA')}</Link>
             </div>
+            <FacebookLink />
             <p className="cband-sign" aria-hidden="true">{pick('একই শিকড়, উজ্জ্বল পথ', 'Same roots, brighter paths')}</p>
           </Reveal>
         </div>

@@ -1,0 +1,33 @@
+import { useApp } from '../lib/app.jsx'
+import { FACEBOOK_PAGE_URL } from '../lib/social.js'
+
+// The Facebook "f" in its round mark (the standard logo shape, drawn in the brand blue by the CSS)
+export function FacebookMark({ size = 20 }) {
+  return (
+    <svg className="fb-mark" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z" />
+    </svg>
+  )
+}
+
+// The organization's official Facebook Page, opened in a new tab. Nothing is drawn until the page's address is configured
+// (VITE_FACEBOOK_PAGE_URL), so a visitor is never sent to a made-up address.
+//   variant "button": the clear call to action in the community band; "footer": the small link in the footer.
+export default function FacebookLink({ variant = 'button' }) {
+  const { pick } = useApp()
+  if (!FACEBOOK_PAGE_URL) return null
+  const label = pick('ফেসবুক পেজ ঘুরে আসুন', 'Visit our Facebook page')
+  if (variant === 'footer') {
+    return (
+      <a className="fb-foot" href={FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label={`${label} (${pick('নতুন ট্যাবে খোলে', 'opens in a new tab')})`}>
+        <FacebookMark size={18} /> <span>{pick('ফেসবুক পেজ', 'Facebook page')}</span>
+      </a>
+    )
+  }
+  return (
+    <a className="fb-btn" href={FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label={`${label} (${pick('নতুন ট্যাবে খোলে', 'opens in a new tab')})`}>
+      <FacebookMark size={22} />
+      <span><b>{label}</b><small>{pick('সর্বশেষ খবর ও ছবি', 'Latest news and photos')}</small></span>
+    </a>
+  )
+}

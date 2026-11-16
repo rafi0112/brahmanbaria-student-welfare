@@ -640,14 +640,14 @@ html[lang='bn'] .ex-label { letter-spacing: .02em; font-size: .85rem; }
 .cband-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4, 30, 24, .55), rgba(4, 30, 24, 0) 42%); }
 .cband-script { position: absolute; z-index: 2; left: 6%; bottom: 8%; margin: 0; max-width: 16ch; font: 600 clamp(1.2rem, 1.8vw, 1.7rem)/1.1 var(--font-script); color: #fff; transform: rotate(-3deg); }
 html[lang='bn'] .cband-script { font-family: 'Nirmala UI', 'Noto Sans Bengali Variable', sans-serif; font-size: 1.05rem; }
-.cband-copy { position: relative; padding: clamp(36px, 5vw, 72px) clamp(22px, 5vw, 80px) clamp(36px, 5vw, 72px) clamp(22px, 4vw, 56px); display: grid; align-items: center; }
+.cband-copy { position: relative; min-width: 0; padding: clamp(36px, 5vw, 72px) clamp(22px, 5vw, 80px) clamp(36px, 5vw, 72px) clamp(22px, 4vw, 56px); display: grid; align-items: center; }
 .cband-copy > div { position: relative; z-index: 1; max-width: 560px; }
 .cb-heritage { right: -30px; top: 8%; width: clamp(240px, 24vw, 400px); filter: brightness(0) invert(1); opacity: .12; mix-blend-mode: normal; }
 .cb-students { right: 4%; bottom: 6%; width: clamp(220px, 22vw, 360px); filter: brightness(0) invert(1); opacity: .1; mix-blend-mode: normal; }
 .eyebrow-line { color: #f6b08f; } .eyebrow-line::before { width: 28px; height: 1px; border-radius: 0; background: var(--accent); }
 .cband h2 { color: #fbf6ee; font-size: clamp(2rem, 3.6vw, 3.1rem); margin-bottom: 14px; }
 .cband-lede { color: rgba(251, 246, 238, .82); margin: 0 0 22px; max-width: 48ch; }
-.cband-avatars { display: flex; align-items: center; margin-bottom: 26px; }
+.cband-avatars { display: flex; flex-wrap: wrap; row-gap: 8px; align-items: center; margin-bottom: 26px; }
 .cband-avatars .avatar { margin-left: -8px; border: 2px solid #073c30; } .cband-avatars .avatar:first-child { margin-left: 0; }
 .cband-more { width: 42px; height: 42px; margin-left: -8px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid rgba(251, 246, 238, .5); color: #fbf6ee; text-decoration: none; font-size: 1.2rem; background: #073c30; transition: background-color var(--dur) var(--ease); }
 .cband-more:hover { background: rgba(251, 246, 238, .12); }
@@ -840,7 +840,7 @@ html[lang='bn'] .cm-role { font-size: .92rem; letter-spacing: .01em; text-transf
   .sbar { flex-wrap: wrap; } .sbar-q { flex-basis: 100%; } .sbar-filters { flex-basis: 100%; flex-wrap: wrap; } .sbar-filters select { border: 1px solid var(--line); border-radius: 999px; flex: 1 1 160px; } .sbar-go { width: 100%; }
   .explore2-grid { grid-template-columns: 1fr; padding-right: var(--gutter); } .ex-media { max-width: none; margin-right: var(--gutter); } .ex-copy { padding-left: var(--gutter); }
   .explore2-grid { grid-template-columns: 1fr; } .ex-media { max-width: 680px; }
-  .cband { grid-template-columns: 1fr; } .cband-photo { min-height: clamp(240px, 52vw, 380px); -webkit-mask: none; mask: none; }
+  .cband { grid-template-columns: minmax(0, 1fr); } .cband-photo { min-height: clamp(240px, 52vw, 380px); -webkit-mask: none; mask: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; row-gap: 32px; } .footer-grid > :nth-child(3) { padding-left: 0; border-left: 0; }
   .phero::after { display: none; }
   .dir { grid-template-columns: 1fr; } .dir-aside { position: static; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
@@ -1644,3 +1644,13 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 @media (prefers-reduced-motion: reduce) { .pv, .pv-stage img { animation: none; transition: none !important; } }
 
 .phero-bare { grid-template-columns: 1fr; min-height: 0; } .phero-bare .phero-lede { max-width: 62ch; }
+
+/* the Facebook Page: a clear call to action in the community band, a small link in the footer; Facebook blue as an accent only */
+.fb-btn { display: inline-flex; align-items: center; gap: 12px; margin-top: 18px; padding: 10px 18px 10px 12px; border-radius: 999px; text-decoration: none; color: #fbf6ee; background: rgba(24, 119, 242, .16); border: 1px solid rgba(24, 119, 242, .55); transition: background var(--dur, .2s) var(--ease, ease), transform var(--dur, .2s) var(--ease, ease); }
+.fb-btn:hover { background: rgba(24, 119, 242, .3); transform: translateY(-1px); }
+.fb-btn:focus-visible, .fb-foot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.fb-btn .fb-mark { flex: none; color: #1877f2; background: #fff; border-radius: 50%; }
+.fb-btn span { display: grid; line-height: 1.2; } .fb-btn b { font-weight: 700; font-size: .98rem; } .fb-btn small { opacity: .8; font-size: .8rem; }
+.footer-grid a.fb-foot { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; }
+.fb-foot .fb-mark { color: #1877f2; background: #fff; border-radius: 50%; }
+@media (max-width: 560px) { .fb-btn { width: 100%; justify-content: center; } }
