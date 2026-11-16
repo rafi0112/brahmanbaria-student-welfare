@@ -50,14 +50,15 @@ function tintOf(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCod
 
 // A student in the directory: a monogram panel (no portraits are stored), then name, department, batch and place.
 // Members see extra details only when the API sends them.
-export function StudentCard({ s, upazilas = [] }) {
+export function StudentCard({ s, upazilas = [], onOpen }) {
   const { t, n, pick } = useApp()
   const base = useBase()
   const up = upazilas.find((u) => u.slug === s.upazila)
   const place = up ? pick(up.nameBn, up.nameEn).replace(' উপজেলা', '').replace(' Upazila', '') : ''
   const photo = usePhoto(s.photo || s.details?.photoUrl)
   return (
-    <Link to={`${base}/students/${s.id}`} className="student-card">
+    <Link to={`${base}/students/${s.id}`} className="student-card"
+      onClick={onOpen ? (e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); onOpen(s.id) } } : undefined}>
       <span className={`sc-mono tint-${tintOf(s.name)}`} aria-hidden="true">{photo ? <img src={photo} alt="" /> : <b>{initials(s.name)}</b>}<span className="sc-go"><Icon name="arrow" size={15} /></span></span>
       <span className="student-info">
         <h3>{s.name}{s.verified && <VerifiedMark size={15} />}</h3>

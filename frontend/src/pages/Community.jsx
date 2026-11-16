@@ -4,6 +4,8 @@ import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import ProfileDialog from '../components/ProfileDialog.jsx'
+import { useProfileParam } from '../lib/profileParam.js'
 
 /* ---------------- Alumni ---------------- */
 function useDebounced(v, ms = 250) {
@@ -12,9 +14,50 @@ function useDebounced(v, ms = 250) {
   return d
 }
 
+// An alumnus in a dialog over the list: everything the list already has about them, larger, with their photo to view bigger.
+function AlumniProfile({ a, view }) {
+  const { t, n, pick } = useApp()
+  const role = [...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')
+  const facts = [[t('students.dept'), a.department], [t('students.batch'), a.batch ? n(a.batch) : ''], [pick('পেশা', 'Occupation'), a.occupation], [pick('কর্মস্থল', 'Workplace'), a.workplace]].filter(([, v]) => v)
+  return (
+    <article className="sprofile is-modal">
+      <div className="sp-head">
+        <Avatar name={a.name} size={96} photo={a.photo} />
+        <div className="sp-id">
+          <h1>{a.name}</h1>
+          <ul className="sp-chips">
+            {role && <li>{role}</li>}
+            {a.department && <li>{a.department}</li>}
+            {a.batch ? <li>{t('students.batch')} {n(a.batch)}</li> : null}
+          </ul>
+        </div>
+      </div>
+      <div className="sp-body">
+        <div className="sp-main">
+          <section className="sp-sec">
+            <dl className="sp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+          </section>
+          <section className="sp-sec">
+            <h2>{t('students.contactH')}</h2>
+            {a.contact ? (
+              <dl className="sp-facts">
+                {a.contact.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}>{a.contact.phone}</a></dd></div>}
+                {a.contact.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${a.contact.email}`}>{a.contact.email}</a></dd></div>}
+                {a.contact.bloodGroup && <div><dt>{t('students.blood')}</dt><dd><b className="blood-txt">{a.contact.bloodGroup}</b></dd></div>}
+                {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} target="_blank" rel="noreferrer noopener">Facebook</a></dd></div>}
+              </dl>
+            ) : <p className="muted"><Icon name="lock" size={14} /> {view === 'public' ? pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details') : pick('কোনো যোগাযোগের তথ্য শেয়ার করা হয়নি।', 'No contact details are shared.')}</p>}
+          </section>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 export function Alumni() {
   const { t, n, pick } = useApp()
   const [sp, setSp] = useSearchParams()
+  const [profile, openProfile, closeProfile] = useProfileParam()
   const f = { q: sp.get('q') || '', batch: sp.get('batch') || '', department: sp.get('department') || '', page: Number(sp.get('page')) || 1 }
   const [text, setText] = useState(f.q)
   const dq = useDebounced(text)
@@ -62,7 +105,7 @@ export function Alumni() {
                       <header className="al-head">
                         <Avatar name={a.name} size={56} photo={a.photo} />
                         <div>
-                          <h3>{a.name}</h3>
+                          <h3><a className="al-open" href={`?profile=${a.id}`} onClick={(e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); openProfile(a.id) } }}>{a.name}</a></h3>
                           {(a.designation || a.occupation) && <p className="al-role">{[...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')}</p>}
                         </div>
                       </header>
@@ -84,6 +127,7 @@ export function Alumni() {
                 </BatchGroups>
               )}
               <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />
+              {profile && (() => { const a = d.items.find((x) => String(x.id) === profile); return a ? <ProfileDialog label={a.name} onClose={closeProfile}><AlumniProfile a={a} view={d.view} /></ProfileDialog> : null })()}
             </>
           )}
         </Data>

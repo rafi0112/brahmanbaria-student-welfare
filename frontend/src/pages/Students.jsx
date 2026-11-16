@@ -7,6 +7,8 @@ import { useBase } from '../lib/base.js'
 import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import PhotoViewer from '../components/PhotoViewer.jsx'
+import ProfileDialog from '../components/ProfileDialog.jsx'
+import { useProfileParam } from '../lib/profileParam.js'
 import Reveal from '../components/Reveal.jsx'
 import { StudentCard } from '../components/cards.jsx'
 
@@ -28,6 +30,7 @@ export default function Students() {
   const { t, n, pick } = useApp()
   const { user } = useAuth()
   const [sp, setSp] = useSearchParams()
+  const [profile, openProfile, closeProfile] = useProfileParam()
   const f = { q: sp.get('q') || '', batch: sp.get('batch') || '', department: sp.get('department') || '', upazila: sp.get('upazila') || '', page: Number(sp.get('page')) || 1 }
   const [text, setText] = useState(f.q)
   const dq = useDebounced(text)
@@ -48,6 +51,7 @@ export default function Students() {
 
   return (
     <>
+      {profile && <ProfileDialog label={pick('প্রোফাইল', 'Profile')} onClose={closeProfile}><StudentDetail id={profile} modal /></ProfileDialog>}
       <PageHero page="students" kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
       <div className="wrap">
         <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
@@ -88,7 +92,7 @@ export default function Students() {
                   {d.alumniUpToBatch > 0 && <> · {t('students.fromBatch').replace('{n}', n(d.alumniUpToBatch + 1))} <Link className="link-arrow" to="/alumni">{t('students.earlierAlumni').replace('{n}', n(d.alumniUpToBatch))} →</Link></>}</p>
                 {d.items.length === 0 ? <Empty /> : (
                   <BatchGroups items={d.items} sessions={d.facets?.batchSessions} counts={!f.q && !f.department && !f.upazila ? d.facets?.batches : null} gridClass="student-grid">
-                    {(s, i) => <Reveal key={s.id} delay={(i % 3) * 50}><StudentCard s={s} upazilas={upazilas} /></Reveal>}
+                    {(s, i) => <Reveal key={s.id} delay={(i % 3) * 50}><StudentCard s={s} upazilas={upazilas} onOpen={openProfile} /></Reveal>}
                   </BatchGroups>
                 )}
                 <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />
@@ -148,9 +152,10 @@ function SpAvatar({ name, photo }) {
   )
 }
 
-export function StudentDetail() {
+export function StudentDetail({ id: idProp, modal = false }) {
   const base = useBase()
-  const { id } = useParams()
+  const params = useParams()
+  const id = idProp || params.id
   const { t, n, pick } = useApp()
   const res = useApi(`/students/${id}`)
   const ups = useApi('/upazilas')
@@ -172,12 +177,14 @@ export function StudentDetail() {
           [t('students.gender'), d.gender ? t(`ad.mem.${d.gender}`) : ''],
         ]) : []
         return (
-          <article className="sprofile">
-            <div className="wrap sp-crumbs"><Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/students`, label: t('nav.students') }, { label: s.name }]} /></div>
-            <div className="sp-cover" aria-hidden="true">
-              <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
-            </div>
-            <div className="wrap sp-head">
+          <article className={`sprofile${modal ? ' is-modal' : ''}`}>
+            {!modal && <div className="wrap sp-crumbs"><Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/students`, label: t('nav.students') }, { label: s.name }]} /></div>}
+            {!modal && (
+              <div className="sp-cover" aria-hidden="true">
+                <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
+              </div>
+            )}
+            <div className={modal ? 'sp-head' : 'wrap sp-head'}>
               <SpAvatar name={s.name} photo={s.photo || d?.photoUrl} />
               <div className="sp-id">
                 <h1>{s.name}{s.verified && <VerifiedMark size={22} />}</h1>
@@ -188,17 +195,17 @@ export function StudentDetail() {
                   {d && <li className={registered ? 'is-teal' : ''}>{registered ? t('students.registeredMember') : t('students.directoryRecord')}</li>}
                 </ul>
               </div>
-              <Link className="btn btn-outline btn-sm sp-back" to={`${base}/students`}><Icon name="arrow" size={15} className="arr flip" /> {t('students.back')}</Link>
+              {!modal && <Link className="btn btn-outline btn-sm sp-back" to={`${base}/students`}><Icon name="arrow" size={15} className="arr flip" /> {t('students.back')}</Link>}
             </div>
 
-            <nav className="wrap pnav" aria-label={t('students.profile')}>
+            {!modal && <nav className="wrap pnav" aria-label={t('students.profile')}>
               <a href="#overview">{t('students.overview')}</a>
               <a href="#academics">{t('students.academics')}</a>
               {d && <a href="#contact">{t('students.contactH')}</a>}
               {d?.record && Object.keys(d.record).length > 0 && <a href="#record">{t('students.recordH')}</a>}
-            </nav>
+            </nav>}
 
-            <div className="wrap sp-body">
+            <div className={modal ? 'sp-body' : 'wrap sp-body'}>
               <div className="sp-main">
                 <section id="overview" className="sp-sec">
                   <h2>{t('students.overview')}</h2>
@@ -239,7 +246,7 @@ export function StudentDetail() {
                   </section>
                 )}
               </div>
-              <aside className="sp-side">
+              {!modal && <aside className="sp-side">
                 <div className="sp-place">
                   <div className="sp-place-img"><img src="/images/bswa/river.webp" alt="" width="740" height="421" loading="lazy" decoding="async" /></div>
                   <p className="kicker">{t('students.from')}</p>
@@ -247,7 +254,7 @@ export function StudentDetail() {
                   {up && <Link className="link-arrow" to={`/directory/${up.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>}
                   {up && <Link className="link-arrow" to={`/students?upazila=${up.slug}`}>{t('dir.studentsFrom')} <Icon name="arrow" size={15} className="arr" /></Link>}
                 </div>
-              </aside>
+              </aside>}
             </div>
           </article>
         )

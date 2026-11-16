@@ -74,7 +74,7 @@ export default function EventCarousel({ items, loading }) {
   }
   const today = new Date().toISOString().slice(0, 10)
   return (
-    <div className={`evx${running ? ' is-running' : ''}`} ref={root} role="region" aria-roledescription="carousel" aria-label={pick('ইভেন্ট', 'Events')}
+    <div className={`evx${running ? ' is-running' : ''}${count > 1 ? ' evx-multi' : ''}`} ref={root} role="region" aria-roledescription="carousel" aria-label={pick('ইভেন্ট', 'Events')}
       tabIndex={0} onKeyDown={onKey} onMouseMove={onMove}
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => { setPaused(false); root.current?.style.setProperty('--px', 0); root.current?.style.setProperty('--py', 0) }}
       onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}
@@ -88,7 +88,12 @@ export default function EventCarousel({ items, loading }) {
           <article key={e.slug || e.date + e.titleEn} className={`evx-slide${on ? ' is-on' : ''}`} aria-hidden={!on} inert={on ? undefined : ''}
             role="group" aria-roledescription="slide" aria-label={`${n(k + 1)} / ${n(count)}`}>
             <div className={`evx-media kb-${k % 3}`}>
-              {img ? <img src={img.src} srcSet={img.srcSet} sizes="100vw" alt="" loading={k === 0 ? 'eager' : 'lazy'} decoding="async" /> : <div className="evx-noimg" />}
+              {img ? (
+                <>
+                  <img className="evx-bg" src={img.src} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+                  <img className="evx-pic" src={img.src} srcSet={img.srcSet} sizes="100vw" alt="" loading={k === 0 ? 'eager' : 'lazy'} decoding="async" />
+                </>
+              ) : <div className="evx-noimg" />}
             </div>
             <div className="evx-shade" aria-hidden="true" />
             <div className="evx-copy">

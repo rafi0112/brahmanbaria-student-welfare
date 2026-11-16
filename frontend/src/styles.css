@@ -1275,12 +1275,19 @@ html[lang='bn'] .evx-title { font-family: 'Nirmala UI', 'Noto Sans Bengali Varia
 @keyframes evx-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .evx-count { color: rgba(255, 255, 255, .85); font: 600 .9rem/1 var(--font-body); letter-spacing: .06em; white-space: nowrap; }
 @media (max-width: 760px) {
-  .evx { height: clamp(500px, 140vw, 620px); border-radius: var(--r-card); }
-  .evx-shade { background: linear-gradient(0deg, rgba(14, 9, 4, .92) 0%, rgba(14, 9, 4, .6) 50%, rgba(14, 9, 4, .1) 100%); }
-  .evx-copy { left: 18px; right: 18px; width: auto; bottom: 84px; gap: 10px; }
+  /* the same design as on a desktop (full-bleed picture, dark gradient, words over it, arrows and dots below), with the whole
+     picture visible: it sits at its own proportions in the upper part, and a soft blurred copy of it fills the rest of the slide */
+  .evx { height: clamp(500px, 138vw, 600px); border-radius: var(--r-card); }
+  .evx-media { transform: none; inset: 0; }
+  .evx-media img, .evx-slide.is-on .kb-0 img, .evx-slide.is-on .kb-1 img, .evx-slide.is-on .kb-2 img { transform: none; animation: none; }
+  .evx-media .evx-bg { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; filter: blur(18px) brightness(.72); }
+  .evx-media .evx-pic { position: absolute; left: 0; top: 0; width: 100%; height: 56%; object-fit: contain; object-position: center; }
+  .evx-shade { background: linear-gradient(0deg, rgba(14, 9, 4, .94) 0%, rgba(14, 9, 4, .78) 36%, rgba(14, 9, 4, .0) 62%); }
+  .evx-copy { left: 18px; right: 18px; width: auto; bottom: 78px; gap: 8px; }
+  .evx-title { font-size: clamp(1.45rem, 6.4vw, 1.9rem); } .evx-sum { display: none; } .evx-meta { font-size: .88rem; gap: 4px 14px; }
   .evx-date { width: 66px; height: 70px; } .evx-date b { font-size: 1.7rem; }
   .evx-nav { left: 18px; right: 18px; gap: 10px; } .evx-arrow { width: 40px; height: 40px; } .evx-count { display: none; }
-  .evx-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .evx-actions { flex-wrap: nowrap; gap: 8px; } .evx-actions .btn { flex: 1 1 0; justify-content: center; padding-inline: 10px; white-space: nowrap; font-size: .9rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .evx-slide, .evx-slide.is-on { transition: none; } .evx-media { transform: none; transition: none; }
@@ -1654,3 +1661,26 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 .footer-grid a.fb-foot { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; }
 .fb-foot .fb-mark { color: #1877f2; background: #fff; border-radius: 50%; }
 @media (max-width: 560px) { .fb-btn { width: 100%; justify-content: center; } }
+
+/* the blurred backdrop copy of an event picture is only for phones */
+.evx-bg { display: none; }
+@media (max-width: 760px) { .evx-bg { display: block; } }
+
+/* a profile in a dialog over the Students or Alumni list */
+.pd { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: clamp(10px, 3vw, 32px); background: rgba(10, 8, 5, .62); backdrop-filter: blur(3px); animation: pd-in .18s ease-out both; }
+.pd-box { position: relative; width: min(720px, 100%); max-height: min(90vh, 900px); overflow: auto; overscroll-behavior: contain; background: var(--paper, #fff8ee); color: var(--ink); border-radius: var(--r-lg, 22px); box-shadow: var(--shadow-pop); outline: none; padding: clamp(18px, 3vw, 30px); }
+.pd-close { position: sticky; top: 0; float: right; z-index: 3; margin: -6px -6px 0 8px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-2, var(--line)); background: var(--card); color: var(--ink); font-size: 1.05rem; cursor: pointer; }
+.pd-close:hover { background: var(--accent-soft); } .pd-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sprofile.is-modal { padding-bottom: 0; }
+.is-modal .sp-head { grid-template-columns: auto minmax(0, 1fr); align-items: center; margin-top: 0; }
+.is-modal .sp-avatar { margin-top: 0; width: clamp(84px, 14vw, 112px); }
+.is-modal .sp-id { padding: 0; } .is-modal .sp-id h1 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); }
+.is-modal .sp-body { grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
+@keyframes pd-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pd { animation: none; } }
+@media (max-width: 560px) { .pd { padding: 0; place-items: end center; } .pd-box { width: 100%; max-height: 92vh; border-radius: 22px 22px 0 0; } }
+/* the whole alumni card opens the profile; its own links (phone, e-mail, Facebook) stay separate targets above that */
+.alumni-card { position: relative; cursor: pointer; }
+.al-open { color: inherit; text-decoration: none; } .al-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.al-open:focus-visible { outline: none; } .al-open:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 2px; }
+.alumni-card .al-contact a { position: relative; z-index: 2; }
