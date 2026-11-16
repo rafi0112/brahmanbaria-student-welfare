@@ -81,7 +81,7 @@ export function Events() {
 
   return (
     <>
-      <PageHero page="events" kicker={t('events.kicker')} title={t('events.title')} variant="arch" lede={t('events.lede')} src="/images/bswa/puppets.webp" />
+      <PageHero page="events" kicker={t('events.kicker')} title={t('events.title')} variant="bleed" lede={t('events.lede')} src="/images/bswa/river.webp" script={pick('একসাথে আয়োজন, একসাথে আনন্দ', 'Together in every gathering')} />
       <section className="section wrap evp">
         <Data q={res} skeleton="cards">
           {() => (items.length === 0 ? (

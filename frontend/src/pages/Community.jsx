@@ -84,7 +84,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="circle" lede={t('alumni.lede')} src="/images/bswa/river.webp">
+      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="bleed" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={pick('যাঁরা পথ দেখিয়েছেন, তাঁরাই আমাদের গর্ব', 'Those who lead the way make us proud')}>
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? pick('নাম, পেশা, রক্তের গ্রুপ (যেমন B+) বা ফোন…', 'Name, profession, blood group (e.g. B+) or phone…') : t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
