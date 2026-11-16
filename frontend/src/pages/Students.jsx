@@ -28,7 +28,6 @@ function useViewNote(view) {
 
 export default function Students() {
   const { t, n, pick } = useApp()
-  const { user } = useAuth()
   const [sp, setSp] = useSearchParams()
   const [profile, openProfile, closeProfile] = useProfileParam()
   const f = { q: sp.get('q') || '', batch: sp.get('batch') || '', department: sp.get('department') || '', upazila: sp.get('upazila') || '', page: Number(sp.get('page')) || 1 }
@@ -47,7 +46,6 @@ export default function Students() {
   const upazilas = ups.data?.items || []
   const facets = res.data?.facets
   const note = useViewNote(res.data?.view)
-  const places = [...upazilas].filter((u) => u.members > 0).sort((a, b) => b.members - a.members)
 
   return (
     <>
@@ -100,37 +98,6 @@ export default function Students() {
             )}
           </Data>
         </div>
-
-        <aside className="dir-aside" aria-label={t('students.quickLinks')}>
-          <div className="join-card">
-            <Icon name="users" size={26} />
-            <h2>{t(user ? 'students.yourProfile' : 'students.joinTitle')}</h2>
-            <p>{t(user ? 'students.yourProfileBody' : 'students.joinBody')}</p>
-            <Link className="btn btn-light btn-sm" to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'}>{t(user ? 'auth.account' : 'students.joinCta')} <Icon name="arrow" size={15} className="arr" /></Link>
-          </div>
-          {places.length > 0 && (
-            <div className="aside-card">
-              <h2>{t('students.byLocation')}</h2>
-              <ul className="loc-list">
-                {places.map((u) => (
-                  <li key={u.slug}>
-                    <button type="button" className={f.upazila === u.slug ? 'on' : ''} onClick={() => set({ upazila: f.upazila === u.slug ? '' : u.slug, page: 1 })} aria-pressed={f.upazila === u.slug}>
-                      <span>{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</span><b className="num">{n(u.members)}</b>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div className="aside-card">
-            <h2>{t('students.quickLinks')}</h2>
-            <ul className="quick-links">
-              {[['/alumni', 'nav.alumni', 'users'], ['/committee', 'nav.committee', 'landmark'], ['/events', 'nav.events', 'calendar'], ['/help#contact', 'nav.contact', 'mail']].map(([to, k, ic]) => (
-                <li key={to}><Link to={to}><span className="ql-ico"><Icon name={ic} size={16} /></span>{t(k)}<Icon name="arrow" size={14} className="arr" /></Link></li>
-              ))}
-            </ul>
-          </div>
-        </aside>
       </section>
     </>
   )

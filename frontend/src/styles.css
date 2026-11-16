@@ -515,7 +515,7 @@ html[lang='bn'] .auth-line { font-family: 'Nirmala UI', 'Noto Sans Bengali Varia
 .sketch-card { background: var(--teal-soft); border-color: transparent; }
 
 /* ---------- students directory and profile ---------- */
-.dir { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: clamp(20px, 3vw, 44px); align-items: start; }
+.dir { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(20px, 3vw, 44px); align-items: start; }
 .dir-main { min-width: 0; }
 .filters-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; } .filters-bar select { flex: 1 1 170px; width: auto; border-radius: 999px; padding-inline: 18px; }
 .student-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
@@ -1329,8 +1329,10 @@ html[lang='bn'] .evx-title { font-family: 'Nirmala UI', 'Noto Sans Bengali Varia
 .evp-card-body h3 { margin: 0; font: 700 1.12rem/1.35 var(--font-body); }
 .evp-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: 600; color: var(--accent-ink); }
 .evd-hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); align-items: center; margin: 12px 0 clamp(24px, 3vw, 36px); }
-.evd-img { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--r-lg); box-shadow: var(--shadow-pop); }
-.evd-img img, .evd-img .evp-noimg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.evd-img { position: relative; overflow: hidden; border-radius: var(--r-lg); box-shadow: var(--shadow-pop); background: var(--paper-2); }
+/* the uploaded picture is shown whole, at its own proportions (never cropped); a very tall one is scaled down to fit the screen */
+.evd-img img { width: 100%; height: auto; max-height: min(82vh, 900px); object-fit: contain; display: block; }
+.evd-img .evp-noimg { width: 100%; aspect-ratio: 16 / 10; }
 .evd-info { display: grid; gap: 14px; justify-items: start; }
 .evd-info h1 { margin: 0; font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem); line-height: 1.15; }
 .evd-facts { display: grid; gap: 10px; margin: 0; }

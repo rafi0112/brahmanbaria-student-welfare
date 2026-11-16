@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { E2E } from '../playwright.config.js'
 
 // Public site: navigation, hero search, the mobile drawer and the account pages. English UI so labels are stable.
 test.beforeEach(async ({ page }) => {
@@ -296,4 +297,31 @@ test('alumni: the photo in the profile dialog can be opened and zoomed, like on 
   await expect(dlg).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
+})
+
+test('event page: the uploaded picture is shown whole, not cropped; the students page has no side cards', async ({ page }) => {
+  await page.goto('/login')
+  await page.locator('input[type=email]').fill(E2E.email)
+  await page.locator('input[type=password]').fill(E2E.password)
+  await page.locator('form button[type=submit]').click()
+  await page.waitForURL((u) => u.pathname === '/')
+  const e = await (await page.request.post('/api/v1/admin/content/event', { data: { slug: 'e2e-whole-picture', data: { titleEn: 'Whole picture event', date: '2099-05-01', image: 'titas-sunset' } } })).json()
+  await page.request.post(`/api/v1/admin/content/event/${e.id}/publish`, { data: {} })
+  try {
+    for (const w of [1280, 375]) {
+      await page.setViewportSize({ width: w, height: 900 })
+      await page.goto('/events/e2e-whole-picture')
+      const img = page.locator('.evd-img img')
+      await expect(img).toBeVisible()
+      await expect.poll(() => img.evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true)
+      const r = await img.evaluate((i) => { const b = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, shown: b.width / b.height, natural: i.naturalWidth / i.naturalHeight, h: b.height, maxH: innerHeight * 0.82 } })
+      expect(r.fit).toBe('contain')
+      // the box has the picture's own proportions (or is scaled down evenly when it would be taller than the screen), so nothing is cut off
+      if (r.h < r.maxH - 2) expect(Math.abs(r.shown - r.natural)).toBeLessThan(0.02)
+    }
+  } finally { await page.request.post(`/api/v1/admin/content/event/${e.id}/archive`, { data: {} }) }
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/students')
+  await expect(page.locator('.student-card').first()).toBeVisible()
+  await expect(page.locator('.dir-aside, .join-card, .loc-list')).toHaveCount(0)
 })
