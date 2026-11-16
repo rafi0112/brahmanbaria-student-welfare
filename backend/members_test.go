@@ -413,8 +413,9 @@ func TestNewMembersAppearBatchWiseOnceApproved(t *testing.T) {
 	if !ok {
 		t.Fatal("the approved alumni-batch member must be on the Alumni page")
 	}
-	if row["batch"].(float64) != 12 || row["occupation"] != "Lecturer" || row["workplace"] != "Dhaka College" {
-		t.Fatalf("the alumni row lacks batch or work details: %v", row)
+	// the public list says who and which batch; what someone does and where is for signed-in members (see TestAlumniWorkDetailsAreForSignedInMembers)
+	if row["batch"].(float64) != 12 || row["occupation"] != "" || row["workplace"] != "" {
+		t.Fatalf("the public alumni row must carry the batch and no work details: %v", row)
 	}
 	if _, ok := names("/api/v1/students")["Qvx Alumnus"]; ok {
 		t.Fatal("an alumni-batch member must not be on the Students page")

@@ -129,8 +129,8 @@ func TestAlumniAddEditDeleteFromThePanel(t *testing.T) {
 	}
 	var pub struct{ Items []Alumnus }
 	decodeBody(t, e.do("GET", "/api/v1/alumni?q=New+Alumnus", nil, nil), &pub)
-	if len(pub.Items) != 1 || pub.Items[0].Workplace != "Some Bank" {
-		t.Fatalf("public alumni list shows the new person at once: %+v", pub.Items)
+	if len(pub.Items) != 1 || pub.Items[0].Workplace != "" || pub.Items[0].Occupation != "" {
+		t.Fatalf("public alumni list shows the new person at once, without what they do or where: %+v", pub.Items)
 	}
 	if strings.Contains(e.do("GET", "/api/v1/alumni?q=New+Alumnus", nil, nil).Body.String(), "alum@example.org") {
 		t.Fatal("private columns must not be public")
@@ -138,9 +138,9 @@ func TestAlumniAddEditDeleteFromThePanel(t *testing.T) {
 	if rec := adminJSON(e, "PATCH", "/api/v1/admin/alumni/"+row.ID, map[string]any{"name": "New Alumnus", "batch": 9, "occupation": "Manager", "private": map[string]string{"phone": "01712345678"}}); rec.Code != 200 {
 		t.Fatalf("edit: %d %s", rec.Code, rec.Body)
 	}
-	decodeBody(t, e.do("GET", "/api/v1/alumni?q=New+Alumnus", nil, nil), &pub)
-	if pub.Items[0].Occupation != "Manager" {
-		t.Fatalf("edited: %+v", pub.Items)
+	// the edit shows in the admin list (the public list carries no work details)
+	if adm := adminJSON(e, "GET", "/api/v1/admin/alumni?q=New+Alumnus", nil).Body.String(); !strings.Contains(adm, `"occupation":"Manager"`) {
+		t.Fatalf("edited: %s", adm)
 	}
 	// a student record is not an alumnus
 	if rec := adminJSON(e, "POST", "/api/v1/admin/alumni/s-x/delete", nil); rec.Code != 404 {

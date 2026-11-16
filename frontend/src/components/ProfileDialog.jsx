@@ -14,7 +14,8 @@ export default function ProfileDialog({ label, onClose, children }) {
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const key = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose() }
+      // Escape closes the photo viewer first when one is open over this dialog, and only the next press closes the dialog
+      if (e.key === 'Escape' && !document.querySelector('.pv')) { e.stopPropagation(); onClose() }
       if (e.key === 'Tab' && box.current) { // keep Tab inside the dialog
         const f = [...box.current.querySelectorAll('a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null)
         if (!f.length) return

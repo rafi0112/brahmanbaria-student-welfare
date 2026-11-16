@@ -144,7 +144,11 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 			if c := extras[s.ID].contact(v); c != nil { // search only what this viewer may see
 				phone, email, blood = c.Phone, c.Email, c.Blood
 			}
-			if !searchHit(t, []string{s.Name, s.Occupation, s.Workplace, s.Department}, phone, email, blood) {
+			fields := []string{s.Name, s.Department}
+			if v.Kind == "member" || v.Kind == "admin" { // what a person does for a living is for signed-in members, so the public can not search it either
+				fields = append(fields, s.Occupation, s.Workplace, s.Designation)
+			}
+			if !searchHit(t, fields, phone, email, blood) {
 				continue
 			}
 		}
@@ -166,6 +170,9 @@ func (a *App) alumni(w http.ResponseWriter, r *http.Request) {
 	items := make([]alumnusView, 0, hi-lo)
 	for _, al := range out[lo:hi] {
 		x := extras[al.ID]
+		if v.Kind != "member" && v.Kind != "admin" { // the public list shows who someone is, not what they do or where
+			al.Occupation, al.Workplace, al.Designation = "", "", ""
+		}
 		items = append(items, alumnusView{Alumnus: al, Photo: x.photo(al.ID), Contact: x.contact(v)})
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "total": len(out), "page": pg, "pages": pages, "view": v.Kind, "alumniUpToBatch": a.data().AlumniUpTo,

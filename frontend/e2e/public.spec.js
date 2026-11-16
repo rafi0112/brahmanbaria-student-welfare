@@ -177,9 +177,18 @@ test('alumni: a card opens the person in a dialog over the list', async ({ page 
   const dlg = page.getByRole('dialog', { name })
   await expect(dlg).toBeVisible()
   await expect(dlg.getByRole('heading', { level: 1 })).toContainText(name)
+  // a visitor who is not signed in sees who the person is, and is asked to sign in for the rest
+  await expect(dlg.getByText(/visible to signed-in members only/)).toBeVisible()
+  await expect(dlg.getByRole('link', { name: /Sign in/ })).toHaveAttribute('href', '/login')
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
   await expect(page).toHaveURL(/\/alumni$/)
+  // the cards stay short: name, department, batch; no work, no contact
+  await expect(page.locator('.alumni-card .al-work, .alumni-card .al-role, .alumni-card .al-contact, .alumni-card .al-locked')).toHaveCount(0)
+  // and the public list does not even carry what people do or where
+  const api = await (await page.request.get('/api/v1/alumni?limit=40')).json()
+  expect(api.items.length).toBeGreaterThan(0)
+  expect(api.items.every((x) => !x.occupation && !x.workplace && !x.designation && !x.contact)).toBe(true)
 })
 
 test('contact: the form validates on the server, then shows a clear success state', async ({ page }) => {
@@ -261,4 +270,30 @@ test('no link on the public site opens a new tab', async ({ page }) => {
     await page.waitForLoadState('networkidle')
     expect(await page.locator('a[target="_blank"]').count(), url).toBe(0)
   }
+})
+
+test('alumni: the photo in the profile dialog can be opened and zoomed, like on a student profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  // give the first alumnus a photo (any public picture will do)
+  await page.route('**/api/v1/alumni?*', async (route) => {
+    const res = await route.fetch()
+    const body = await res.json()
+    if (body.items?.[0]) body.items[0].photo = '/images/bswa/river.webp'
+    await route.fulfill({ response: res, json: body })
+  })
+  await page.goto('/alumni')
+  await page.locator('.alumni-card .al-open').first().click()
+  const dlg = page.getByRole('dialog').first()
+  await expect(dlg).toBeVisible()
+  await dlg.locator('.sp-zoomable').click()
+  const viewer = page.locator('.pv')
+  await expect(viewer).toBeVisible()
+  await page.getByRole('button', { name: 'Zoom in' }).click()
+  await expect(page.locator('.pv-pct')).not.toHaveText('100%')
+  // Escape closes the viewer only; the profile stays until the next press
+  await page.keyboard.press('Escape')
+  await expect(viewer).toBeHidden()
+  await expect(dlg).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dlg).toBeHidden()
 })

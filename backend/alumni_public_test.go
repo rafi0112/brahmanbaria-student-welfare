@@ -80,3 +80,29 @@ func TestDirectoryPhotoLinkPublicAndAdminCanRemove(t *testing.T) {
 		t.Fatalf("no photo after removal: %d", rec.Code)
 	}
 }
+
+// What an alumnus does and where is shown only to signed-in approved members and admins, in the list and in search.
+func TestAlumniWorkDetailsAreForSignedInMembers(t *testing.T) {
+	e := cmsApp(t)
+	rec := adminJSON(e, "POST", "/api/v1/admin/alumni", map[string]any{"name": "Worker Alumnus", "batch": 7, "department": "Finance", "occupation": "Zxqv Banker", "workplace": "Wvut Bank", "designation": "Qrst Manager"})
+	if rec.Code != 201 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	for _, secret := range []string{"Zxqv Banker", "Wvut Bank", "Qrst Manager"} {
+		pub := e.do("GET", "/api/v1/alumni?q=Worker+Alumnus", nil, nil).Body.String()
+		if !strings.Contains(pub, "Worker Alumnus") || strings.Contains(pub, secret) {
+			t.Fatalf("the public list shows the person but never %q: %s", secret, pub)
+		}
+		// and the public can not find the person by it either
+		if hit := e.do("GET", "/api/v1/alumni?q="+strings.Fields(secret)[0], nil, nil).Body.String(); strings.Contains(hit, "Worker Alumnus") {
+			t.Fatalf("searching %q must not find the person for the public: %s", secret, hit)
+		}
+	}
+	approvedMember(t, e, "member-token", idMember, "Member One")
+	mem := e.do("GET", "/api/v1/alumni?q=Zxqv", nil, nil, bearer("member-token")...).Body.String()
+	for _, want := range []string{"Worker Alumnus", "Zxqv Banker", "Wvut Bank", "Qrst Manager"} {
+		if !strings.Contains(mem, want) {
+			t.Fatalf("a signed-in member sees %q: %s", want, mem)
+		}
+	}
+}

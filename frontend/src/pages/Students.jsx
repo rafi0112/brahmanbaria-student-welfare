@@ -1,12 +1,12 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useApi, qs, usePhoto } from '../lib/api.js'
+import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
-import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark, initials } from '../components/ui.jsx'
+import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
-import PhotoViewer from '../components/PhotoViewer.jsx'
+import SpAvatar from '../components/SpAvatar.jsx'
 import ProfileDialog from '../components/ProfileDialog.jsx'
 import { useProfileParam } from '../lib/profileParam.js'
 import Reveal from '../components/Reveal.jsx'
@@ -132,22 +132,6 @@ export default function Students() {
           </div>
         </aside>
       </section>
-    </>
-  )
-}
-
-// The profile picture. With a photo it is a button: a click opens the full-screen viewer, where it can be zoomed.
-function SpAvatar({ name, photo }) {
-  const { pick } = useApp()
-  const src = usePhoto(photo)
-  const [open, setOpen] = useState(false)
-  if (!src) return <span className="sp-avatar" aria-hidden="true">{initials(name)}</span>
-  return (
-    <>
-      <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${pick('ছবি বড় করে দেখুন', 'View the photo larger')}: ${name}`}>
-        <img src={src} alt="" /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
-      </button>
-      {open && <PhotoViewer src={src} alt={name} onClose={() => setOpen(false)} />}
     </>
   )
 }

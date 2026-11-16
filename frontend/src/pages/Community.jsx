@@ -5,6 +5,7 @@ import { useApp } from '../lib/app.jsx'
 import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import ProfileDialog from '../components/ProfileDialog.jsx'
+import SpAvatar from '../components/SpAvatar.jsx'
 import { useProfileParam } from '../lib/profileParam.js'
 
 /* ---------------- Alumni ---------------- */
@@ -23,7 +24,7 @@ function AlumniProfile({ a, view }) {
     <article className="sprofile is-modal">
       <div className="pm-cover" aria-hidden="true" />
       <div className="sp-head">
-        <Avatar name={a.name} size={96} photo={a.photo} />
+        <SpAvatar name={a.name} photo={a.photo} />
         <div className="sp-id">
           <h1>{a.name}</h1>
           <ul className="sp-chips">
@@ -38,17 +39,27 @@ function AlumniProfile({ a, view }) {
           <section className="sp-sec">
             <dl className="sp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
           </section>
-          <section className="sp-sec">
-            <h2>{t('students.contactH')}</h2>
-            {a.contact ? (
-              <dl className="sp-facts">
-                {a.contact.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}>{a.contact.phone}</a></dd></div>}
-                {a.contact.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${a.contact.email}`}>{a.contact.email}</a></dd></div>}
-                {a.contact.bloodGroup && <div><dt>{t('students.blood')}</dt><dd><b className="blood-txt">{a.contact.bloodGroup}</b></dd></div>}
-                {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} rel="noreferrer noopener">Facebook</a></dd></div>}
-              </dl>
-            ) : <p className="muted"><Icon name="lock" size={14} /> {view === 'public' ? pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details') : pick('কোনো যোগাযোগের তথ্য শেয়ার করা হয়নি।', 'No contact details are shared.')}</p>}
-          </section>
+          {view === 'public' ? (
+            <section className="sp-sec">
+              <p className="privacy-note" role="status">
+                <Icon name="lock" size={16} />
+                {pick('পেশা, কর্মস্থল ও যোগাযোগের তথ্য শুধু লগইন করা সদস্যরা দেখতে পারেন।', 'Occupation, workplace and contact details are visible to signed-in members only.')}
+                <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>
+              </p>
+            </section>
+          ) : (
+            <section className="sp-sec">
+              <h2>{t('students.contactH')}</h2>
+              {a.contact ? (
+                <dl className="sp-facts">
+                  {a.contact.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}>{a.contact.phone}</a></dd></div>}
+                  {a.contact.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${a.contact.email}`}>{a.contact.email}</a></dd></div>}
+                  {a.contact.bloodGroup && <div><dt>{t('students.blood')}</dt><dd><b className="blood-txt">{a.contact.bloodGroup}</b></dd></div>}
+                  {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} rel="noreferrer noopener">Facebook</a></dd></div>}
+                </dl>
+              ) : <p className="muted">{pick('কোনো যোগাযোগের তথ্য শেয়ার করা হয়নি।', 'No contact details are shared.')}</p>}
+            </section>
+          )}
         </div>
       </div>
     </article>
@@ -107,22 +118,12 @@ export function Alumni() {
                         <Avatar name={a.name} size={56} photo={a.photo} />
                         <div>
                           <h3><a className="al-open" href={`?profile=${a.id}`} onClick={(e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); openProfile(a.id) } }}>{a.name}</a></h3>
-                          {(a.designation || a.occupation) && <p className="al-role">{[...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')}</p>}
                         </div>
                       </header>
-                      {a.workplace && <p className="al-work"><Icon name="landmark" size={15} /> <span>{a.workplace}</span></p>}
                       <p className="al-chips">
                         {a.department && <span className="chip-mini">{a.department}</span>}
                         {a.batch ? <span className="chip-mini is-batch">{t('students.batch')} {n(a.batch)}</span> : null}
                       </p>
-                      {a.contact ? (
-                        <ul className="al-contact" aria-label={pick('যোগাযোগ', 'Contact')}>
-                          {a.contact.phone && <li><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}><Icon name="phone" size={14} /><span>{a.contact.phone}</span></a></li>}
-                          {a.contact.email && <li><a href={`mailto:${a.contact.email}`}><Icon name="mail" size={14} /><span>{a.contact.email}</span></a></li>}
-                          {a.contact.bloodGroup && <li className="al-blood"><Icon name="heart" size={14} /><span>{pick('রক্তের গ্রুপ', 'Blood group')}: <b>{a.contact.bloodGroup}</b></span></li>}
-                          {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <li><a href={a.contact.facebook} rel="noreferrer noopener"><Icon name="facebook" size={14} /><span>Facebook</span></a></li>}
-                        </ul>
-                      ) : d.view === 'public' && <p className="al-locked"><Icon name="lock" size={13} /> {pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details')}</p>}
                     </article>
                   )}
                 </BatchGroups>
