@@ -2,6 +2,8 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { uploadMedia } from '../lib/api.js'
+import { storeImageFile } from '../lib/mediaUpload.js'
+import { INPUT_TYPES, checkFile } from '../lib/imageCore.js'
 import { folders, validTarget } from '../lib/favorites.js'
 import { useFavorites } from './favorites.jsx'
 import { navFor } from './nav.js'
@@ -56,9 +58,23 @@ export function useNotice() {
 }
 
 // Server error codes are stable strings; every code has a translated message.
+// why a picture was refused or could not be prepared (bilingual; these never come from the server)
+const IMAGE_ERRORS = {
+  empty: ['ফাইলটি খালি।', 'The file is empty.'],
+  svg: ['SVG ছবি নিরাপদ নয়, তাই নেওয়া হয় না। JPG, PNG বা WebP দিন।', 'SVG pictures are not accepted for safety. Use JPG, PNG or WebP.'],
+  gif: ['GIF নেওয়া হয় না (অ্যানিমেশন নষ্ট না করার জন্য)। JPG, PNG বা WebP দিন।', 'GIF is not accepted (so an animation is never turned into a still). Use JPG, PNG or WebP.'],
+  type: ['শুধু JPG, PNG বা WebP ছবি দেওয়া যায়।', 'Only JPG, PNG or WebP pictures are accepted.'],
+  too_big: ['ছবিটি ১৫ MB-এর বেশি।', 'The picture is larger than 15 MB.'],
+  corrupt: ['ছবিটি খোলা যাচ্ছে না, ফাইলটি নষ্ট হতে পারে।', 'The picture cannot be opened; the file may be damaged.'],
+  dimensions: ['ছবিটি অতিরিক্ত বড় (১২০০০ পিক্সেলের বেশি)।', 'The picture is too large in pixels (over 12000).'],
+  too_big_after: ['ছবিটি ছোট করেও ২ MB-এর নিচে আনা গেল না।', 'The picture could not be made smaller than 2 MB.'],
+  busy: ['একই ছবি অন্য কেউ আপলোড করছে, একটু পরে আবার চেষ্টা করুন।', 'Someone else is uploading this same picture; try again in a moment.'],
+  not_ready: ['ছবিটি সংরক্ষণ নিশ্চিত হয়নি, আবার চেষ্টা করুন।', 'The picture could not be confirmed as stored; try again.'],
+}
 export function useErrText() {
-  const { t } = useApp()
+  const { t, pick } = useApp()
   return useCallback((err) => {
+    if (err?.code && IMAGE_ERRORS[err.code]) return pick(...IMAGE_ERRORS[err.code])
     if (!err || err.status === 0 || err.name === 'TypeError') return t('ad.e.network')
     const key = `ad.e.${err.message}`
     const text = t(key)
@@ -66,7 +82,7 @@ export function useErrText() {
     if (err.status === 401) return t('ad.e.signin')
     if (err.status === 403) return t('ad.e.forbidden')
     return t('ad.e.generic')
-  }, [t])
+  }, [t, pick])
 }
 
 /* ---------------------------------------------------------------- display pieces */
@@ -339,12 +355,11 @@ export function TypeConfirm({ title, text, detail, expect, prompt, label, busy, 
 
 /* ---------------------------------------------------------------- images */
 
-const ACCEPT = ['image/jpeg', 'image/png']
-const MAX = 5 * 1024 * 1024
+const ACCEPT = INPUT_TYPES
 
 // One picture: paste a public link (recommended) or choose a file (preview first, upload with progress).
 // onChange gets { path, url } once the server has stored the file, or null when it is removed.
-export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
+export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, profile = 'heritage' }) {
   const { t } = useApp()
   const errText = useErrText()
   const input = useRef(null)
@@ -361,7 +376,9 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
     setErr(''); setBroken(false); setProgress(0)
     if (preview) setLocal(preview)
     try {
-      const r = await uploadMedia({ ...opts, onProgress: setProgress })
+      // a file is optimized in the browser and stored once (a picture that is already stored is reused, not uploaded again);
+      // a link is fetched and checked by the server
+      const r = opts.file ? await storeImageFile(opts.file, profile, { onStage: (_s, p) => setProgress(p) }) : await uploadMedia({ ...opts, onProgress: setProgress })
       onChange({ path: r.path, url: r.url })
     } catch (e) {
       setErr(errText(e))
@@ -372,8 +389,8 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl }) {
     const f = e.target.files?.[0]
     e.target.value = ''
     if (!f) return
-    if (!ACCEPT.includes(f.type)) { setErr(t('ad.e.file_type')); return }
-    if (f.size > MAX) { setErr(t('ad.e.photo_too_big')); return }
+    const bad = checkFile(f)
+    if (bad) { setErr(errText({ code: bad })); return }
     send({ file: f }, URL.createObjectURL(f))
   }
   return (
@@ -424,8 +441,8 @@ export function UploadAsLink({ onUrl, disabled }) {
     const f = e.target.files?.[0]
     e.target.value = ''
     if (!f) return
-    if (!ACCEPT.includes(f.type)) { setErr(t('ad.e.file_type')); return }
-    if (f.size > MAX) { setErr(t('ad.e.photo_too_big')); return }
+    if (!['image/jpeg', 'image/png'].includes(f.type)) { setErr(t('ad.e.file_type')); return } // person photos go through the server (other bucket)
+    if (f.size > 5 * 1024 * 1024) { setErr(t('ad.e.photo_too_big')); return }
     setErr(''); setProgress(0)
     try { const r = await uploadMedia({ file: f, onProgress: setProgress }); await onUrl(r.url) }
     catch (ex) { setErr(errText(ex)) }

@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, qs, uploadMedia, useApi } from '../lib/api.js'
+import { useCallback, useEffect, useState } from 'react'
+import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, SkeletonRows, StatusBadge, slugFrom, useErrText, useFilters, useNotice } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
+import MultiUpload from './MultiUpload.jsx'
 
 const thumb = (d) => d.imageUrl || (d.image ? `/images/${d.image}-640.webp` : '')
 const base = (name) => name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim().slice(0, 120)
-const STEPS = { queued: 'ad.gal.q.queued', uploading: 'ad.gal.q.uploading', saving: 'ad.gal.q.saving', done: 'ad.gal.q.done', failed: 'ad.gal.q.failed' }
 
 export default function GalleryAdmin() {
   const { t, n, pick } = useApp()
@@ -21,8 +21,7 @@ export default function GalleryAdmin() {
   const [albumEdit, setAlbumEdit] = useState(null) // entry | {} for new
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [queue, setQueue] = useState([])
-  const fileInput = useRef(null)
+  const [uploading, setUploading] = useState(false)
   const albumList = albums.data?.items || []
   const rows = list.data?.items || []
   const current = albumList.find((a) => a.id === f.album)
@@ -33,33 +32,13 @@ export default function GalleryAdmin() {
 
   const refresh = () => { list.retry(); albums.retry() }
 
-  /* ---- upload: every file is stored first, and an entry is created only after the server confirms it ---- */
-  const patchItem = useCallback((id, patch) => setQueue((q) => q.map((x) => (x.id === id ? { ...x, ...patch } : x))), [])
-  const processOne = useCallback(async (item) => {
-    patchItem(item.id, { step: 'uploading', progress: 0, error: '' })
-    try {
-      const up = await uploadMedia({ file: item.file, onProgress: (p) => patchItem(item.id, { progress: p }) })
-      patchItem(item.id, { step: 'saving' })
-      await api('/admin/content/image', {
-        method: 'POST',
-        body: JSON.stringify({ parentId: current ? current.id : '', data: { image: up.path, alt: base(item.file.name) || 'Photo', captionEn: '' } }),
-      })
-      patchItem(item.id, { step: 'done', progress: 100 })
-    } catch (e) { patchItem(item.id, { step: 'failed', error: errText(e) }) }
-  }, [current, errText, patchItem])
-  const startUploads = async (files) => {
-    const items = files.map((file, i) => ({ id: `${Date.now()}-${i}`, file, step: 'queued', progress: 0, error: '' }))
-    setQueue((q) => [...q.filter((x) => x.step !== 'done'), ...items])
-    for (const it of items) await processOne(it) // one at a time keeps progress readable and the server calm
-    refresh()
-  }
-  const pickFiles = (e) => {
-    const files = [...(e.target.files || [])]
-    e.target.value = ''
-    const okTypes = files.filter((x) => ['image/jpeg', 'image/png'].includes(x.type) && x.size <= 5 * 1024 * 1024)
-    if (okTypes.length !== files.length) bad(t('ad.gal.skipped').replace('{n}', n(files.length - okTypes.length)))
-    if (okTypes.length) startUploads(okTypes.slice(0, 20))
-  }
+  /* ---- upload: many pictures at once; each is optimized, stored once, and gets its own entry once the server confirms it ---- */
+  const addEntry = useCallback(async ({ path, file }) => {
+    await api('/admin/content/image', {
+      method: 'POST',
+      body: JSON.stringify({ parentId: current ? current.id : '', data: { image: path, alt: base(file.name) || 'Photo', captionEn: '' } }),
+    })
+  }, [current])
 
   /* ---- status changes, bulk actions, reordering ---- */
   const run = async (fn, doneText) => {
@@ -94,36 +73,19 @@ export default function GalleryAdmin() {
   }, (r) => `${t('ad.bulkDone').replace('{n}', n(r.done))}${r.failed.length ? ` ${t('ad.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`)
   const ask = (action, ids) => setConfirm({ text: t(`ad.confirmBulk.${action}`).replace('{n}', n(ids.length)), action, ids })
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
-  const active = queue.some((x) => ['queued', 'uploading', 'saving'].includes(x.step))
 
   return (
     <section aria-labelledby="gal-h">
       <PageHeader title={<span id="gal-h">{t('ad.gal.title')}</span>} desc={t('ad.gal.desc')}
         action={
           <div className="row">
-            <input ref={fileInput} type="file" multiple accept="image/jpeg,image/png" onChange={pickFiles} hidden />
-            <button type="button" className="btn btn-dark btn-sm" disabled={active} onClick={() => fileInput.current?.click()}>+ {t('ad.gal.upload')}</button>
+            <button type="button" className="btn btn-dark btn-sm" onClick={() => setUploading(true)}>+ {t('ad.gal.upload')}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAlbumEdit({})}>+ {t('ad.gal.newAlbum')}</button>
           </div>
         } />
       <Notice notice={notice} onClose={clear} />
 
-      {queue.length > 0 && (
-        <div className="ad-queue" role="region" aria-label={t('ad.gal.queue')}>
-          <div className="row"><strong>{t('ad.gal.queue')}</strong>
-            {!active && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQueue([])}>{t('ad.close')}</button>}</div>
-          <ul>
-            {queue.map((it) => (
-              <li key={it.id}>
-                <span className="ad-q-name">{it.file.name}</span>
-                <progress max="100" value={it.progress} aria-label={it.file.name} />
-                <span className={it.step === 'failed' ? 'err' : 'muted small'}>{t(STEPS[it.step])}{it.error ? `: ${it.error}` : ''}</span>
-                {it.step === 'failed' && <button type="button" className="btn btn-ghost btn-sm" disabled={active} onClick={() => processOne(it).then(refresh)}>{t('ad.gal.retry')}</button>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {uploading && <MultiUpload profile="gallery" onStored={addEntry} onFinished={refresh} onClose={() => { setUploading(false); refresh() }} />}
 
       <div className="chips ad-albums" role="group" aria-label={t('ad.gal.albums')}>
         <button type="button" className={`chip ${f.album === '' ? 'on' : ''}`} aria-pressed={f.album === ''} onClick={() => set({ album: '' })}>{t('ad.gal.allImages')}</button>
@@ -242,7 +204,7 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
     <Modal title={t('ad.gal.editImage')} onClose={() => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) onClose() }} drawer busy={busy}>
       <p><StatusBadge status={row.status} label={row.status === 'draft' ? t('ad.gal.hidden') : undefined} /></p>
       <form onSubmit={save} noValidate className="ad-form">
-        <ImagePicker label={t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
+        <ImagePicker profile="gallery" label={t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
           onChange={(m) => m && setV({ ...v, image: m.path, imageUrl: m.url })} hint={t('ad.gal.replaceHint')} />
         {errs.image && <small className="err" role="alert">{errs.image}</small>}
         <div className="ad-grid">

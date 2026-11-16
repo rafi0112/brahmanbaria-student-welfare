@@ -52,7 +52,7 @@ function Slot({ label, hint, value, onChange }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="si-slot">
-      <ImagePicker label={label} value={value?.image || ''} url={value?.imageUrl} legacyUrl={legacyUrl(value?.image)} hint={hint}
+      <ImagePicker profile="hero" label={label} value={value?.image || ''} url={value?.imageUrl} legacyUrl={legacyUrl(value?.image)} hint={hint}
         onChange={(m) => onChange(m ? { image: m.path, imageUrl: m.url } : null)} />
       <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setOpen(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
       {open && <GalleryPick onClose={() => setOpen(false)} onPick={(g) => { onChange({ image: g.image, imageUrl: g.imageUrl }); setOpen(false) }} />}
@@ -180,7 +180,7 @@ export default function SiteImagesAdmin() {
                 <h3>{pick('নতুন স্লাইড যোগ করুন', 'Add a slide')}</h3>
                 <p className="muted small">{pick('চওড়া (ল্যান্ডস্কেপ) ছবি সবচেয়ে ভালো দেখায়, অন্তত ১৬০০ পিক্সেল চওড়া।', 'A wide (landscape) picture looks best, at least 1600 pixels wide.')}</p>
                 <div className="si-slot">
-                  <ImagePicker label={pick('ছবি', 'Picture')} value={fresh?.image || ''} url={fresh?.imageUrl}
+                  <ImagePicker profile="hero" label={pick('ছবি', 'Picture')} value={fresh?.image || ''} url={fresh?.imageUrl}
                     onChange={(m) => { if (m) { addSlide({ image: m.path, imageUrl: m.url }); setFresh(null) } }} />
                   <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setAdding(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
                 </div>

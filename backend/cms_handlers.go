@@ -339,6 +339,8 @@ func (a *App) cmsRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *http
 	m.HandleFunc("POST /api/v1/admin/content/{kind}/{id}/{action}", adm(a.cmsAction))
 	m.HandleFunc("DELETE /api/v1/admin/content/{kind}/{id}", adm(a.cmsDelete))
 	m.HandleFunc("POST /api/v1/admin/media", adm(a.uploadMedia))
+	m.HandleFunc("GET /api/v1/admin/media/stats", adm(a.mediaStats))
+	m.HandleFunc("POST /api/v1/admin/media/cleanup", adm(a.mediaCleanup))
 
 	m.HandleFunc("GET /api/v1/gallery", h(a.publicGallery))
 }

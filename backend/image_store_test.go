@@ -93,3 +93,11 @@ func TestSamePictureIsStoredOnceAndKeepsOneName(t *testing.T) {
 		t.Fatalf("a JPEG stays a JPEG: %s", p)
 	}
 }
+
+// the browser names a stored picture the same way (frontend/src/lib/imageCore.js pathFor), so one picture is one file
+// whichever side stored it
+func TestContentNameAgreesWithTheBrowser(t *testing.T) {
+	if got := contentName([]byte("abc"), ".jpg"); got != "ba7816bf-8f01-cfea-4141-40de5dae2223.jpg" {
+		t.Fatalf("contentName = %s", got)
+	}
+}

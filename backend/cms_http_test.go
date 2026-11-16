@@ -39,7 +39,7 @@ func TestContentEndpointsRequireAnAdmin(t *testing.T) {
 	calls := []struct{ method, path string }{
 		{"GET", "/api/v1/admin/content/blog"}, {"POST", "/api/v1/admin/content/blog"}, {"GET", "/api/v1/admin/content/blog/x"},
 		{"PATCH", "/api/v1/admin/content/blog/x"}, {"POST", "/api/v1/admin/content/blog/x/publish"}, {"POST", "/api/v1/admin/content/place/reorder"},
-		{"POST", "/api/v1/admin/content/image/bulk"}, {"POST", "/api/v1/admin/media"},
+		{"POST", "/api/v1/admin/content/image/bulk"}, {"POST", "/api/v1/admin/media"}, {"GET", "/api/v1/admin/media/stats"}, {"POST", "/api/v1/admin/media/cleanup"},
 		{"GET", "/api/v1/admin/dashboard"}, {"GET", "/api/v1/admin/activity"}, {"GET", "/api/v1/admin/role-history"},
 		{"GET", "/api/v1/admin/students"}, {"GET", "/api/v1/admin/students/x"}, {"PATCH", "/api/v1/admin/students/x"},
 		{"POST", "/api/v1/admin/students/x/approve"}, {"POST", "/api/v1/admin/students/bulk"}, {"GET", "/api/v1/admin/export/students"},

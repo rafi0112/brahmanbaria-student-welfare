@@ -110,7 +110,7 @@ export default function AdminManual() {
             <h2>{T('মানুষের ছবি যোগ করা', 'Adding people’s photos')}</h2>
             <p>{T('শিক্ষার্থী বা অ্যালামনাইয়ের ছবি দুইভাবে দেওয়া যায়, সম্পাদনার ফর্মের ছবি অংশে:', 'A photo of a student or alumnus can be given in two ways, in the Photo part of the edit form:')}</p>
             <ol>
-              <li>{T('ডিভাইস থেকে আপলোড: বোতামটি চেপে কম্পিউটার বা ফোন থেকে JPG/PNG ছবি বেছে নিন (সর্বোচ্চ ৫ MB)।', 'Upload from the device: press the button and choose a JPG/PNG picture from your computer or phone (up to 5 MB).')}</li>
+              <li>{T('ডিভাইস থেকে আপলোড: বোতামটি চেপে কম্পিউটার বা ফোন থেকে JPG/PNG/WebP ছবি বেছে নিন (মূল ছবি ১৫ MB পর্যন্ত)। ছবি আপনার ব্রাউজারেই ছোট করে একবার সংরক্ষণ হয়; সাইটে আগে থেকে থাকা ছবি আবার আপলোড হয় না।', 'Upload from the device: press the button and choose a JPG/PNG/WebP picture from your computer or phone (the original may be up to 15 MB). The picture is optimized in your browser and stored once; a picture the site already has is not uploaded again.')}</li>
               <li>{T('ছবির লিংক: গুগল ড্রাইভের লিংক দিলে ছবিটি অবশ্যই “Anyone with the link” হিসেবে শেয়ার করা থাকতে হবে।', 'Photo link: for a Google Drive link the file must be shared as “Anyone with the link”.')}</li>
             </ol>
             <p className="man-note">{T('পুরোনো গুগল ফর্মের অনেক ছবির লিংক ব্যক্তিগত (শেয়ার করা নয়), তাই সেগুলো সাইটে দেখায় না এবং এটি পাশ কাটানোর কোনো উপায় নেই। সমাধান: ছবিটি সংগ্রহ করে এখানে আপলোড করুন, অথবা মালিককে ড্রাইভে শেয়ার চালু করতে বলুন।',
@@ -141,7 +141,7 @@ export default function AdminManual() {
           <section id="m-gallery">
             <h2>{T('গ্যালারি', 'Gallery')} <Go to="/admin/gallery">{open}</Go></h2>
             <ol>
-              <li>{T('ছবি যোগ করুন চেপে ছবি আপলোড করুন বা লিংক দিন।', 'Press Add picture and upload one or give a link.')}</li>
+              <li>{T('“ছবি আপলোড” চেপে একসাথে অনেক ছবি বেছে নিন (আরও ছবি পরে যোগ করা যায়, অপছন্দের ছবি ✕ দিয়ে বাদ দেওয়া যায়)। প্রতিটি ছবির প্রিভিউ, মূল ও ছোট করা আকার এবং অগ্রগতি দেখা যায়; একই ছবি দুবার বাছলে একবারই সংরক্ষণ হয়। সবশেষে আপলোড চাপুন, প্রতিটি ছবি গ্যালারিতে আলাদা এন্ট্রি হয়ে যাবে।', 'Press “Upload pictures” and choose many at once (you can add more later and take a picture out with ✕). Each picture shows a preview, its original and optimized size and its progress; the same picture chosen twice is stored once. Then press Upload: every picture becomes its own gallery entry.')}</li>
               <li>{T('ক্যাপশন (বাংলা ও ইংরেজি), ছবির বর্ণনা (alt), কৃতজ্ঞতা/উৎস এবং চাইলে অ্যালবাম বেছে দিন।', 'Give captions (Bangla and English), a description (alt), credit/source and, if you want, an album.')}</li>
               <li>{T('প্রকাশ করলে ছবিটি গ্যালারি পাতায় দেখা যাবে; লুকান করলে সরে যাবে কিন্তু মুছবে না।', 'Publishing shows the picture on the Gallery page; hiding removes it from view without deleting it.')}</li>
               <li>{T('অ্যালবাম তৈরি করে ছবিগুলো অনুষ্ঠান অনুযায়ী ভাগ করা যায়; টেনে বা তীর দিয়ে ক্রম বদলানো যায়।', 'Create albums to group pictures by occasion; change the order by dragging or with the arrows.')}</li>
@@ -203,7 +203,7 @@ export default function AdminManual() {
               <li>{T('ব্যক্তিগত তথ্য: ফোন, ইমেইল ও রক্তের গ্রুপ সাধারণ দর্শকদের দেখানো হয় না, শুধু লগইন করা সদস্যরা দেখেন। এই তথ্য সংগঠনের কাজের বাইরে কাউকে দেবেন না।', 'Private details: phone, email and blood group are not shown to ordinary visitors, only to signed-in members. Do not give them to anyone outside the association’s work.')}</li>
               <li>{T('মুছে ফেলা: মুছে ফেলা তথ্য সাধারণত ফেরত আনা যায় না। সন্দেহ থাকলে মুছে না ফেলে লুকান বা আর্কাইভ করুন।', 'Deleting: deleted data usually cannot be brought back. When in doubt, hide or archive instead.')}</li>
               <li>{T('পাসওয়ার্ড: নিজের অ্যাডমিন পাসওয়ার্ড কারও সাথে ভাগ করবেন না। পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হয়, তবে অ্যাডমিন অ্যাকাউন্টে লম্বা ও অনুমান করা কঠিন পাসওয়ার্ড ব্যবহার করুন।', 'Password: never share your admin password. A password needs at least 6 characters, but use a long, hard-to-guess one for an admin account.')}</li>
-              <li>{T('ছবি: স্পষ্ট, শালীন ও অনুমতি আছে এমন ছবি ব্যবহার করুন। ছবির আকার ৫ MB-এর মধ্যে রাখুন।', 'Pictures: use clear, decent pictures you have permission for. Keep each under 5 MB.')}</li>
+              <li>{T('ছবি: স্পষ্ট, শালীন ও অনুমতি আছে এমন ছবি ব্যবহার করুন। প্রতিটি মূল ছবি ১৫ MB-এর মধ্যে রাখুন।', 'Pictures: use clear, decent pictures you have permission for. Keep each original under 15 MB.')}</li>
               <li>{T('ভুল হলে: কার্যক্রম পাতায় দেখে নিন কী বদলেছে, তারপর সম্পাদনা করে ঠিক করুন। সমাধান না হলে সাইটের ডেভেলপারকে জানান।', 'If something goes wrong: check the Activity page to see what changed, then edit to fix it. If it is not solved, tell the site’s developer.')}</li>
             </ul>
           </section>

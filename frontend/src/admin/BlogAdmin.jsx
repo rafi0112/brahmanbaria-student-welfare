@@ -196,7 +196,7 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
               <label className="check"><input type="checkbox" checked={v.featured} onChange={set('featured')} /> {t('ad.blog.featuredLabel')}</label>
             </fieldset>
 
-            <ImagePicker label={t('ad.blog.image')} value={v.image} url={v.imageUrl}
+            <ImagePicker profile="blog" label={t('ad.blog.image')} value={v.image} url={v.imageUrl}
               onChange={(m) => setV({ ...v, image: m ? m.path : '', imageUrl: m ? m.url : '' })} hint={t('ad.blog.imageHint')} />
             {e.image && <small className="err" role="alert">{e.image}</small>}
             <Field label={t('ad.imageAlt')} error={e.imageAlt} hint={t('ad.imageAltHint')}>{(fid, bad) => <input id={fid} value={v.imageAlt} onChange={set('imageAlt')} maxLength={300} aria-invalid={bad} />}</Field>
