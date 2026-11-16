@@ -98,7 +98,7 @@ export default function HeroStage() {
           <p className="hs-tagbn hs-e2" lang="bn">ঐক্য, সহযোগিতা ও শিক্ষার্থীদের কল্যাণে আমরা একসাথে।</p>
           <div className="hs-actions hs-e3">
             <Link className="hs-b1" to="/gallery">
-              <span><b>{pick('BSWA ঘুরে দেখুন', 'Explore BSWA')}</b><small>{pick('Explore BSWA', 'BSWA ঘুরে দেখুন')}</small></span>
+              <span><b>{pick('BSWA ঘুরে দেখুন', 'Explore BSWA')}</b></span>
               <span className="hs-orb"><span className="hs-a1"><Arrow /></span><span className="hs-a2"><Arrow /></span></span>
             </Link>
             <Link className="hs-b2" to="/students">{pick('শিক্ষার্থীদের সাথে যুক্ত হোন', 'Connect with students')} <i><Arrow d="M7 17L17 7M9 7h8v8" size={16} width={2} /></i></Link>
