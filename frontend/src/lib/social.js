@@ -1,5 +1,5 @@
-// The organization's official Facebook Page. It comes from the build configuration (VITE_FACEBOOK_PAGE_URL), not from the
-// code, and only an https address on Facebook's own domains is accepted.
+// The organization's official Facebook Page. VITE_FACEBOOK_PAGE_URL may override it at build time; only an https address on
+// Facebook's own domains is ever accepted.
 export function facebookPageUrl(raw) {
   try {
     const u = new URL(String(raw || '').trim())
@@ -9,4 +9,5 @@ export function facebookPageUrl(raw) {
   } catch { return '' }
 }
 
-export const FACEBOOK_PAGE_URL = facebookPageUrl(import.meta.env?.VITE_FACEBOOK_PAGE_URL)
+export const OFFICIAL_FACEBOOK_PAGE = 'https://www.facebook.com/share/1QSHxFFB47/?mibextid=wwXIfr'
+export const FACEBOOK_PAGE_URL = facebookPageUrl(import.meta.env?.VITE_FACEBOOK_PAGE_URL) || OFFICIAL_FACEBOOK_PAGE
