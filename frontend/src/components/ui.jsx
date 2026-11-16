@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { initials } from '../lib/initials.js'
 import { Link } from 'react-router-dom'
 import images from '../data/images.json'
 import { usePhoto } from '../lib/api.js'
@@ -191,10 +192,7 @@ export function Badge({ tone = 'leaf', children }) {
   return <span className={`badge badge-${tone}`}>{children}</span>
 }
 
-export function initials(name) {
-  const p = name.trim().split(/\s+/)
-  return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase()
-}
+export { initials }
 
 // A person's picture: their photo when one exists and this viewer may see it, otherwise a monogram in one of four soft
 // palette tints chosen from the name (so it stays the same for the same person).

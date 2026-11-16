@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
+import { initials } from '../lib/initials.js'
 import { Confirm, Modal, useErrText, useWhen } from './kit.jsx'
 
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const LEVELS = ['members', 'hidden']
 const PHONE = /^01\d{9}$/
 
-export const initials = (name = '') => name.trim().split(/\s+/).slice(0, 2).map((w) => [...w][0] || '').join('').toUpperCase() || '?'
+export { initials }
 
 // Black-and-white initials badge: no colour, so it works in both themes.
 export function MonoAvatar({ name, size = 28 }) {

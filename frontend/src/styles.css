@@ -1684,3 +1684,42 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 .al-open { color: inherit; text-decoration: none; } .al-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
 .al-open:focus-visible { outline: none; } .al-open:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 2px; }
 .alumni-card .al-contact a { position: relative; z-index: 2; }
+
+/* ---- the profile dialog, refined: a glass backdrop, a rounded sheet that settles in, a deep-green cover band, the avatar ringed over it,
+   facts as soft tiles and contact details as touch-friendly rows ---- */
+.pd { background: radial-gradient(120% 90% at 50% 0%, rgba(7, 60, 48, .55), rgba(8, 6, 4, .74)); backdrop-filter: blur(8px) saturate(1.1); }
+.pd-box { padding: 0; border-radius: 28px; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); box-shadow: 0 40px 90px -24px rgba(0, 0, 0, .6), 0 2px 0 rgba(255, 255, 255, .5) inset; animation: pd-pop .34s cubic-bezier(.2, .8, .2, 1) both; scrollbar-width: thin; }
+.pd-close { position: absolute; top: 14px; right: 14px; float: none; margin: 0; z-index: 5; width: 38px; height: 38px; color: #fff; background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .34); backdrop-filter: blur(10px); transition: background .2s, transform .2s; }
+.pd-close:hover { background: rgba(255, 255, 255, .3); transform: rotate(90deg); }
+.pm-cover { position: relative; height: 128px; background: linear-gradient(135deg, #052f26 0%, #0b5a45 55%, #c4491f 135%); overflow: hidden; }
+.pm-cover::before { content: ''; position: absolute; inset: 0; background: url('/images/bswa/hero-1000.webp') center 35% / cover; opacity: .28; mix-blend-mode: luminosity; }
+.pm-cover::after { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 120% at 85% -20%, rgba(255, 190, 120, .42), transparent 60%), linear-gradient(0deg, rgba(0, 0, 0, .28), transparent 55%); }
+.is-modal .sp-head { padding: 0 clamp(20px, 4vw, 32px); margin-top: -46px; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 16px; }
+.is-modal .sp-avatar { width: clamp(88px, 15vw, 108px); border: 4px solid var(--paper, #fff8ee) !important; border-radius: 28px !important; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .45) !important; overflow: hidden; }
+.is-modal .sp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.is-modal .sp-id { padding: 54px 0 4px; } /* starts below the cover band; the avatar alone reaches up over it */
+.is-modal .sp-id h1 { font-size: clamp(1.4rem, 3.6vw, 1.9rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
+.is-modal .sp-chips { gap: 6px; } .is-modal .sp-chips li { padding: 4px 11px; font-size: .8rem; font-weight: 600; border-radius: 999px; background: var(--accent-soft); border-color: transparent; color: var(--accent-ink); }
+.is-modal .sp-chips li.is-teal { background: var(--teal-soft); color: var(--teal); }
+.is-modal .sp-body { padding: clamp(18px, 3vw, 24px) clamp(20px, 4vw, 32px) clamp(22px, 4vw, 32px); margin-top: 0; }
+.is-modal .sp-sec { padding-bottom: 0; margin-bottom: 20px; border-bottom: 0; }
+.is-modal .sp-sec:last-child { margin-bottom: 0; }
+.is-modal .sp-sec h2 { display: flex; align-items: center; gap: 10px; font: 700 .76rem/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.is-modal .sp-sec h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.is-modal .sp-lede { font-size: 1rem; margin-bottom: 10px; }
+.is-modal .sp-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.is-modal .sp-facts > div { padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--card) 88%, transparent); transition: border-color .2s, transform .2s, box-shadow .2s; }
+.is-modal .sp-facts > div:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); transform: translateY(-1px); box-shadow: 0 8px 22px -14px rgba(0, 0, 0, .4); }
+.is-modal .sp-facts dt { font-size: .68rem; letter-spacing: .1em; color: var(--muted); }
+.is-modal .sp-facts dd { font-size: .98rem; font-weight: 650; }
+.is-modal .sp-facts a { text-decoration: none; color: var(--accent-ink, var(--ink)); font-weight: 700; } .is-modal .sp-facts a:hover { text-decoration: underline; }
+.is-modal .privacy-note { display: block; padding: 10px 12px; border-radius: 14px; background: var(--paper-2); font-size: .84rem; line-height: 1.5; } .is-modal .privacy-note svg { display: inline; vertical-align: -3px; margin-right: 6px; } .is-modal .privacy-note .link-arrow { margin-left: 6px; }
+@keyframes pd-pop { from { opacity: 0; transform: translateY(22px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (max-width: 560px) {
+  .pd-box { border-radius: 26px 26px 0 0; animation-name: pd-sheet; }
+  .pd-box::before { content: ''; position: absolute; top: 8px; left: 50%; width: 42px; height: 4px; margin-left: -21px; border-radius: 4px; background: rgba(255, 255, 255, .6); z-index: 6; }
+  .pm-cover { height: 104px; } .is-modal .sp-head { margin-top: -40px; } .is-modal .sp-id { padding-top: 46px; }
+  .is-modal .sp-facts { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+@keyframes pd-sheet { from { opacity: .6; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pd-box { animation: none; } .pd-close:hover { transform: none; } }

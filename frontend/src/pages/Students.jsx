@@ -184,6 +184,7 @@ export function StudentDetail({ id: idProp, modal = false }) {
                 <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
               </div>
             )}
+            {modal && <div className="pm-cover" aria-hidden="true" />}
             <div className={modal ? 'sp-head' : 'wrap sp-head'}>
               <SpAvatar name={s.name} photo={s.photo || d?.photoUrl} />
               <div className="sp-id">

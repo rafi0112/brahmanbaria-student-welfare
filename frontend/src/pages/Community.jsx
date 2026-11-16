@@ -21,6 +21,7 @@ function AlumniProfile({ a, view }) {
   const facts = [[t('students.dept'), a.department], [t('students.batch'), a.batch ? n(a.batch) : ''], [pick('পেশা', 'Occupation'), a.occupation], [pick('কর্মস্থল', 'Workplace'), a.workplace]].filter(([, v]) => v)
   return (
     <article className="sprofile is-modal">
+      <div className="pm-cover" aria-hidden="true" />
       <div className="sp-head">
         <Avatar name={a.name} size={96} photo={a.photo} />
         <div className="sp-id">
