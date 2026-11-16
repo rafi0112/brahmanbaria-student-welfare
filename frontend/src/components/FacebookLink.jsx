@@ -10,7 +10,7 @@ export function FacebookMark({ size = 20 }) {
   )
 }
 
-// The organization's official Facebook Page, opened in a new tab. Nothing is drawn until the page's address is configured
+// The organization's official Facebook Page, opened in the same tab. Nothing is drawn until the page's address is configured
 // (VITE_FACEBOOK_PAGE_URL), so a visitor is never sent to a made-up address.
 //   variant "button": the clear call to action in the community band; "footer": the small link in the footer.
 export default function FacebookLink({ variant = 'button' }) {
@@ -19,13 +19,13 @@ export default function FacebookLink({ variant = 'button' }) {
   const label = pick('ফেসবুক পেজ ঘুরে আসুন', 'Visit our Facebook page')
   if (variant === 'footer') {
     return (
-      <a className="fb-foot" href={FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label={`${label} (${pick('নতুন ট্যাবে খোলে', 'opens in a new tab')})`}>
+      <a className="fb-foot" href={FACEBOOK_PAGE_URL} rel="noopener noreferrer">
         <FacebookMark size={18} /> <span>{pick('ফেসবুক পেজ', 'Facebook page')}</span>
       </a>
     )
   }
   return (
-    <a className="fb-btn" href={FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label={`${label} (${pick('নতুন ট্যাবে খোলে', 'opens in a new tab')})`}>
+    <a className="fb-btn" href={FACEBOOK_PAGE_URL} rel="noopener noreferrer">
       <FacebookMark size={22} />
       <span><b>{label}</b><small>{pick('সর্বশেষ খবর ও ছবি', 'Latest news and photos')}</small></span>
     </a>

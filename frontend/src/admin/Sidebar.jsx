@@ -296,7 +296,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
       </nav>
 
       <div className="adm-side-foot">
-        <a className="adm-link" href="/" target="_blank" rel="noopener noreferrer" title={t('admin.nav.exit')}><NavIcon name="external" tone="slate" /><span className="adm-fade">{t('admin.nav.exit')}</span></a>
+        <a className="adm-link" href="/" rel="noopener noreferrer" title={t('admin.nav.exit')}><NavIcon name="external" tone="slate" /><span className="adm-fade">{t('admin.nav.exit')}</span></a>
         <div className="adm-prefs">
           <button type="button" className="adm-iconbtn" onClick={toggleLang} aria-label={t('lang.toggle')} title={t('lang.toggle')}><Icon name="globe" size={16} /><span className="adm-fade adm-lang">{lang === 'bn' ? 'EN' : 'বাং'}</span></button>
           <button type="button" className="adm-iconbtn" onClick={toggleTheme} aria-label={t('theme.toggle')} title={t('theme.toggle')}><Icon name={isDark() ? 'sun' : 'moon'} size={16} /></button>

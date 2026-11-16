@@ -1723,3 +1723,6 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 }
 @keyframes pd-sheet { from { opacity: .6; transform: translateY(40px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pd-box { animation: none; } .pd-close:hover { transform: none; } }
+
+.contact-info .ci-mail { color: #fff; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; } .contact-info .ci-mail:hover { color: var(--accent-soft, #ffd9c4); }
+.footer-grid a.ft-mail { overflow-wrap: anywhere; }

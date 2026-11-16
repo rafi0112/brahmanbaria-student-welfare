@@ -241,7 +241,7 @@ export function StudentDetail({ id: idProp, modal = false }) {
                     <dl className="sp-facts">
                       {['permanentAddress', 'presentAddress', 'school', 'college', 'facebook', 'photoLink', 'note'].filter((k) => d.record[k]).map((k) => (
                         <div key={k}><dt>{t(`students.rec.${k}`)}</dt>
-                          <dd>{/^https?:\/\//.test(d.record[k]) ? <a href={d.record[k]} target="_blank" rel="noreferrer noopener">{k === 'photoLink' ? t('students.rec.openPhoto') : d.record[k]}</a> : d.record[k]}</dd></div>
+                          <dd>{/^https?:\/\//.test(d.record[k]) ? <a href={d.record[k]} rel="noreferrer noopener">{k === 'photoLink' ? t('students.rec.openPhoto') : d.record[k]}</a> : d.record[k]}</dd></div>
                       ))}
                     </dl>
                   </section>

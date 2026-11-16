@@ -202,7 +202,7 @@ export function StatusPanel({ entry, busy, onAct, dirty, publicUrl, onPreview, t
             <button key={a} type="button" className={`btn btn-sm ${a === 'publish' ? 'btn-dark' : 'btn-ghost'}`} disabled={busy || dirty} onClick={() => setConfirm(a)}
               title={dirty ? t('ad.saveFirst') : undefined}>{t(label)}</button>
           ))}
-          {entry.status === 'published' && publicUrl && <a className="btn btn-ghost btn-sm" href={publicUrl} target="_blank" rel="noreferrer">{t('ad.openPublic')}</a>}
+          {entry.status === 'published' && publicUrl && <a className="btn btn-ghost btn-sm" href={publicUrl} rel="noreferrer">{t('ad.openPublic')}</a>}
         </div>
       )}
       {onPreview && <button type="button" className="btn btn-ghost btn-sm" onClick={onPreview}>{t('ad.preview')}</button>}

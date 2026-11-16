@@ -45,7 +45,7 @@ function AlumniProfile({ a, view }) {
                 {a.contact.phone && <div><dt>{t('students.phone')}</dt><dd><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}>{a.contact.phone}</a></dd></div>}
                 {a.contact.email && <div><dt>{t('students.email')}</dt><dd><a href={`mailto:${a.contact.email}`}>{a.contact.email}</a></dd></div>}
                 {a.contact.bloodGroup && <div><dt>{t('students.blood')}</dt><dd><b className="blood-txt">{a.contact.bloodGroup}</b></dd></div>}
-                {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} target="_blank" rel="noreferrer noopener">Facebook</a></dd></div>}
+                {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} rel="noreferrer noopener">Facebook</a></dd></div>}
               </dl>
             ) : <p className="muted"><Icon name="lock" size={14} /> {view === 'public' ? pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details') : pick('কোনো যোগাযোগের তথ্য শেয়ার করা হয়নি।', 'No contact details are shared.')}</p>}
           </section>
@@ -120,7 +120,7 @@ export function Alumni() {
                           {a.contact.phone && <li><a href={`tel:${a.contact.phone.replace(/[^\d+]/g, '')}`}><Icon name="phone" size={14} /><span>{a.contact.phone}</span></a></li>}
                           {a.contact.email && <li><a href={`mailto:${a.contact.email}`}><Icon name="mail" size={14} /><span>{a.contact.email}</span></a></li>}
                           {a.contact.bloodGroup && <li className="al-blood"><Icon name="heart" size={14} /><span>{pick('রক্তের গ্রুপ', 'Blood group')}: <b>{a.contact.bloodGroup}</b></span></li>}
-                          {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <li><a href={a.contact.facebook} target="_blank" rel="noreferrer noopener"><Icon name="facebook" size={14} /><span>Facebook</span></a></li>}
+                          {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <li><a href={a.contact.facebook} rel="noreferrer noopener"><Icon name="facebook" size={14} /><span>Facebook</span></a></li>}
                         </ul>
                       ) : d.view === 'public' && <p className="al-locked"><Icon name="lock" size={13} /> {pick('যোগাযোগ দেখতে লগইন করুন', 'Sign in to see contact details')}</p>}
                     </article>

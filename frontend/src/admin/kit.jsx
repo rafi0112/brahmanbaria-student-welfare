@@ -526,7 +526,7 @@ export function RowMenu({ label, items, className = '', icon }) {
           {live.map((it) => (
             <li key={it.label} role="none" className={it.sep ? 'has-sep' : ''}>
               {it.href
-                ? <a role="menuitem" className={it.danger ? 'danger' : ''} href={it.href} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>{it.icon && <Icon name={it.icon} size={14} />}<span>{it.label}</span></a>
+                ? <a role="menuitem" className={it.danger ? 'danger' : ''} href={it.href} rel="noreferrer" onClick={() => setOpen(false)}>{it.icon && <Icon name={it.icon} size={14} />}<span>{it.label}</span></a>
                 : (
                   <button role={it.checked != null ? 'menuitemradio' : 'menuitem'} aria-checked={it.checked ?? undefined} type="button" className={it.danger ? 'danger' : ''} disabled={it.disabled} title={it.disabled ? it.why : undefined}
                     onClick={() => { setOpen(false); it.onClick() }}>

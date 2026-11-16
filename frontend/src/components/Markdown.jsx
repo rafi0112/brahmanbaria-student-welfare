@@ -12,7 +12,7 @@ function inline(text, keyBase) {
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) return <code key={key}>{part.slice(1, -1)}</code>
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) return <em key={key}>{part.slice(1, -1)}</em>
     const link = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(part)
-    if (link) return <a key={key} href={link[2]} target="_blank" rel="noopener noreferrer nofollow">{link[1]}</a>
+    if (link) return <a key={key} href={link[2]} rel="noopener noreferrer nofollow">{link[1]}</a>
     return part
   })
 }

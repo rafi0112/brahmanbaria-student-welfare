@@ -146,7 +146,7 @@ export function HeritageDetail() {
                     </>
                   )}
                   <h2>{t('place.sources')}</h2>
-                  <ul className="sources">{p.sources.map((s) => <li key={s}><a href={s} target="_blank" rel="noreferrer">{s.replace('https://', '')}</a></li>)}</ul>
+                  <ul className="sources">{p.sources.map((s) => <li key={s}><a href={s} rel="noreferrer">{s.replace('https://', '')}</a></li>)}</ul>
                   <p className="muted small">{t('place.lastVerified')}: {p.lastVerified}</p>
                 </article>
                 <div>

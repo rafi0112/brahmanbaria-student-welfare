@@ -230,12 +230,12 @@ test('home: no "Together We Grow" line, slides last 6 seconds, the Facebook page
   }))
   expect(at).toBeGreaterThan(5000)
   expect(at).toBeLessThan(7000)
-  // the Facebook page: a clear button in the community band and a small link in the footer, both to the configured page, in a new tab
+  // the Facebook page: a clear button in the community band and a small link in the footer, both to the configured page, in the same tab
   for (const link of [page.locator('.cband .fb-btn'), page.locator('.site-footer .fb-foot')]) {
     await link.scrollIntoViewIfNeeded()
     await expect(link).toBeVisible()
     await expect(link).toHaveAttribute('href', 'https://www.facebook.com/bswa.e2e.test')
-    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).not.toHaveAttribute('target', '_blank') // every link opens in the same tab
     await expect(link).toHaveAttribute('rel', /noopener/)
   }
   // phone width: the button fits inside the screen once the section has faded in, and nothing scrolls sideways
@@ -245,4 +245,20 @@ test('home: no "Together We Grow" line, slides last 6 seconds, the Facebook page
   await btn.scrollIntoViewIfNeeded()
   await expect.poll(async () => { const r = await btn.boundingBox(); return r.x >= 0 && r.x + r.width <= 375 }).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('the website contact email is shown on the contact page and in the footer', async ({ page }) => {
+  await page.goto('/help')
+  const mail = 'brahmanbaria.jnu@gmail.com'
+  await expect(page.locator('.contact-info a.ci-mail')).toHaveAttribute('href', `mailto:${mail}`)
+  await expect(page.locator('.contact-info a.ci-mail')).toHaveText(mail)
+  await expect(page.locator('.site-footer a.ft-mail')).toHaveAttribute('href', `mailto:${mail}`)
+})
+
+test('no link on the public site opens a new tab', async ({ page }) => {
+  for (const url of ['/', '/help', '/gallery', '/heritage', '/events', '/directory']) {
+    await page.goto(url)
+    await page.waitForLoadState('networkidle')
+    expect(await page.locator('a[target="_blank"]').count(), url).toBe(0)
+  }
 })

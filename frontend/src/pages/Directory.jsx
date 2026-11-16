@@ -131,7 +131,7 @@ export function UpazilaDetail() {
                   {unions.length === 0 ? <Empty>{t('dir.noUnion')}</Empty> : (
                     <ol className="up-union-chips">{unions.map((x) => <li key={x}><Icon name="pin" size={14} />{x}</li>)}</ol>
                   )}
-                  <p className="muted small">{u.unionSource} {u.note} {t('dir.source')}: <a href={u.source} target="_blank" rel="noreferrer">Wikipedia</a> · {u.lastVerified}.</p>
+                  <p className="muted small">{u.unionSource} {u.note} {t('dir.source')}: <a href={u.source} rel="noreferrer">Wikipedia</a> · {u.lastVerified}.</p>
                 </section>
                 <aside className="up-students">
                   <span className="up-students-ico" aria-hidden="true"><Icon name="users" size={26} /></span>

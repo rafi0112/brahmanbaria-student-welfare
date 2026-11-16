@@ -172,7 +172,7 @@ export function EventDetail() {
                     {e.venue && <div><dt><Icon name="pin" size={18} /></dt><dd>{e.venue}</dd></div>}
                   </dl>
                   <div className="evd-actions">
-                    {e.link && <a className="btn btn-dark" href={e.link} target="_blank" rel="noreferrer noopener">{t('events.details')} <Icon name="arrow" size={16} className="arr" /></a>}
+                    {e.link && <a className="btn btn-dark" href={e.link} rel="noreferrer noopener">{t('events.details')} <Icon name="arrow" size={16} className="arr" /></a>}
                     <Link className="btn btn-outline" to="/events">{pick('সব ইভেন্ট', 'All events')}</Link>
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { AccountMenu, ProfileDialog } from './Account.jsx'
 import Icon from './Icon.jsx'
 import SearchDialog from './SearchDialog.jsx'
 import FacebookLink from './FacebookLink.jsx'
+import { CONTACT_EMAIL } from '../lib/contact.js'
 import { MotionLayer, Toasts, toast } from './Motion.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
@@ -189,6 +190,7 @@ function Footer() {
         <div>
           <h2>{t('footer.touch')}</h2>
           <Link to="/help#contact">{t('footer.send')}</Link>
+          <a className="ft-mail" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
           <span className="footer-line">{t('footer.campus')}</span>
           <FacebookLink variant="footer" />
           <Link className="btn btn-sm ft-cta" to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register'}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('footer.join')} <Icon name="arrow" size={15} className="arr" /></Link>

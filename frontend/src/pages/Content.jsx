@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import images from '../data/images.json'
 import { api, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
+import { CONTACT_EMAIL } from '../lib/contact.js'
 import { useSiteImages } from '../lib/site.jsx'
 import { useBase } from '../lib/base.js'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
@@ -149,7 +150,7 @@ export function Gallery() {
                 <span>
                   {m.credit && <>{t('place.photoCredit')}: {m.credit}</>}
                   {m.license && <> · {t('gallery.license')}: {m.license}</>}
-                  {m.source && <> · <a href={m.source} target="_blank" rel="noreferrer">{t('gallery.source')}</a></>}
+                  {m.source && <> · <a href={m.source} rel="noreferrer">{t('gallery.source')}</a></>}
                 </span>
               )}
             </figcaption>
@@ -234,7 +235,7 @@ export function HelpPage() {
 }
 
 function ContactSection() {
-  const { t } = useApp()
+  const { t, pick } = useApp()
   const [v, setV] = useState({ name: '', email: '', subject: '', message: '', website: '' })
   const [st, setSt] = useState({ status: 'idle', fields: {} })
   const on = (k) => (e) => setV({ ...v, [k]: e.target.value })
@@ -260,9 +261,10 @@ function ContactSection() {
     </label>
   )
   const info = [
-    ['pin', 'contact.whereT', t('footer.campus')],
-    ['users', 'contact.whoT', t('contact.whoD')],
-    ['lock', 'contact.privT', t('contact.privD')],
+    ['mail', pick('ইমেইল', 'Email'), <a key="m" className="ci-mail" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>],
+    ['pin', t('contact.whereT'), t('footer.campus')],
+    ['users', t('contact.whoT'), t('contact.whoD')],
+    ['lock', t('contact.privT'), t('contact.privD')],
   ]
   return (
     <>
@@ -308,7 +310,7 @@ function ContactSection() {
         <aside className="contact-side">
           <ul className="contact-info">
             {info.map(([ic, k, d]) => (
-              <li key={k}><span className="ci-ico"><Icon name={ic} size={18} /></span><div><b>{t(k)}</b><p>{d}</p></div></li>
+              <li key={ic}><span className="ci-ico"><Icon name={ic} size={18} /></span><div><b>{k}</b><p>{d}</p></div></li>
             ))}
           </ul>
           <div className="contact-links">
