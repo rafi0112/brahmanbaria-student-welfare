@@ -1934,3 +1934,9 @@ dialog.pdialog .pd-body * { max-width: 100%; }
   dialog.pdialog .pd-head h2 { font-size: 1.05rem; line-height: 1.3; }
   dialog.pdialog .pd-head p { font-size: .82rem; overflow-wrap: anywhere; }
 }
+
+/* Dropdown lists use the page's colours, so in dark mode the open list is dark with light text (a select with a
+   transparent background, as in the search bars, otherwise opens as light text on a white list). */
+select option, select optgroup { background-color: var(--card); color: var(--ink); }
+select option:disabled { color: var(--muted); }
+.sbar-filters select, .filters-bar select, .evp-sort select { color: var(--ink); }

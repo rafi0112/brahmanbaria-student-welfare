@@ -755,3 +755,6 @@
   .adm .ad-modal { width: 100%; max-height: calc(100dvh - 20px); border-radius: 16px; }
   .adm .ad-modal-wide { width: 100%; }
 }
+
+/* admin dropdown lists follow the panel's light or dark colours */
+.adm select option, .adm select optgroup { background-color: var(--a-surface); color: var(--a-text); }

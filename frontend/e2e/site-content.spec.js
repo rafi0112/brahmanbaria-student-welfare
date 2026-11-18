@@ -212,6 +212,15 @@ test.describe('in English', () => {
     }
   })
 
+  test('dark mode: the Students filter dropdowns open as light text on a dark list', async ({ page }) => {
+    await page.addInitScript(() => { try { localStorage.setItem('jk-theme', 'dark') } catch { /* */ } })
+    await page.goto('/students')
+    const cols = await page.locator('.sbar select').evaluateAll((els) => els.map((s) => { const o = getComputedStyle(s.options[0]); return [o.color, o.backgroundColor] }))
+    expect(cols.length).toBe(3)
+    const lum = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
+    for (const [text, bg] of cols) expect(lum(text) - lum(bg), 'light text on a dark list').toBeGreaterThan(120)
+  })
+
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path)
