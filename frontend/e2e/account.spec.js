@@ -99,6 +99,18 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   expect(box.y + box.height).toBeLessThanOrEqual(844)
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dialog-mobile.png` })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  // nothing in the pop-up scrolls sideways or touches its edges, on both tabs, even on a 320px phone
+  for (const w of [390, 320]) {
+    await page.setViewportSize({ width: w, height: 760 })
+    for (const tab of [0, 1]) {
+      await dlg.locator('.pd-tabs button').nth(tab).click()
+      const m = await dlg.evaluate((d) => { const body = d.querySelector('.pd-body'); const b = body.getBoundingClientRect(); const pad = parseFloat(getComputedStyle(body).paddingLeft)
+        return { side: body.scrollWidth - body.clientWidth, pad, out: [...body.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.left < b.left + pad - 1 || r.right > b.right - pad + 1) && !e.closest('.facts, .card-form, .photo-pick, .notice') }).length } })
+      expect(m.side, `${w}px tab ${tab}: no sideways scroll`).toBe(0)
+      expect(m.pad).toBeGreaterThanOrEqual(16)
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
   expect(overflow).toBe(0)
   await page.keyboard.press('Escape')
 
