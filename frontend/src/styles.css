@@ -19,7 +19,7 @@
   --glow: 0; --leaf-blend: multiply; --leaf-op: 1;
   --font-body: 'Manrope Variable', 'Tiro Bangla', 'Nirmala UI', 'Noto Sans Bengali Variable', system-ui, sans-serif;
   --font-head: 'Manrope Variable', 'Tiro Bangla', 'Nirmala UI', 'Noto Sans Bengali Variable', system-ui, sans-serif;
-  --font-script: 'Caveat', 'Tiro Bangla', 'Nirmala UI', 'Noto Sans Bengali Variable', cursive;
+  --font-script: 'Manrope Variable', 'Tiro Bangla', 'Nirmala UI', 'Noto Sans Bengali Variable', cursive;
   --wrap: 1520px; --gutter: clamp(16px, 4.2vw, 56px); --gap: clamp(16px, 2vw, 28px);
   --r-sm: 10px; --r: 999px; --r-input: 12px; --r-card: 18px; --r-photo: 16px; --r-lg: 26px;
   --ease: cubic-bezier(.2, .7, .2, 1); --ease-out: cubic-bezier(.16, 1, .3, 1); --dur: 180ms; --dur-2: 320ms;
@@ -1808,3 +1808,64 @@ html[data-theme='dark'] .phero-v-stack .phero-script { color: var(--ink); }
 }
 @media (max-width: 560px) { .hero-stage .hs-lock { align-items: center; } }
 @media (max-width: 560px) { .cta-band { justify-content: center; } .cta-band-actions { width: 100%; } .cta-band-actions .btn { min-width: min(160px, 100%); } }
+
+/* ---------- picture editor: preview, crop, zoom, turn, light and colour before any upload ---------- */
+.ie { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; color: inherit; background: rgba(12, 14, 13, .62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.ie-box { width: min(980px, 100%); max-height: calc(100dvh - 32px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--card); color: var(--ink); border-radius: 20px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .55); overflow: hidden; outline: none; }
+.ie-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.ie-head h2 { margin: 0; font-size: 1.05rem; }
+.ie-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.ie-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; min-height: 0; overflow: auto; }
+.ie-stage { position: relative; overflow: hidden; min-height: 300px; height: min(62vh, 520px); background: repeating-conic-gradient(#2a2d2c 0 25%, #222524 0 50%) 0 0 / 22px 22px; cursor: grab; touch-action: none; user-select: none; outline: none; }
+.ie-stage:active { cursor: grabbing; } .ie-stage:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
+.ie-stage.is-loading::after { content: ''; position: absolute; inset: 40% 45%; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .25); border-top-color: #fff; animation: spin .8s linear infinite; }
+.ie-img { position: absolute; max-width: none; pointer-events: none; transform-origin: center; }
+.ie-frame { position: absolute; left: 50%; top: 50%; translate: -50% -50%; pointer-events: none; border: 2px solid #fff; border-radius: 4px; box-shadow: 0 0 0 9999px rgba(10, 12, 11, .58); }
+.ie-frame i { position: absolute; inset: 0; } .ie-frame i:first-child { border-left: 1px solid rgba(255, 255, 255, .35); border-right: 1px solid rgba(255, 255, 255, .35); left: 33.33%; right: 33.33%; }
+.ie-frame i:last-child { border-top: 1px solid rgba(255, 255, 255, .35); border-bottom: 1px solid rgba(255, 255, 255, .35); top: 33.33%; bottom: 33.33%; }
+.ie-fail { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 20px; text-align: center; color: #fff; }
+.ie-tools { display: grid; align-content: start; gap: 16px; padding: 16px 18px; border-left: 1px solid var(--line); }
+.ie-label { display: block; margin-bottom: 8px; font-size: .82rem; font-weight: 700; color: var(--ink-2); }
+.ie-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ie-chips button, .ie-row button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--paper); color: var(--ink); font: 600 .8rem/1 var(--font-body); cursor: pointer; }
+.ie-chips button.on, .ie-row button.on { background: var(--accent-btn); border-color: var(--accent-btn); color: #fff; }
+.ie-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.ie-slider { display: grid; gap: 6px; font-size: .82rem; font-weight: 700; color: var(--ink-2); } .ie-slider span { display: flex; justify-content: space-between; } .ie-slider b { font-weight: 600; color: var(--muted); }
+.ie-slider input { width: 100%; accent-color: var(--accent); }
+.ie-more { display: grid; gap: 12px; } .ie-more summary { cursor: pointer; font-size: .85rem; font-weight: 700; color: var(--ink-2); margin-bottom: 10px; } .ie-more[open] { gap: 12px; }
+.ie-hint { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.5; }
+.ie-reset { justify-self: start; border: 0; background: none; padding: 0; color: var(--accent-ink); font: 600 .85rem var(--font-body); text-decoration: underline; cursor: pointer; }
+.ie-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+@media (max-width: 760px) {
+  .ie { padding: 0; place-items: end center; }
+  .ie-box { max-height: 100dvh; border-radius: 18px 18px 0 0; }
+  .ie-body { grid-template-columns: minmax(0, 1fr); }
+  .ie-stage { height: min(48vh, 380px); min-height: 240px; }
+  .ie-tools { border-left: 0; border-top: 1px solid var(--line); padding: 14px 16px; gap: 12px; }
+  .ie-foot { justify-content: center; } .ie-foot .btn { flex: 1 1 140px; max-width: 220px; }
+}
+
+/* ---------- phones: the bar shows the logo with BSWA on the left and only the menu button on the right ---------- */
+.drawer-tools { display: none; }
+@media (max-width: 760px) {
+  .site-header.nav-menu .nav-tools > :not(.menu-btn) { display: none !important; }
+  .site-header .brand small { display: none; }
+  .site-header.nav-menu .menu-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: color-mix(in srgb, var(--card) 70%, transparent); }
+  .site-header.is-clear .menu-btn { border-color: rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .08); }
+  .drawer-tools { display: grid; gap: 10px; margin-bottom: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .dt-search { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--card); color: var(--muted); font: 500 .95rem var(--font-body); text-align: left; cursor: pointer; }
+  .dt-search svg { color: var(--ink-2); flex: none; } .dt-search span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dt-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); font: 600 .9rem var(--font-body); cursor: pointer; }
+  .dt-ico { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 8px; background: var(--card); font: 700 .72rem/1 var(--font-body); }
+  .drawer-cta { justify-content: center; } .drawer-cta .btn { flex: 1 1 0; max-width: 220px; }
+}
+
+/* English chosen: every piece of text (headings, buttons, form fields, the handwritten-style lines) uses one family,
+   Manrope; Bangla words that appear on an English page still use Tiro Bangla. Only code-style text stays monospace. */
+html[lang='en'] { --font-head: var(--font-body); --font-script: var(--font-body); }
+html[lang='en'] body, html[lang='en'] body :not(svg, svg *, code, kbd, pre, .pwh-code) { font-family: 'Manrope Variable', 'Tiro Bangla', 'Nirmala UI', 'Noto Sans Bengali Variable', system-ui, sans-serif !important; }
+html[lang='en'] :is(.phero-script, .cband-script, .cband-sign, .hero-script, .story-caption) { font-style: normal; font-weight: 600; letter-spacing: -.01em; }
+
+.ie::backdrop { background: transparent; }
+.ie:not([open]) { display: none; }

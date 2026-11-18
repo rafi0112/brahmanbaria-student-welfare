@@ -74,6 +74,54 @@ test.describe('in English', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
   })
 
+  test('phones: the bar shows only the logo with BSWA and the menu; search, language and theme are inside the menu', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 })
+    await page.goto('/about')
+    const bar = page.locator('.nav-bar')
+    await expect(bar.locator('.brand')).toBeVisible()
+    await expect(bar.locator('.brand b')).toHaveText('BSWA')
+    const visible = await bar.locator('button, a').evaluateAll((els) => els.filter((e) => e.offsetParent !== null && e.getBoundingClientRect().width > 0).map((e) => e.className))
+    expect(visible.length, 'logo and menu button only').toBe(2)
+    const menu = page.getByRole('button', { name: 'Menu' })
+    const mb = await menu.boundingBox()
+    expect(mb.x + mb.width).toBeGreaterThan(375 - 40) // on the right
+    await menu.click()
+    const drawer = page.locator('#drawer')
+    await expect(drawer.locator('.dt-search')).toBeVisible()
+    await drawer.getByRole('button', { name: /বাংলা|English/ }).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'bn')
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await expect(page.locator('.nav-tools').getByRole('button', { name: /খুঁজুন|Search/ })).toBeVisible()
+  })
+
+  test('English uses one font family everywhere', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => document.fonts.ready)
+    const fams = await page.evaluate(() => [...document.querySelectorAll('body, h1, h2, h3, p, a, button, input, .phero-script, .cband-script, .eyebrow')]
+      .filter((e) => e.offsetParent !== null && /[A-Za-z]/.test(e.textContent || e.placeholder || '')).map((e) => getComputedStyle(e).fontFamily.split(',')[0].replace(/"/g, '').trim()))
+    expect(new Set(fams)).toEqual(new Set(['Manrope Variable']))
+    await page.goto('/login')
+    expect((await page.locator('input[type=email]').evaluate((e) => getComputedStyle(e).fontFamily)).split(',')[0].replace(/"/g, '')).toBe('Manrope Variable')
+  })
+
+  test('admin: a picture chosen for upload can be previewed and cropped first; the edited copy replaces it', async ({ page }) => {
+    await login(page)
+    await page.goto('/admin/gallery')
+    await page.getByRole('button', { name: /Upload/ }).first().click()
+    // a real 300×200 picture made in the page
+    const buf = Buffer.from(await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 300; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#3a7'; x.fillRect(0, 0, 300, 200); const b = await new Promise((r) => c.toBlob(r, 'image/png')); return [...new Uint8Array(await b.arrayBuffer())] }))
+    await page.locator('.mu input[type=file]').setInputFiles({ name: 'wide.png', mimeType: 'image/png', buffer: buf })
+    await page.locator('.mu-item').getByRole('button', { name: 'Preview & adjust' }).click()
+    const ed = page.getByRole('dialog', { name: 'Preview and adjust the picture' })
+    await expect(ed.locator('.ie-img')).toBeVisible()
+    await ed.getByRole('button', { name: 'Square 1:1' }).click()
+    await ed.getByRole('button', { name: 'Use this picture' }).click()
+    await expect(ed).toBeHidden()
+    await expect(page.locator('.mu-item').getByRole('button', { name: 'Adjust again' })).toBeVisible()
+    const dims = await page.locator('.mu-item img').first().evaluate((i) => new Promise((r) => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.src = i.src }))
+    expect(dims).toEqual([200, 200]) // the square cut from the middle of the 300×200 picture
+  })
+
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path)

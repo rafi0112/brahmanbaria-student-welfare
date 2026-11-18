@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { api, sendPhoto, sendPhotoLink } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar } from './ui.jsx'
+import { useImageEditor } from './ImageEditor.jsx'
 
 const TYPES = ['image/jpeg', 'image/png']
 const MAX = 5 * 1024 * 1024
@@ -15,6 +16,7 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [link, setLink] = useState('')
+  const [edit, editor] = useImageEditor({ aspect: '1:1', maxSide: 1600 })
   const fromLink = async () => {
     const l = link.trim()
     if (!/^https:\/\/\S+$/.test(l)) { setErr(t('photo.e.link')); return }
@@ -24,10 +26,12 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
     finally { setBusy(false) }
   }
   const pick = async (e) => {
-    const f = e.target.files?.[0]
+    const chosen = e.target.files?.[0]
     e.target.value = ''
+    if (!chosen) return
+    if (!TYPES.includes(chosen.type)) { setErr(t('photo.e.type')); return }
+    const f = await edit(chosen) // see the photo first, crop it to a square, turn or brighten it
     if (!f) return
-    if (!TYPES.includes(f.type)) { setErr(t('photo.e.type')); return }
     if (f.size > MAX) { setErr(t('photo.e.size')); return }
     setBusy(true); setErr('')
     try { onDone(await sendPhoto(uploadPath, f), 'set') }
@@ -40,6 +44,7 @@ export default function PhotoPicker({ name, photo, uploadPath, deletePath, onDon
   }
   return (
     <div className="photo-pick">
+      {editor}
       <Avatar name={name} photo={photo} size={size} className="photo-pick-img" />
       <div className="photo-pick-actions">
         {/* a public link is the recommended way; a file from the device is the fallback */}

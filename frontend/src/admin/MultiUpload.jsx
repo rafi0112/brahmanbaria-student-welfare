@@ -4,6 +4,7 @@ import { INPUT_TYPES, MAX_ORIGINAL, checkFile, formatBytes } from '../lib/imageC
 import { optimizeImage } from '../lib/imageOptimize.js'
 import { storeOptimized, withRetry } from '../lib/mediaUpload.js'
 import { Modal, useErrText } from './kit.jsx'
+import { useImageEditor } from '../components/ImageEditor.jsx'
 
 const CONCURRENCY = 3
 const MAX_QUEUE = 100 // a usability and memory safeguard, not a size limit: more can be added after a batch is done
@@ -25,6 +26,7 @@ export default function MultiUpload({ profile = 'gallery', title, onStored, onCl
   const live = useRef(items)
   live.current = items
   const previews = useRef(new Map())
+  const [editPic, editor] = useImageEditor()
 
   const patch = useCallback((id, p) => setItems((list) => list.map((x) => (x.id === id ? { ...x, ...p } : x))), [])
   useEffect(() => { const m = previews.current; return () => m.forEach((u) => URL.revokeObjectURL(u)) }, [])
@@ -52,6 +54,16 @@ export default function MultiUpload({ profile = 'gallery', title, onStored, onCl
       cut ? pick(`একবারে সর্বোচ্চ ${n(MAX_QUEUE)}টি; বাকিগুলো এই ব্যাচ শেষ হলে যোগ করুন।`, `At most ${MAX_QUEUE} at a time; add the rest when this batch is done.`) : ''].filter(Boolean).join(' '))
   }
   const onPick = (e) => { const files = [...(e.target.files || [])]; e.target.value = ''; if (files.length) add(files) }
+  // see one chosen picture large and crop, turn or adjust it before the upload; the edited copy replaces it in the list
+  const adjust = async (it) => {
+    const f = await editPic(it.file)
+    if (!f || f === it.file) return
+    const old = previews.current.get(it.id)
+    if (old) URL.revokeObjectURL(old)
+    const url = URL.createObjectURL(f)
+    previews.current.set(it.id, url)
+    patch(it.id, { file: f, preview: url, edited: true, size: 0, width: 0, height: 0 })
+  }
   const remove = (id) => {
     const u = previews.current.get(id)
     if (u) { URL.revokeObjectURL(u); previews.current.delete(id) }
@@ -103,6 +115,7 @@ export default function MultiUpload({ profile = 'gallery', title, onStored, onCl
   return (
     <Modal title={title || pick('একসাথে অনেক ছবি আপলোড', 'Upload several pictures')} onClose={onClose} wide busy={running}>
       <div className="mu">
+        {editor}
         <input ref={input} type="file" multiple accept={INPUT_TYPES.join(',')} onChange={onPick} hidden />
         <div className="mu-bar row">
           <button type="button" className="btn btn-outline btn-sm" disabled={running} onClick={() => input.current?.click()}>+ {pick(items.length ? 'আরও ছবি যোগ করুন' : 'ছবি বাছুন', items.length ? 'Add more pictures' : 'Choose pictures')}</button>
@@ -123,7 +136,9 @@ export default function MultiUpload({ profile = 'gallery', title, onStored, onCl
             <ul className="mu-list">
               {items.map((it) => (
                 <li key={it.id} className={`mu-item is-${it.status}`}>
-                  {it.preview ? <img src={it.preview} alt="" loading="lazy" decoding="async" width="56" height="56" /> : <span className="mu-noimg" aria-hidden="true" />}
+                  {it.preview
+                    ? <button type="button" className="mu-thumb" disabled={it.status !== 'ready' || running} onClick={() => adjust(it)} aria-label={`${pick('ছবি দেখুন ও ঠিক করুন', 'Preview and adjust')}: ${it.file.name}`}><img src={it.preview} alt="" loading="lazy" decoding="async" width="56" height="56" /></button>
+                    : <span className="mu-noimg" aria-hidden="true" />}
                   <div className="mu-info">
                     <span className="mu-name" title={it.file.name}>{it.file.name}</span>
                     <small className="muted">{formatBytes(it.file.size)}{it.size ? ` → ${formatBytes(it.size)}${it.width ? ` · ${it.width}×${it.height}` : ''}` : ''}</small>
@@ -132,6 +147,7 @@ export default function MultiUpload({ profile = 'gallery', title, onStored, onCl
                       {it.status === 'done' && it.reused ? pick('আগে থেকেই সংরক্ষিত — আবার আপলোড হয়নি', 'Already stored — not uploaded again') : label[it.status]}{it.retrying ? pick(' (সার্ভার জাগছে, আবার চেষ্টা চলছে)', ' (server is waking up, retrying)') : ''}{it.error ? `: ${it.error}` : ''}
                     </small>
                   </div>
+                  {it.status === 'ready' && it.preview && <button type="button" className="btn btn-ghost btn-sm mu-edit" disabled={running} onClick={() => adjust(it)}>{it.edited ? pick('আবার ঠিক করুন', 'Adjust again') : pick('দেখুন ও ঠিক করুন', 'Preview & adjust')}</button>}
                   {!RUNNING.includes(it.status) && it.status !== 'done' && <button type="button" className="ad-iconbtn is-danger" disabled={running && it.status === 'ready'} onClick={() => remove(it.id)} aria-label={pick('বাদ দিন', 'Remove')}>✕</button>}
                 </li>
               ))}

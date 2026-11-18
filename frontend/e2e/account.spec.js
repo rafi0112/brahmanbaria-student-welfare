@@ -64,8 +64,18 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await dlg.getByRole('button', { name: 'Save' }).click()
   await expect(dlg.getByText('Saved.')).toBeVisible()
 
-  // photo: upload, it appears in the header button, then remove
+  // photo: the chosen picture opens in the editor first (square for a profile photo); turn it, use it, it is uploaded,
+  // appears in the header button, then remove
   await dlg.locator('input[type=file]').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: png(240, 160) })
+  const ed = page.getByRole('dialog', { name: 'Preview and adjust the picture' })
+  await expect(ed).toBeVisible()
+  await expect(ed.getByRole('button', { name: 'Square 1:1' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(ed.locator('.ie-frame')).toBeVisible()
+  const fr = await ed.locator('.ie-frame').boundingBox()
+  expect(Math.abs(fr.width - fr.height)).toBeLessThan(2) // a square frame
+  await ed.getByRole('button', { name: 'Turn right' }).click()
+  await ed.getByRole('button', { name: 'Use this picture' }).click()
+  await expect(ed).toBeHidden()
   await expect(dlg.getByRole('button', { name: 'Remove' })).toBeVisible()
   await expect(page.locator('.acct-btn img.avatar-img')).toBeVisible()
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dialog-desktop.png` })
@@ -75,12 +85,12 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
 
-  // mobile: the account button stays in the bar; the dialog fills the screen
+  // mobile: the bar keeps only the logo and the menu button; the account is in the menu; the dialog fills the screen
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
-  await page.getByRole('button', { name: 'Account menu' }).click()
+  await expect(page.getByRole('button', { name: 'Account menu' })).toBeHidden()
+  await page.getByRole('button', { name: 'Menu' }).click()
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/menu-mobile.png` })
-  await page.getByRole('menuitem', { name: 'My profile' }).click()
+  await page.locator('#drawer').getByRole('button', { name: 'My profile' }).click()
   await expect(dlg).toBeVisible()
   const box = await dlg.boundingBox()
   expect(Math.round(box.width)).toBe(390)
@@ -90,7 +100,8 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await page.keyboard.press('Escape')
 
   // sign out from the menu
-  await page.getByRole('button', { name: 'Account menu' }).click()
-  await page.getByRole('menuitem', { name: 'Log out' }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.locator('#drawer').getByRole('button', { name: 'Log out' }).click()
+  await page.setViewportSize({ width: 1280, height: 900 })
   await expect(page.getByRole('button', { name: 'Account menu' })).toHaveCount(0)
 })

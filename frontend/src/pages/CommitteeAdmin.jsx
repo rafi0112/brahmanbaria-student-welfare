@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, Badge, Data, Empty, Loading } from '../components/ui.jsx'
+import { useImageEditor } from '../components/ImageEditor.jsx'
 
 const MAX_BYTES = 5 * 1024 * 1024
 
@@ -58,6 +59,7 @@ function PhotoPicker({ value, onChange }) {
   const [link, setLink] = useState('')
   const [broken, setBroken] = useState(false)
   const input = useRef(null)
+  const [edit, editor] = useImageEditor({ aspect: '1:1', maxSide: 1600 })
   useEffect(() => () => local && URL.revokeObjectURL(local), [local])
 
   const send = async (form, preview) => {
@@ -68,11 +70,13 @@ function PhotoPicker({ value, onChange }) {
       onChange({ path: r.path, url: r.url })
     } catch (e) { setErr(explain(e)) } finally { setBusy(false) }
   }
-  const pick = (e) => {
-    const f = e.target.files?.[0]
+  const pick = async (e) => {
+    const chosen = e.target.files?.[0]
     e.target.value = ''
+    if (!chosen) return
+    if (!['image/jpeg', 'image/png'].includes(chosen.type)) { setErr(t('cm.e.file_type')); return }
+    const f = await edit(chosen) // see the photo first and crop, turn or adjust it
     if (!f) return
-    if (!['image/jpeg', 'image/png'].includes(f.type)) { setErr(t('cm.e.file_type')); return }
     if (f.size > MAX_BYTES) { setErr(t('cm.e.photo_too_big')); return }
     const form = new FormData()
     form.append('file', f)
@@ -88,6 +92,7 @@ function PhotoPicker({ value, onChange }) {
 
   return (
     <fieldset className="photo-picker">
+      {editor}
       <legend>{t('cm.photo')}</legend>
       <div className="photo-row">
         {shown && !broken

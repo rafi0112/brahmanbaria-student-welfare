@@ -11,6 +11,7 @@ import Icon from './icons.jsx'
 export { slugFrom } from '../lib/slug.js'
 import { useApp } from '../lib/app.jsx'
 import { Pagination } from '../components/ui.jsx'
+import { useImageEditor } from '../components/ImageEditor.jsx'
 
 /* ---------------------------------------------------------------- state helpers */
 
@@ -359,10 +360,11 @@ const ACCEPT = INPUT_TYPES
 
 // One picture: paste a public link (recommended) or choose a file (preview first, upload with progress).
 // onChange gets { path, url } once the server has stored the file, or null when it is removed.
-export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, profile = 'heritage' }) {
+export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, profile = 'heritage', aspect = 'original' }) {
   const { t } = useApp()
   const errText = useErrText()
   const input = useRef(null)
+  const [edit, editor] = useImageEditor({ aspect })
   const [local, setLocal] = useState('')
   const [progress, setProgress] = useState(null)
   const [err, setErr] = useState('')
@@ -385,16 +387,19 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, prof
       if (preview) setLocal('')
     } finally { setProgress(null) }
   }
-  const pick = (e) => {
-    const f = e.target.files?.[0]
+  const pick = async (e) => {
+    const chosen = e.target.files?.[0]
     e.target.value = ''
-    if (!f) return
-    const bad = checkFile(f)
+    if (!chosen) return
+    const bad = checkFile(chosen)
     if (bad) { setErr(errText({ code: bad })); return }
+    const f = await edit(chosen) // the person sees the picture first and may crop, turn or adjust it
+    if (!f) return
     send({ file: f }, URL.createObjectURL(f))
   }
   return (
     <fieldset className="photo-picker ad-image">
+      {editor}
       <legend>{label}</legend>
       <div className="photo-row">
         {shown && !broken
@@ -437,11 +442,14 @@ export function UploadAsLink({ onUrl, disabled }) {
   const [progress, setProgress] = useState(null)
   const [err, setErr] = useState('')
   const busy = progress !== null
+  const [edit, editor] = useImageEditor({ aspect: '1:1', maxSide: 1600 })
   const pick = async (e) => {
-    const f = e.target.files?.[0]
+    const chosen = e.target.files?.[0]
     e.target.value = ''
+    if (!chosen) return
+    if (!['image/jpeg', 'image/png'].includes(chosen.type)) { setErr(t('ad.e.file_type')); return } // person photos go through the server (other bucket)
+    const f = await edit(chosen) // preview, crop and adjust first; the result is small enough even from a large original
     if (!f) return
-    if (!['image/jpeg', 'image/png'].includes(f.type)) { setErr(t('ad.e.file_type')); return } // person photos go through the server (other bucket)
     if (f.size > 5 * 1024 * 1024) { setErr(t('ad.e.photo_too_big')); return }
     setErr(''); setProgress(0)
     try { const r = await uploadMedia({ file: f, onProgress: setProgress }); await onUrl(r.url) }
@@ -450,6 +458,7 @@ export function UploadAsLink({ onUrl, disabled }) {
   }
   return (
     <span className="upload-as-link">
+      {editor}
       <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
       <button type="button" className="btn btn-outline btn-sm" disabled={busy || disabled} onClick={() => input.current?.click()}><Icon name="upload" size={15} /> {busy ? `${t('ad.uploading')} ${progress}%` : t('photo.upload')}</button>
       {err && <small className="err" role="alert">{err}</small>}

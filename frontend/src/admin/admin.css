@@ -733,3 +733,7 @@
 .bi-table { max-height: 320px; overflow: auto; border: 1px solid var(--a-line); border-radius: var(--a-r); }
 .bi-table table { width: 100%; border-collapse: collapse; font-size: .86rem; } .bi-table th, .bi-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--a-line); vertical-align: top; }
 .bi-table th { position: sticky; top: 0; background: var(--a-surface); }
+
+/* multi-upload: a chosen picture opens in the editor from its thumbnail or the "Preview & adjust" button */
+.mu-thumb { padding: 0; border: 0; background: none; border-radius: 8px; cursor: zoom-in; line-height: 0; } .mu-thumb:disabled { cursor: default; }
+.mu-thumb img { border-radius: 8px; object-fit: cover; } .mu-edit { white-space: nowrap; }
