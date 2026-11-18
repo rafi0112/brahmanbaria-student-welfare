@@ -18,7 +18,7 @@ export default function AdminManual() {
     ['start', T('শুরু করার আগে', 'Before you start')], ['dashboard', T('ড্যাশবোর্ড', 'Dashboard')],
     ['requests', T('সদস্যপদের আবেদন', 'Membership requests')], ['directory', T('সদস্য ডিরেক্টরি', 'Member directory')],
     ['alumni', T('অ্যালামনাই', 'Alumni')], ['photos', T('মানুষের ছবি যোগ করা', 'Adding people’s photos')],
-    ['site-images', T('সাইটের ছবি ও হোম স্লাইড', 'Site pictures and home slides')], ['gallery', T('গ্যালারি', 'Gallery')],
+    ['site-images', T('সাইটের ছবি ও হোম স্লাইড', 'Site pictures and home slides')], ['site-texts', T('ওয়েবসাইটের লেখা', 'Website texts')], ['gallery', T('গ্যালারি', 'Gallery')],
     ['events', T('ইভেন্ট', 'Events')], ['blog', T('ব্লগ ও ঐতিহ্য', 'Blog and heritage')],
     ['committee', T('কার্যনির্বাহী কমিটি', 'Executive committee')], ['contact', T('যোগাযোগ বার্তা', 'Contact messages')],
     ['roles', T('অ্যাডমিন ও ভূমিকা', 'Admins and roles')], ['faq', T('প্রশ্নোত্তর ও রেফারেন্স তথ্য', 'FAQ and reference data')],
@@ -88,6 +88,15 @@ export default function AdminManual() {
               <li>{T('ইমেইল যোগ করে আমন্ত্রণ পাঠান: মানুষটি ইমেইলে একটি লিংক পাবেন, যা দিয়ে নিজের পাসওয়ার্ড ঠিক করে অ্যাকাউন্ট চালু করতে পারবেন।', 'Add an email and send an invitation: the person gets a link to set their own password and activate the account.')}</li>
               <li>{T('Export: তালিকাটি এক্সেল/CSV ফাইল হিসেবে নামিয়ে নিন।', 'Export: download the list as an Excel/CSV file.')}</li>
             </ul>
+            <h3>{T('একসাথে অনেক রেকর্ড যোগ করা (CSV ফাইল)', 'Adding many records at once (CSV file)')}</h3>
+            <ol>
+              <li>{T('“ডিরেক্টরি রেকর্ড” ট্যাবে “ফাইল থেকে একসাথে যোগ” চাপুন, তারপর “নমুনা ফাইল (CSV)” নামিয়ে নিন।', 'On the “Directory records” tab press “Import from a file”, then download the “Template (CSV)”.')}</li>
+              <li>{T('নমুনা ফাইলটি Excel বা Google Sheets-এ খুলে প্রতি সারিতে একজনের তথ্য লিখুন। নাম, ব্যাচ ও বিভাগ আবশ্যক; বিভাগের নাম সাইটের তালিকার মতো হতে হবে। কলামের নাম বাংলা বা ইংরেজি হতে পারে (নাম/name, ব্যাচ/batch, ফোন/phone …)।', 'Open the template in Excel or Google Sheets and write one person per row. Name, batch and department are required; the department must be named as in the site’s list. Column names may be Bangla or English (নাম/name, ব্যাচ/batch, ফোন/phone …).')}</li>
+              <li>{T('ফাইলটি “CSV UTF-8” হিসেবে সংরক্ষণ করুন (Excel: File › Save As)। Excel-এর .xlsx ফাইল সরাসরি চলবে না।', 'Save the file as “CSV UTF-8” (Excel: File › Save As). An Excel .xlsx file does not work directly.')}</li>
+              <li>{T('“CSV ফাইল বাছুন” দিয়ে ফাইলটি দিন। আগে যাচাই হয়, কিছু সংরক্ষণ হয় না: কতজন প্রস্তুত, কতজন আগে থেকেই আছেন, আর কোন সারিতে কী ভুল, সব দেখাবে।', 'Choose the file with “Choose a CSV file”. It is checked first and nothing is saved: you see how many are ready, how many are already in the directory, and what is wrong in which row.')}</li>
+              <li>{T('“… জন যোগ করুন” চাপলে শুধু প্রস্তুত সারিগুলো যোগ হয়। ভুল সারিগুলো ফাইলে ঠিক করে আবার একই ফাইল দিন; আগে যোগ হওয়া মানুষ আবার যোগ হবেন না।', 'Press “Add …” and only the ready rows are added. Fix the wrong rows in the file and give the same file again; people already added are not added twice.')}</li>
+            </ol>
+            <p className="man-note">{T('একই ফোন নম্বর, অথবা একই নাম-ব্যাচ-বিভাগের কেউ আগে থেকে থাকলে সেই সারি বাদ যায়। একবারে সর্বোচ্চ ২০০০ সারি।', 'A row is skipped when someone with the same phone, or the same name, batch and department, is already there. At most 2000 rows at a time.')}</p>
           </section>
 
           <section id="m-alumni">
@@ -133,9 +142,28 @@ export default function AdminManual() {
             <h3>{T('প্রতিটি পাতার উপরের ছবি', 'The picture at the top of each page')}</h3>
             <p>{T('শিক্ষার্থী, অ্যালামনাই, কমিটি, ইভেন্ট, গ্যালারি, ঐতিহ্য, ব্লগ ইত্যাদি পাতার শুরুতে যে ছবি থাকে তা এখান থেকে বদলানো যায়। যে পাতার ছবি বদলাতে চান শুধু সেটিতে ছবি দিন; খালি রাখলে ডিফল্ট ছবি থাকবে।',
               'The picture at the start of the Students, Alumni, Committee, Events, Gallery, Heritage, Blog and other pages can be changed here. Set a picture only for the pages you want to change; empty means the built-in picture stays.')}</p>
+            <h3>{T('পাতার ভেতরের ছবি', 'Pictures inside the pages')}</h3>
+            <p>{T('“আমাদের সম্পর্কে” পাতার লেখার পাশের দুটি ছবি, এবং হোম পেজের “ঘুরে দেখুন” অংশের ছোট ছবি ও “যারা গড়ছে আগামী” অংশের ছবি “পাতার ভেতরের ছবি” অংশ থেকে বদলান। খালি রাখলে সাইটের নিজের ছবি থাকে।',
+              'The two pictures beside the text of the About page, the small picture in the Home “Explore” section and the “The people shaping tomorrow” picture are changed under “Pictures inside the pages”. Empty means the site’s own picture stays.')}</p>
             <h3>{T('গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া”', 'Gallery featured picture and “Explore Brahmanbaria”')}</h3>
             <p>{T('গ্যালারি পাতার শুরুতে বড় করে দেখানোর জন্য একটি ফিচার্ড ছবি বেছে নিতে পারেন। হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” অংশের ছবিও এখান থেকে বদলায়।',
               'Choose a featured picture to show large at the start of the Gallery page. The “Explore Brahmanbaria” picture on the home page is changed here too.')}</p>
+          </section>
+
+          <section id="m-site-texts">
+            <h2>{T('ওয়েবসাইটের লেখা', 'Website texts')} <Go to="/admin/site-texts">{open}</Go></h2>
+            <p>{T('সাইটের প্রায় সব লেখা (শিরোনাম, বর্ণনা, বোতাম, মেনু, ফুটার, বার্তা) কোড ছাড়াই বাংলা ও ইংরেজিতে বদলানো যায়।', 'Almost every text of the site (headings, descriptions, buttons, menu, footer, messages) can be changed in Bangla and English without code.')}</p>
+            <ol>
+              <li>{T('উপরের বোতাম থেকে সাইটের অংশ বাছুন (যেমন “হোম পেজ”, “আমাদের সম্পর্কে”), অথবা খোঁজার ঘরে লেখাটির কয়েকটি শব্দ লিখুন।', 'Pick a part of the site from the buttons (such as “Home page”, “About”), or type a few words of the text into the search box.')}</li>
+              <li>{T('প্রতিটি কার্ডের উপরে লেখা থাকে লেখাটি কী (শিরোনাম, বোতাম, বার্তা…) এবং সাইটের কোথায় দেখায়। “পাতাটি দেখুন” চাপলে সেই পাতা খোলে।', 'Each card says what the text is (a heading, a button, a message…) and where on the site it appears. “See the page” opens that page.')}</li>
+              <li>{T('ঘরে এখনকার লেখাই থাকে; সেখানেই বাংলা ও ইংরেজি লেখা বদলান।', 'The boxes hold the current wording; change the Bangla and English right there.')}</li>
+              <li>{T('নিচের “সংরক্ষণ করুন” চাপুন। সাইটে সাথে সাথে নতুন লেখা দেখা যাবে।', 'Press “Save” at the bottom. The site shows the new wording at once.')}</li>
+            </ol>
+            <ul>
+              <li>{T('ভুল হলে কার্ডের “আগের লেখায় ফেরান” চেপে সংরক্ষণ করুন, আসল লেখা ফিরে আসবে। “শুধু বদলানো লেখা” টিক দিলে যা যা বদলেছেন শুধু সেগুলো দেখায়।', 'If you make a mistake, press “Use the original” on the card and save: the original wording comes back. Tick “Only changed texts” to see just what you changed.')}</li>
+              <li>{T('কিছু লেখায় {n} বা {name}-এর মতো চিহ্ন থাকে; সেখানে সাইট নিজে সংখ্যা বা নাম বসায়। এগুলো মুছবেন না।', 'Some texts contain marks such as {n} or {name}; the site puts a number or a name there. Do not remove them.')}</li>
+              <li>{T('ইভেন্ট, ব্লগ, গ্যালারির ক্যাপশন, কমিটির সদস্য, প্রশ্নোত্তর ও ঐতিহ্যের লেখা এখানে নয়, তাদের নিজের পাতা থেকে বদলান।', 'Events, blog articles, gallery captions, committee members, FAQ and heritage texts are not here; change them on their own pages.')}</li>
+            </ul>
           </section>
 
           <section id="m-gallery">
@@ -144,8 +172,15 @@ export default function AdminManual() {
               <li>{T('“ছবি আপলোড” চেপে একসাথে অনেক ছবি বেছে নিন (আরও ছবি পরে যোগ করা যায়, অপছন্দের ছবি ✕ দিয়ে বাদ দেওয়া যায়)। প্রতিটি ছবির প্রিভিউ, মূল ও ছোট করা আকার এবং অগ্রগতি দেখা যায়; একই ছবি দুবার বাছলে একবারই সংরক্ষণ হয়। সবশেষে আপলোড চাপুন, প্রতিটি ছবি গ্যালারিতে আলাদা এন্ট্রি হয়ে যাবে।', 'Press “Upload pictures” and choose many at once (you can add more later and take a picture out with ✕). Each picture shows a preview, its original and optimized size and its progress; the same picture chosen twice is stored once. Then press Upload: every picture becomes its own gallery entry.')}</li>
               <li>{T('ক্যাপশন (বাংলা ও ইংরেজি), ছবির বর্ণনা (alt), কৃতজ্ঞতা/উৎস এবং চাইলে অ্যালবাম বেছে দিন।', 'Give captions (Bangla and English), a description (alt), credit/source and, if you want, an album.')}</li>
               <li>{T('প্রকাশ করলে ছবিটি গ্যালারি পাতায় দেখা যাবে; লুকান করলে সরে যাবে কিন্তু মুছবে না।', 'Publishing shows the picture on the Gallery page; hiding removes it from view without deleting it.')}</li>
-              <li>{T('অ্যালবাম তৈরি করে ছবিগুলো অনুষ্ঠান অনুযায়ী ভাগ করা যায়; টেনে বা তীর দিয়ে ক্রম বদলানো যায়।', 'Create albums to group pictures by occasion; change the order by dragging or with the arrows.')}</li>
+              <li>{T('অ্যালবাম তৈরি করে ছবিগুলো অনুষ্ঠান অনুযায়ী ভাগ করা যায়।', 'Create albums to group pictures by occasion.')}</li>
+              <li>{T('ক্রম বদলাতে একটি ছবি মাউস দিয়ে টেনে অন্য ছবির জায়গায় ছেড়ে দিন (ফোনে ↑ ↓ বোতাম ব্যবহার করুন)। নতুন ক্রম সাথে সাথে সংরক্ষণ হয়। এটি “ক্রম অনুযায়ী” সাজানো থাকলে এবং কোনো খোঁজ/ফিল্টার না থাকলে কাজ করে।', 'To change the order, drag a picture with the mouse and drop it on the place of another (on a phone use the ↑ ↓ buttons). The new order is saved at once. This works while the list is sorted “by order” with no search or filter.')}</li>
             </ol>
+            <h3>{T('বছর অনুযায়ী সাজানো', 'Grouped by year')}</h3>
+            <p>{T('সাইটের গ্যালারি পাতায় ছবিগুলো বছর অনুযায়ী ভাগ হয়ে দেখায়, আর দর্শক বছর বেছে দেখতে পারেন। ছবির বছর আসে তার “তারিখ” থেকে; তারিখ না থাকলে যে বছর প্রকাশ হয়েছে সেটি ধরা হয়।', 'On the site’s Gallery page pictures appear grouped by year, and visitors can pick a year. A picture’s year comes from its “date”; without a date, the year it was published is used.')}</p>
+            <ul>
+              <li>{T('আপলোডের সময়: “এই ছবিগুলোর তারিখ” ঘরে তারিখ দিলে একসাথে আপলোড করা সব ছবি সেই বছরে যায়।', 'While uploading: give a date in “Date of these pictures” and every picture of that upload goes under its year.')}</li>
+              <li>{T('পরে: ছবিগুলো টিক দিয়ে বাছুন, নিচের তারিখের ঘরে তারিখ দিয়ে “তারিখ দিন” চাপুন। একটি ছবির তারিখ তার সম্পাদনা ফর্ম থেকেও বদলানো যায়।', 'Later: tick the pictures, give a date in the date box of the bar that appears and press “Set the date”. One picture’s date can also be changed in its edit form.')}</li>
+            </ul>
             <p className="man-note">{T('অন্যের তোলা ছবি দিলে অনুমতি আছে কিনা নিশ্চিত হোন এবং কৃতজ্ঞতার ঘরে নাম লিখুন।', 'If a picture was taken by someone else, make sure you have permission and write their name in the credit field.')}</p>
           </section>
 
@@ -175,6 +210,8 @@ export default function AdminManual() {
               <li>{T('সদস্য যোগ করুন: নাম, পদবি, ছবি ও ক্রম। সভাপতি ও সাধারণ সম্পাদক সবার আগে দেখান।', 'Add members: name, post, photo and order. Show the president and general secretary first.')}</li>
               <li>{T('কমিটি সক্রিয় করলে সেটিই সাইটের কমিটি পাতায় দেখাবে; আগের কমিটি সংরক্ষিত থাকে।', 'Activating a committee makes it the one on the site’s Committee page; earlier committees are kept.')}</li>
             </ol>
+            <p>{T('সাইটের কমিটি পাতায় কার্ডে পরিচিতির (Bio) প্রথম কয়েক লাইন দেখায়। দর্শক কোনো সদস্যের কার্ডে ক্লিক করলে একটি পপ-আপে বড় ছবি (ক্লিক করে আরও বড় করা যায়), নাম, পদবি, গ্রুপ, কমিটির নাম ও মেয়াদ এবং পুরো পরিচিতি দেখায়। তাই প্রতিটি সদস্যের পরিচিতি লিখে রাখা ভালো।',
+              'On the site’s Committee page the cards show the first lines of the introduction (Bio). When a visitor clicks a member’s card, a pop-up shows a large photo (a click enlarges it further), the name, post, group, the committee and its term, and the whole introduction. So it is worth writing an introduction for every member.')}</p>
           </section>
 
           <section id="m-contact">

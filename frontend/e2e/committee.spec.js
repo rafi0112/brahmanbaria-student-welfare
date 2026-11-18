@@ -62,6 +62,22 @@ test('committee: create, describe, add seats without accounts, edit, reorder, pu
   await expect(page.locator('.cm-group').nth(1)).toContainText('অধ্যাপক মোহাম্মদ শফিকুল ইসলাম')
   await expect(page.locator('.cm-group').nth(2)).toContainText('মোঃ সালাহ্ উদ্দিন')
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/committee-public.png`, fullPage: true })
+
+  // a click on any member (a card, a lead card or an advisor row) opens their details in the pop-up, over the list
+  for (const who of ['সুমন সরকার', 'অধ্যাপক মোহাম্মদ শফিকুল ইসলাম']) {
+    await page.locator('.cm-group').getByRole('link', { name: who }).click()
+    const dlg = page.getByRole('dialog', { name: who })
+    await expect(dlg).toBeVisible()
+    await expect(dlg.locator('h1')).toContainText(who)
+    await expect(dlg).toContainText('কার্যনির্বাহী কমিটি ২০২৬-২০২৭')
+    await expect(page).toHaveURL(/\/committee\?profile=/)
+    await page.keyboard.press('Escape')
+    await expect(dlg).toBeHidden()
+    await expect(page).toHaveURL(/\/committee$/)
+  }
+  // the whole card is the click target, not only the name
+  await page.locator('.cm-group').nth(2).locator('.advisor-row').first().click({ position: { x: 8, y: 8 } })
+  await expect(page.getByRole('dialog')).toContainText('মোঃ সালাহ্ উদ্দিন')
 })
 
 test('register shows the optional profile photo link field', async ({ page }) => {

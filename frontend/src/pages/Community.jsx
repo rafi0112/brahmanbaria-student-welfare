@@ -6,6 +6,7 @@ import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } 
 import Icon from '../components/Icon.jsx'
 import ProfileDialog from '../components/ProfileDialog.jsx'
 import SpAvatar from '../components/SpAvatar.jsx'
+import PhotoViewer from '../components/PhotoViewer.jsx'
 import { useProfileParam } from '../lib/profileParam.js'
 
 /* ---------------- Alumni ---------------- */
@@ -84,7 +85,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="bleed" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={t('alumni.thoseWhoLeadThe')}>
+      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="stack" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={t('alumni.thoseWhoLeadThe')}>
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? t('alumni.nameProfessionBloodGroup') : t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -142,6 +143,10 @@ export function Alumni() {
 export function Committee() {
   const { t } = useApp()
   const res = useApi('/executive-committee')
+  const [profile, openProfile, closeProfile] = useProfileParam()
+  // a click on a member opens their details in the pop-up (a click with Ctrl/⌘ still opens the link as usual)
+  const go = (id) => (e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); openProfile(id) } }
+  const name = (m) => <a className="cm-open" href={`?profile=${m.id}`} onClick={go(m.id)}>{m.name}</a>
   return (
     <>
       <PageHero page="committee" kicker={t('committee.kicker')} title={t('committee.title')} variant="frame" lede={t('committee.lede')} src="/images/bswa/mosque.webp" />
@@ -169,7 +174,7 @@ export function Committee() {
                             <span className="cm-ring"><ExecPhoto m={m} size={112} /></span>
                             <div>
                               <p className="cm-role">{m.designation}</p>
-                              <h3>{m.name}{m.verified && <VerifiedMark size={17} />}</h3>
+                              <h3>{name(m)}{m.verified && <VerifiedMark size={17} />}</h3>
                               {m.bio && <p className="exec-bio">{m.bio}</p>}
                             </div>
                           </article>
@@ -181,7 +186,7 @@ export function Committee() {
                         {rest.map((m) => (
                           <article key={m.id} className="member-card">
                             <span className="cm-ring"><ExecPhoto m={m} size={88} /></span>
-                            <h3>{m.name}{m.verified && <VerifiedMark size={15} />}</h3>
+                            <h3>{name(m)}{m.verified && <VerifiedMark size={15} />}</h3>
                             <p className="cm-chip">{m.designation}</p>
                             {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
                           </article>
@@ -193,7 +198,7 @@ export function Committee() {
                           <article key={m.id} className="advisor-row">
                             <ExecPhoto m={m} size={52} />
                             <div>
-                              <h3>{m.name}{m.verified && <VerifiedMark size={14} />}</h3>
+                              <h3>{name(m)}{m.verified && <VerifiedMark size={14} />}</h3>
                               <p className="role">{m.designation}</p>
                               {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
                             </div>
@@ -204,6 +209,11 @@ export function Committee() {
                   </section>
                 )
               })}
+              {profile && (() => {
+                const m = d.members.find((x) => String(x.id) === profile)
+                const group = groupSeats(d.members).find(([, seats]) => seats.includes(m))?.[0]
+                return m ? <ProfileDialog label={m.name} onClose={closeProfile}><CommitteeProfile m={m} group={group} committee={d.committee} /></ProfileDialog> : null
+              })()}
             </>
           )}
         </Data>
@@ -228,6 +238,58 @@ function ExecPhoto({ m, size = 96 }) {
   let h = 0
   for (const c of m.name || '?') h = (h * 31 + c.charCodeAt(0)) % 997
   return <span className={`cm-mono tint-${['peach', 'teal', 'orange', 'sand'][h % 4]}`} style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden="true">{firstLetter(m.name)}</span>
+}
+
+// One member's details in the pop-up: the photo (a click enlarges it), name, post, group, the committee and its term,
+// and the whole introduction (the cards show only its first lines).
+function SeatPhoto({ m }) {
+  const { pick } = useApp()
+  const [open, setOpen] = useState(false)
+  const [bad, setBad] = useState(false)
+  if (!m.photoUrl || bad) return <span className="sp-avatar" aria-hidden="true">{firstLetter(m.name)}</span>
+  return (
+    <>
+      <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${pick('ছবি বড় করে দেখুন', 'View the photo larger')}: ${m.name}`}>
+        <img src={m.photoUrl} alt="" onError={() => setBad(true)} /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
+      </button>
+      {open && <PhotoViewer src={m.photoUrl} alt={m.name} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+function CommitteeProfile({ m, group, committee }) {
+  const { t, pick } = useApp()
+  const term = [committee.term, committee.startsOn && `${committee.startsOn} → ${committee.endsOn || '…'}`].filter(Boolean).join(' · ')
+  return (
+    <article className="sprofile is-modal">
+      <div className="pm-cover" aria-hidden="true" />
+      <div className="sp-head">
+        <SeatPhoto m={m} />
+        <div className="sp-id">
+          <h1>{m.name}{m.verified && <VerifiedMark size={18} />}</h1>
+          <ul className="sp-chips">
+            {m.designation && <li>{m.designation}</li>}
+            {group && <li>{t(`committee.group.${group}`)}</li>}
+          </ul>
+        </div>
+      </div>
+      <div className="sp-body">
+        <div className="sp-main">
+          <section className="sp-sec">
+            <h2>{pick('পরিচিতি', 'About')}</h2>
+            {m.bio ? <p className="cm-bio-full">{m.bio}</p> : <p className="muted">{pick('এখনো কোনো পরিচিতি যোগ করা হয়নি।', 'No introduction has been added yet.')}</p>}
+          </section>
+          <section className="sp-sec">
+            <dl className="sp-facts">
+              <div><dt>{pick('কমিটি', 'Committee')}</dt><dd>{committee.name}</dd></div>
+              {term && <div><dt>{pick('মেয়াদ', 'Term')}</dt><dd>{term}</dd></div>}
+              {m.verified && <div><dt>{pick('সদস্যপদ', 'Membership')}</dt><dd>{t('verified.mark')}</dd></div>}
+            </dl>
+          </section>
+        </div>
+      </div>
+    </article>
+  )
 }
 
 // Seats are shown in three groups by their designation; the order inside each group is the admin's order.

@@ -1736,3 +1736,43 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
 /* small skeletons: the list counter in admin toolbars, the upazila list on Home */
 .tb-sk { display: inline-block; width: 140px; vertical-align: middle; }
 .ex-sk { height: 38px; width: 100%; border-radius: 999px; }
+
+/* ---------- modern page tops for Alumni (stack) and Events (glass) ---------- */
+/* stack (Alumni): a straight, rounded photo on two offset colour layers, a dotted grid and a glass note over its corner */
+.phero-v-stack .phero-media, .phero-v-glass .phero-media { -webkit-mask: none; mask: none; z-index: 1; }
+.phero-v-stack .phero::after, .phero-v-glass .phero::after { display: none; }
+.phero-v-stack .phero-media { border-radius: 26px; margin: 10px 34px 34px 0;
+  box-shadow: 16px 16px 0 0 color-mix(in srgb, var(--teal) 34%, var(--paper)), 32px 32px 0 0 color-mix(in srgb, var(--peach) 75%, var(--paper)), 0 40px 60px -30px rgba(0, 0, 0, .4); }
+.phero-v-stack .phero-deco-b { display: block; z-index: 0; width: clamp(120px, 11vw, 170px); height: clamp(90px, 8vw, 130px); left: calc(52% - 46px); top: -6px; mix-blend-mode: normal;
+  background: radial-gradient(color-mix(in srgb, var(--accent) 60%, transparent) 1.6px, transparent 2px) 0 0 / 14px 14px repeat; }
+.phero-v-stack .phero-script { top: auto; right: auto; left: calc(52% - 8px); bottom: 58px; max-width: 19ch; text-align: left; color: var(--ink); text-shadow: none;
+  padding: 12px 16px; border-radius: 16px; border: 1px solid color-mix(in srgb, #fff 55%, transparent); border-left: 4px solid var(--accent);
+  background: color-mix(in srgb, var(--card) 80%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 18px 40px -20px rgba(0, 0, 0, .45); }
+
+/* glass (Events): a deeply rounded photo with a dark fade at the foot, a thin accent ring, a soft glow and the line written on the photo */
+.phero-v-glass .phero-media { border-radius: 32px; margin: 12px 12px 12px 0; outline: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 10px;
+  box-shadow: 0 40px 70px -35px rgba(0, 0, 0, .5); }
+.phero-v-glass .phero-media::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, transparent 42%, rgba(8, 28, 22, .66)); }
+.phero-v-glass .phero-deco-a { display: block; width: clamp(90px, 8vw, 130px); aspect-ratio: 1; right: -22px; top: -26px; border-radius: 50%; mix-blend-mode: normal;
+  border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); background: none; }
+.phero-v-glass .phero-deco-b { display: block; z-index: 0; width: clamp(180px, 18vw, 280px); aspect-ratio: 1; left: calc(52% - 90px); bottom: -70px; border-radius: 50%; mix-blend-mode: normal;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--peach) 85%, transparent), transparent); filter: blur(6px); }
+.phero-v-glass .phero-script { top: auto; right: auto; left: calc(52% + 58px); bottom: 42px; max-width: 16ch; text-align: left; font-size: clamp(1.25rem, 2vw, 1.8rem); }
+.phero-v-glass .phero-script::before { content: ''; display: block; width: 38px; height: 3px; margin-bottom: 10px; border-radius: 3px; background: var(--accent); }
+html[lang='bn'] .phero-v-glass .phero-script { font-size: 1.15rem; }
+html[data-theme='dark'] .phero-v-stack .phero-script { color: var(--ink); }
+@media (max-width: 760px) {
+  .phero-v-stack .phero-media { border-radius: 20px; margin: 0 16px 16px 0; box-shadow: 8px 8px 0 0 color-mix(in srgb, var(--teal) 34%, var(--paper)), 16px 16px 0 0 color-mix(in srgb, var(--peach) 75%, var(--paper)); }
+  .phero-v-stack .phero-deco-b { display: none; }
+  .phero-v-stack .phero-script { display: block; left: 12px; bottom: 30px; font-size: .95rem; padding: 9px 12px; }
+  .phero-v-glass .phero-media { border-radius: 24px; margin: 0; outline: 0; box-shadow: 0 24px 40px -26px rgba(0, 0, 0, .5); }
+  .phero-v-glass .phero-deco-a, .phero-v-glass .phero-deco-b { display: none; }
+  .phero-v-glass .phero-script { display: block; left: 24px; bottom: 26px; font-size: 1.1rem; }
+}
+
+/* Committee: the whole card opens the member's details; the name is the link */
+.cm-lead-card, .member-card, .advisor-row { position: relative; cursor: pointer; }
+.cm-open { color: inherit; text-decoration: none; } .cm-open::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; }
+.cm-open:hover { text-decoration: underline; text-underline-offset: 3px; } .cm-open:focus-visible { outline: none; } .cm-open:focus-visible::after { outline: 3px solid var(--accent); outline-offset: 2px; }
+.member-card:hover, .advisor-row:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.cm-bio-full { margin: 0; white-space: pre-line; line-height: 1.7; color: var(--ink-2); }

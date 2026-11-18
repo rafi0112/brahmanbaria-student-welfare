@@ -45,6 +45,17 @@ test.describe('in English', () => {
     expect(lines, 'one line').toBe(1)
   })
 
+  test('Alumni and Events have their own modern page tops (not the Students one)', async ({ page }) => {
+    for (const [path, variant] of [['/alumni', 'stack'], ['/events', 'glass']]) {
+      await page.goto(path)
+      await expect(page.locator(`.phero-wrap.phero-v-${variant}`)).toBeVisible()
+      await expect(page.locator('.phero-v-bleed')).toHaveCount(0)
+      await expect(page.locator('.phero-script')).toBeVisible()
+    }
+    await page.goto('/students')
+    await expect(page.locator('.phero-v-bleed')).toBeVisible()
+  })
+
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path)
