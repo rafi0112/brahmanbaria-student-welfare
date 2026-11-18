@@ -1,0 +1,145 @@
+// Plain words for the "Website texts" page: for each text, where on the site it appears and what kind of text it is
+// (a heading, a button, a message…), so an admin never has to read the code names (such as "nav.breadcrumb").
+// describe(key) → { where: [bn, en], what: [bn, en], to: '/page' | null, hidden: bool }
+
+// part of the site, by the first part of the name (more specific names first)
+const PLACES = [
+  [/^hero\./, 'হোম পেজ › সবার উপরের বড় ছবির অংশ', 'Home page › the large picture at the top', '/'],
+  [/^explore\./, 'হোম পেজ › উপজেলার মানচিত্রের অংশ', 'Home page › the upazila map section', '/'],
+  [/^stat\./, 'হোম ও “আমাদের সম্পর্কে” › সংখ্যার অংশ', 'Home and About › the numbers section', '/'],
+  [/^community\./, 'হোম পেজ › “যারা গড়ছে আগামী” অংশ', 'Home page › “The people shaping tomorrow”', '/'],
+  [/^stories\./, 'হোম পেজ › লেখা (ব্লগ) অংশ', 'Home page › articles section', '/'],
+  [/^(quick|collage|featured)\./, 'হোম পেজ › কার্ডের অংশ', 'Home page › cards', '/'],
+  [/^evc\./, 'হোম পেজ › ইভেন্টের স্লাইডার', 'Home page › events slider', '/'],
+  [/^fb\./, 'ফেসবুক পেজের বোতাম (হোম ও ফুটার)', 'Facebook page button (Home and footer)', '/'],
+  [/^home\./, 'হোম পেজ', 'Home page', '/'],
+  [/^nav\./, 'সবার উপরের মেনু', 'Top menu', '/'],
+  [/^footer\./, 'প্রতিটি পাতার নিচের অংশ (ফুটার)', 'Bottom of every page (footer)', '/'],
+  [/^brand(Sub|Full)?$/, 'সাইটের নাম (লোগোর পাশে ও ব্রাউজারের ট্যাবে)', 'Site name (beside the logo and in the browser tab)', '/'],
+  [/^(theme|lang)(\.|$)/, 'উপরের মেনু › থিম ও ভাষার বোতাম', 'Top menu › theme and language buttons', '/'],
+  [/^about\./, '“আমাদের সম্পর্কে” পাতা', 'About page', '/about'],
+  [/^students\./, 'শিক্ষার্থী পাতা ও প্রোফাইল', 'Students page and profiles', '/students'],
+  [/^alumni\./, 'অ্যালামনাই পাতা ও প্রোফাইল', 'Alumni page and profiles', '/alumni'],
+  [/^committee\./, 'কমিটি পাতা', 'Committee page', '/committee'],
+  [/^events\./, 'ইভেন্ট পাতা', 'Events page', '/events'],
+  [/^gallery\./, 'গ্যালারি পাতা', 'Gallery page', '/gallery'],
+  [/^(heritage|place|cat)\./, 'ঐতিহ্য পাতা', 'Heritage page', '/heritage'],
+  [/^dir\./, 'উপজেলা ডিরেক্টরি পাতা', 'Upazila directory page', '/directory'],
+  [/^blog\./, 'ব্লগ পাতা', 'Blog page', '/blog'],
+  [/^(help|faq|contact)\./, 'যোগাযোগ ও প্রশ্নোত্তর পাতা', 'Contact and FAQ page', '/help'],
+  [/^pw\./, 'পাসওয়ার্ড দেওয়ার ঘর (নিবন্ধন ও পাসওয়ার্ড বদল)', 'Password box (registration and password change)', '/register'],
+  [/^auth\./, 'লগইন ও নিবন্ধন পাতা', 'Sign-in and registration pages', '/login'],
+  [/^join\./, '“সদস্য হোন” অংশ', '“Join” section', '/membership'],
+  [/^member\./, 'সদস্যপদ পাতা', 'Membership page', '/membership'],
+  [/^verified\./, 'যাচাইকৃত সদস্যের চিহ্ন', 'Verified member mark', '/students'],
+  [/^photo\./, 'প্রোফাইল ছবি বদলানো', 'Changing a profile photo', null],
+  [/^(dash|acct)\./, 'সদস্যের নিজের পাতা (লগইনের পরে)', 'A member’s own page (after signing in)', null],
+  [/^state\./, 'সব পাতা › লোড হওয়া বা সমস্যার বার্তা', 'Every page › loading and problem messages', null],
+  [/^page\./, 'সব পাতা › পাতা নম্বরের বোতাম', 'Every page › page number buttons', null],
+  [/^nf\./, '“পাতা পাওয়া যায়নি” পাতা', '“Page not found” page', null],
+  [/^common\./, 'অনেক পাতায় ব্যবহৃত লেখা', 'Used on many pages', null],
+]
+
+// what kind of text it is, by the whole name, for groups whose texts are all of one kind
+const BY_GROUP = [
+  [/^nav\./, 'মেনুর একটি লিংক', 'A link in the menu'],
+  [/^footer\.(discover|links|resources|touch|upazilas)$/, 'ফুটারের একটি কলামের শিরোনাম', 'Heading of a footer column'],
+  [/^footer\.(about|members|contact|privacy|terms|explore|send)$/, 'ফুটারের একটি লিংক', 'A link in the footer'],
+  [/^cat\./, 'ঐতিহ্যের ধরন (ছাঁকনির বোতাম ও কার্ডে)', 'Kind of heritage place (filter buttons and cards)'],
+  [/^pw\.rule\./, 'ভালো পাসওয়ার্ডের একটি শর্ত', 'One rule of a good password'],
+  [/^pw\.level\./, 'পাসওয়ার্ড কতটা শক্ত, তার নাম', 'How strong the password is'],
+  [/^stat\./, 'সংখ্যার নিচের নাম', 'Name under a number'],
+  [/^quick\.\w+$/, 'কার্ডের শিরোনাম', 'Card heading'],
+  [/^about\.m\d$/, '“আমাদের লক্ষ্য” তালিকার একটি পয়েন্ট', 'One point of “Our mission”'],
+  [/^about\.v\d$/, 'একটি মূল্যবোধের নাম', 'Name of one value'],
+  [/^member\.s\d$/, 'সদস্য হওয়ার একটি ধাপ', 'One step of joining'],
+  [/^(evc|events)\.(upcoming|past)\d*$/, 'ইভেন্টের গায়ের ছোট ট্যাগ', 'Small tag on an event'],
+  [/^(dir\.(unions|members|places|population|area|district|country|sqkm|source)|place\.(verified|unverified|sources|lastVerified|facts|photoCredit|on)|students\.rec\.(?!open)\w+)$/, 'তথ্যের নাম (মানের পাশে লেখা)', 'Name of a fact (shown beside its value)'],
+  [/^dash\.(show|public|members|off)/, 'কে দেখতে পাবে, তার পছন্দ', 'Choice of who can see something'],
+  [/[a-z][TH]$/, 'শিরোনাম', 'Heading'],
+  [/[a-z]Sub$/, 'শিরোনামের নিচের ছোট লেখা', 'Small line under a heading'],
+  [/\.found$/, 'ফলাফলের সংখ্যার পাশের লেখা', 'Words beside the number of results'],
+  [/^students\.view(Public|Member|Admin|Pending)$/, 'কে কী দেখছেন, সেই বার্তা', 'Message about what the viewer can see'],
+]
+
+// what kind of text it is, by the words of its name ("noResults" → no, results; "pw.rule.lower" → pw, rule, lower)
+const ARIA = ['prev', 'previous', 'next', 'play', 'pause', 'toggle', 'close', 'zoom', 'skip', 'breadcrumb', 'menu', 'scenes']
+const BUTTON = ['cta', 'btn', 'button', 'submit', 'go', 'open', 'more', 'view', 'see', 'send', 'save', 'join', 'login', 'register', 'logout', 'retry',
+  'back', 'explore', 'visit', 'reset', 'connect', 'apply', 'continue', 'edit', 'upload', 'remove', 'choose', 'clear', 'suggest', 'copy', 'use', 'withdraw',
+  'learn', 'show', 'hide', 'all', 'sign', 'resend', 'verify', 'set', 'pick']
+const FIELD = ['name', 'email', 'phone', 'batch', 'dept', 'department', 'session', 'upazila', 'union', 'gender', 'blood', 'occupation', 'workplace',
+  'subject', 'message', 'password', 'confirm', 'address', 'school', 'college']
+const KINDS = [
+  [(w, key) => /\.e\./.test(key), 'ভুল হলে দেখানো বার্তা', 'Message shown when something is wrong'],
+  [(w) => ['title', 'heading'].includes(w.at(-1)), 'শিরোনাম', 'Heading'],
+  [(w) => ['kicker', 'eyebrow'].includes(w.at(-1)), 'শিরোনামের উপরের ছোট লেখা', 'Small line above a heading'],
+  [(w, key) => ['lede', 'desc', 'intro', 'body', 'text'].includes(w.at(-1)) || /^p\d$/.test(w.at(-1)) || /[a-z]D$/.test(key), 'বর্ণনা বা অনুচ্ছেদ', 'Description or paragraph'],
+  [(w) => w.some((x) => ['tagline', 'motto', 'script', 'quote'].includes(x)), 'স্লোগান বা উক্তি', 'Slogan or quote'],
+  [(w) => w.some((x) => ['search', 'placeholder'].includes(x)), 'খোঁজার ঘরের ভেতরের লেখা', 'Text inside a search box'],
+  [(w) => w[0] === 'no' || w.some((x) => ['empty', 'none', 'nothing', 'unavailable'].includes(x)), 'কিছু না থাকলে দেখানো বার্তা', 'Message when there is nothing to show'],
+  [(w) => ['ok', 'sent', 'saved', 'done', 'success', 'copied', 'toast', 'resent', 'withdrawn', 'received'].includes(w.at(-1)), 'কাজ হয়ে গেলে দেখানো বার্তা', 'Message after something worked'],
+  [(w) => w.some((x) => ['error', 'fail', 'failed', 'bad', 'wrong', 'invalid', 'network', 'offline', 'limit', 'missing'].includes(x)), 'সমস্যা হলে দেখানো বার্তা', 'Message when something goes wrong'],
+  [(w) => ['loading', 'sending', 'verifying', 'searching'].includes(w.at(-1)), 'অপেক্ষার সময়ের লেখা', 'Text while waiting'],
+  [(w) => ARIA.includes(w[0]) || ARIA.includes(w.at(-1)), 'বোতামের নাম (স্ক্রিন রিডার ব্যবহারকারীরা শোনেন, চোখে কম দেখা যায়)', 'Button name (read aloud by screen readers, mostly not shown)'],
+  [(w) => BUTTON.includes(w[0]), 'বোতাম বা লিংকের লেখা', 'Button or link text'],
+  [(w) => ['hint', 'note', 'help', 'tip', 'caps', 'privacy', 'approval'].includes(w.at(-1)), 'সহায়ক ছোট লেখা', 'Short helping note'],
+  [(w) => FIELD.includes(w.at(-1)) || FIELD.includes(w[0]), 'ফর্মের ঘরের নাম বা তথ্যের নাম', 'Name of a form box or a fact'],
+]
+const wordsOf = (last) => last.split(/[.\-]/).flatMap((p) => p.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ')).map((x) => x.toLowerCase().replace(/\d+$/, '')).filter(Boolean)
+
+// a few texts whose names say little on their own
+const EXACT = {
+  brand: ['সংক্ষিপ্ত নাম (লোগোর পাশে বড় করে)', 'Short name (large, beside the logo)'],
+  brandSub: ['লোগোর পাশে নামের নিচের ছোট লেখা', 'Small line under the name beside the logo'],
+  brandFull: ['সংগঠনের পুরো নাম', 'Full name of the association'],
+  theme: ['আলো/অন্ধকার থিম বদলের বোতাম', 'Light/dark theme button'],
+  lang: ['ভাষা বদলের বোতাম', 'Language button'],
+  'nav.breadcrumb': ['পাতার উপরের “হোম / …” পথের নাম (স্ক্রিন রিডারের জন্য)', 'Name of the “Home / …” trail at the top of pages (for screen readers)'],
+  'footer.tagline': ['ফুটারে নামের নিচের ছোট পরিচিতি', 'Short introduction under the name in the footer'],
+  'hero.tagline': ['বড় নামের নিচের স্লোগান', 'Slogan under the large name'],
+  'about.p1': ['প্রথম অনুচ্ছেদ (পাতার উপরে)', 'First paragraph (top of the page)'],
+  'about.p2': ['দ্বিতীয় অনুচ্ছেদ', 'Second paragraph'],
+  'home.atAGlance': ['সংখ্যার অংশের শিরোনামের উপরের ছোট লেখা', 'Small line above the numbers heading'],
+  'home.aDistrictOfMany': ['“ঘুরে দেখুন” শিরোনামের উপরের ছোট লেখা', 'Small line above the “Explore” heading'],
+  'home.brahmanbaria': ['“ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” শিরোনামের রঙিন অংশ', 'Coloured part of the “Explore Brahmanbaria” heading'],
+  'home.theNineUpazilas': ['উপজেলার তালিকার উপরের লেখা', 'Line above the list of upazilas'],
+  'home.riversHeritagePeople': ['ছবির উপরের ছোট ক্যাপশন', 'Small caption on the picture'],
+  'home.eveningOnTheTitas': ['ছবির বর্ণনা (যাঁরা ছবি দেখতে পান না, তাঁদের জন্য)', 'Picture description (for people who can not see it)'],
+  'home.arifailMosqueSarail': ['ছবির বর্ণনা (যাঁরা ছবি দেখতে পান না, তাঁদের জন্য)', 'Picture description (for people who can not see it)'],
+  'home.peopleGatheredOnThe': ['ছবির বর্ণনা (যাঁরা ছবি দেখতে পান না, তাঁদের জন্য)', 'Picture description (for people who can not see it)'],
+  'home.events': ['ইভেন্ট শিরোনামের উপরের ছোট লেখা', 'Small line above the events heading'],
+  'home.upcomingAndRecentEvents': ['ইভেন্ট অংশের শিরোনাম', 'Heading of the events section'],
+  'home.studentCommunity': ['শিরোনামের উপরের ছোট লেখা', 'Small line above the heading'],
+  'home.thePeopleShapingTomorrow': ['শিরোনাম', 'Heading'],
+  'home.differentJourneysAStronger': ['ছবির উপর হাতের লেখার মতো স্লোগান', 'Handwritten-style slogan on the picture'],
+  'home.sameRootsBrighterPaths': ['নিচের দিকে হাতের লেখার মতো স্লোগান', 'Handwritten-style slogan at the bottom'],
+  'heritage.aDistrictOfMany': ['শিরোনামের উপরের ছোট লেখা', 'Small line above the heading'],
+  'heritage.brahmanbaria': ['শিরোনামের রঙিন অংশ', 'Coloured part of the heading'],
+  'fb.latestNewsAndPhotos': ['ফেসবুক বোতামের নিচের ছোট লেখা', 'Small line under the Facebook button'],
+  'footer.legal': ['ফুটারের একদম নিচের ছোট লেখা', 'Small print at the very bottom'],
+  'footer.photos': ['ছবির উৎসের কৃতজ্ঞতা', 'Credit for the photo sources'],
+  'footer.campus': ['ঠিকানা', 'Address'],
+  'dir.chattogramDivision': ['বিভাগের নাম (পথের লেখায়)', 'Division name (in the page trail)'],
+  'dir.brahmanbariaDistrict': ['জেলার নাম (পথের লেখায়)', 'District name (in the page trail)'],
+  'auth.facebook': ['বোতাম বা লিংকের লেখা', 'Button or link text'],
+  'auth.google': ['বোতাম বা লিংকের লেখা', 'Button or link text'],
+  'contact.address': ['সহায়ক ছোট লেখা', 'Short helping note'],
+  'auth.resetSignedIn': ['কাজ হয়ে গেলে দেখানো বার্তা', 'Message after something worked'],
+  'pw.saveIt': ['সহায়ক ছোট লেখা', 'Short helping note'],
+  'verified.mark': ['যাচাইকৃত চিহ্নের নাম', 'Name of the verified mark'],
+}
+
+export function describe(key) {
+  const place = PLACES.find(([rx]) => rx.test(key))
+  const last = key.split('.').slice(1).join('.') || key
+  const words = wordsOf(last)
+  const kind = EXACT[key] || (BY_GROUP.find(([rx]) => rx.test(key)) || KINDS.find(([test]) => test(words, key)) || [null, 'ছোট লেখা বা লেবেল', 'Short text or label']).slice(1)
+  return {
+    where: place ? [place[1], place[2]] : ['সাইটের অন্যান্য জায়গা', 'Elsewhere on the site'],
+    what: kind,
+    to: place ? place[3] : null,
+  }
+}
+
+// marks such as {n} or {name} that the site fills in; they must stay in the text
+export const marksIn = (s) => [...new Set(String(s || '').match(/\{[a-zA-Z]+\}/g) || [])]

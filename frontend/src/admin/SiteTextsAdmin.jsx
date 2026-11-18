@@ -3,7 +3,10 @@ import { api, useApi } from '../lib/api.js'
 import { useApp, setSiteTexts } from '../lib/app.jsx'
 import { strings } from '../data/strings.js'
 import { Data } from '../components/ui.jsx'
+import { Link } from 'react-router-dom'
 import { Notice, PageHeader, SearchBox, useErrText, useNotice } from './kit.jsx'
+import Icon from './icons.jsx'
+import { describe, marksIn } from './textLabels.js'
 
 // Every text of the public site and the member pages, in Bangla and English, changed from here without touching code.
 // An admin's wording replaces the built-in one for everyone; emptying a box (or "Use the original") brings the built-in
@@ -32,15 +35,28 @@ const groupOf = (key) => {
 const ALL_KEYS = Object.keys(strings.en).filter((k) => !HIDDEN.has(k.split('.')[0]))
 const PAGE = 40
 
-function Box({ label, lang, value, original, onChange }) {
-  const rows = Math.min(8, Math.max(1, Math.ceil(Math.max(value.length, original.length) / 60)))
+// The box holds the wording the site shows now (the original until someone changes it); the admin edits it in place.
+const same = (a, b) => (a || '').trim() === (b || '').trim()
+const isChanged = (raw, original) => raw !== undefined && raw.trim() !== '' && !same(raw, original)
+
+function Box({ label, lang, raw, original, onChange }) {
+  const value = raw ?? original
+  const rows = Math.min(8, Math.max(1, Math.ceil(Math.max(value.length, 1) / 55)))
   return (
     <label className="stx-box">
-      <span>{label}</span>
-      <textarea lang={lang} rows={rows} value={value} placeholder={original} onChange={(e) => onChange(e.target.value)} maxLength={5000} />
+      <span>{label}{isChanged(raw, original) && <em> · {lang === 'bn' ? 'বদলানো' : 'changed'}</em>}</span>
+      <textarea lang={lang} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} maxLength={5000} />
     </label>
   )
 }
+
+// only the languages whose wording really differs from the original are stored
+const clean = (draft) => Object.fromEntries(Object.entries(draft).map(([k, v]) => {
+  const out = {}
+  if (isChanged(v.bn, strings.bn[k])) out.bn = v.bn.trim()
+  if (isChanged(v.en, strings.en[k])) out.en = v.en.trim()
+  return [k, out]
+}).filter(([, v]) => v.bn || v.en))
 
 export default function SiteTextsAdmin() {
   const { pick, n } = useApp()
@@ -57,7 +73,7 @@ export default function SiteTextsAdmin() {
   useEffect(() => { if (res.data) { setSaved(res.data.texts || {}); setDraft(res.data.texts || {}) } }, [res.data])
   useEffect(() => setShown(PAGE), [group, q, onlyChanged])
 
-  const norm = (m) => JSON.stringify(Object.fromEntries(Object.entries(m).filter(([, v]) => v.bn || v.en).sort(([a], [b]) => a.localeCompare(b))))
+  const norm = (m) => JSON.stringify(Object.entries(clean(m)).sort(([a], [b]) => a.localeCompare(b)))
   const dirty = saved && norm(draft) !== norm(saved)
   useEffect(() => {
     if (!dirty) return undefined
@@ -69,22 +85,23 @@ export default function SiteTextsAdmin() {
   const list = useMemo(() => {
     const words = q.trim().toLowerCase()
     return ALL_KEYS.filter((k) => {
-      if (onlyChanged && !(draft[k]?.bn || draft[k]?.en)) return false
+      if (onlyChanged && !clean({ [k]: draft[k] || {} })[k]) return false
       if (words) {
-        const hay = `${k} ${strings.bn[k] || ''} ${strings.en[k] || ''} ${draft[k]?.bn || ''} ${draft[k]?.en || ''}`.toLowerCase()
+        const d = describe(k)
+        const hay = `${strings.bn[k] || ''} ${strings.en[k] || ''} ${draft[k]?.bn || ''} ${draft[k]?.en || ''} ${d.where.join(' ')} ${d.what.join(' ')}`.toLowerCase()
         return hay.includes(words)
       }
       return onlyChanged || groupOf(k) === group
     })
   }, [q, group, onlyChanged, draft])
-  const changedCount = Object.values(draft).filter((v) => v.bn || v.en).length
+  const changedCount = Object.keys(clean(draft)).length
   const set = (k, lang, value) => setDraft((d) => ({ ...d, [k]: { ...(d[k] || {}), [lang]: value } }))
   const reset = (k) => setDraft((d) => { const x = { ...d }; delete x[k]; return x })
 
   const save = async () => {
     setBusy(true); clear()
     try {
-      const body = Object.fromEntries(Object.entries(draft).filter(([, v]) => (v.bn || '').trim() || (v.en || '').trim()))
+      const body = clean(draft)
       const r = await api('/admin/settings/site-texts', { method: 'PUT', body: JSON.stringify({ texts: body }) })
       setSaved(r.texts || {}); setDraft(r.texts || {})
       setSiteTexts(r.texts || {}) // this tab shows the new wording at once
@@ -97,8 +114,12 @@ export default function SiteTextsAdmin() {
   return (
     <>
       <PageHeader title={pick('ওয়েবসাইটের লেখা', 'Website texts')}
-        desc={pick('সাইটের যেকোনো লেখা এখান থেকে বদলান, কোড ছাড়াই। বাক্স খালি রাখলে আসল লেখা দেখায়। {n}-এর মতো বন্ধনীর চিহ্নগুলো রেখে দিন, সেখানে সংখ্যা বা নাম বসে।',
-          'Change any text of the site here, without code. An empty box shows the original wording. Keep marks such as {n} in braces: a number or name goes there.')} />
+        desc={pick('সাইটে যা লেখা আছে, তা এখান থেকে বদলান। কোনো কোড লাগবে না।', 'Change the wording of the site here. No code needed.')} />
+      <ol className="stx-how">
+        <li>{pick('উপরের বোতাম থেকে সাইটের অংশ বাছুন (যেমন “হোম পেজ”), অথবা যে লেখা বদলাতে চান তার কয়েকটি শব্দ খোঁজার ঘরে লিখুন।', 'Pick a part of the site from the buttons (such as “Home page”), or type a few words of the text you want to change into the search box.')}</li>
+        <li>{pick('প্রতিটি কার্ডে লেখা আছে লেখাটি সাইটের কোথায় দেখায় এবং সেটি কী (শিরোনাম, বোতাম, বার্তা…)। ঘরে এখনকার লেখাই আছে; সেখানেই বদলান।', 'Each card says where the text appears and what it is (a heading, a button, a message…). The box holds the current wording; change it right there.')}</li>
+        <li>{pick('নিচের “সংরক্ষণ করুন” চাপুন। ভুল হলে “আগের লেখায় ফেরান” চাপলেই আসল লেখা ফিরে আসে।', 'Press “Save” at the bottom. If you make a mistake, “Use the original” brings the original wording back.')}</li>
+      </ol>
       <Notice notice={notice} onClose={clear} />
       <Data q={res}>
         {() => saved && (
@@ -118,18 +139,24 @@ export default function SiteTextsAdmin() {
             <ul className="stx-list">
               {list.slice(0, shown).map((k) => {
                 const v = draft[k] || {}
-                const changed = !!(v.bn || v.en)
+                const changed = !!clean({ [k]: v })[k]
+                const d = describe(k)
+                const marks = marksIn(`${strings.bn[k] || ''} ${strings.en[k] || ''}`)
                 return (
-                  <li key={k} className={`stx-row si-card${changed ? ' is-changed' : ''}`}>
+                  <li key={k} data-text={k} className={`stx-row si-card${changed ? ' is-changed' : ''}`}>
                     <div className="stx-head">
-                      <code>{k}</code>
+                      <div className="stx-what">
+                        <strong>{pick(...d.what)}</strong>
+                        <span className="stx-where"><Icon name="globe" size={13} /> {pick(...d.where)}{d.to && <> · <Link to={d.to}>{pick('পাতাটি দেখুন', 'See the page')}</Link></>}</span>
+                      </div>
                       {changed && <span className="badge badge-ok">{pick('বদলানো', 'Changed')}</span>}
-                      {changed && <button type="button" className="btn btn-ghost btn-sm" onClick={() => reset(k)}>{pick('আসল লেখায় ফেরান', 'Use the original')}</button>}
+                      {(changed || v.bn !== undefined || v.en !== undefined) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => reset(k)}>{pick('আগের লেখায় ফেরান', 'Use the original')}</button>}
                     </div>
                     <div className="stx-pair">
-                      <Box label="বাংলা" lang="bn" value={v.bn || ''} original={strings.bn[k] || ''} onChange={(x) => set(k, 'bn', x)} />
-                      <Box label="English" lang="en" value={v.en || ''} original={strings.en[k] || ''} onChange={(x) => set(k, 'en', x)} />
+                      <Box label="বাংলা" lang="bn" raw={v.bn} original={strings.bn[k] || ''} onChange={(x) => set(k, 'bn', x)} />
+                      <Box label="English" lang="en" raw={v.en} original={strings.en[k] || ''} onChange={(x) => set(k, 'en', x)} />
                     </div>
+                    {marks.length > 0 && <p className="stx-marks">{pick(`লেখার ${marks.join(', ')} অংশটি মুছবেন না — সেখানে সাইট নিজে সংখ্যা বা নাম বসায়।`, `Keep ${marks.join(', ')} in the text — the site puts a number or a name there.`)}</p>}
                   </li>
                 )
               })}
