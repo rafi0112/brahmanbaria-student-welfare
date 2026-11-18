@@ -55,14 +55,16 @@ func listContact(t *testing.T, e *env2, ck *http.Cookie, query string) map[strin
 	return out
 }
 
-func TestContactSavedNotifiedAndAdminOnly(t *testing.T) {
+// A message is saved for the admins and the visitor gets an answer at once; no email is sent, even with a mailbox set.
+func TestContactSavedForAdminsOnlyWithoutMail(t *testing.T) {
 	t.Setenv("CONTACT_RECIPIENT_EMAIL", "inbox@bswa.example")
 	e, mail := contactEnv(t)
+	mail.fail = true // a broken or blocked mail server must not matter
 	if rec := e.do("POST", "/api/v1/contact", goodContact, nil); rec.Code != 201 {
 		t.Fatalf("submit: %d %s", rec.Code, rec.Body)
 	}
-	if len(mail.sent) != 1 || mail.sent[0].to != "inbox@bswa.example" || mail.sent[0].replyTo != "rina@example.org" || !strings.Contains(mail.sent[0].body, "not verified") {
-		t.Fatalf("notification wrong: %+v", mail.sent)
+	if len(mail.sent) != 0 {
+		t.Fatalf("no email may be sent for a contact message: %+v", mail.sent)
 	}
 	// access control: nobody but an admin sees or touches the inbox
 	member := e.member(t, "m1@example.com")
@@ -84,7 +86,7 @@ func TestContactSavedNotifiedAndAdminOnly(t *testing.T) {
 		t.Fatalf("inbox: %v", res)
 	}
 	m := items[0].(map[string]any)
-	if m["notifyStatus"] != "sent" || m["status"] != "new" {
+	if m["notifyStatus"] != "skipped" || m["status"] != "new" || m["message"] == "" {
 		t.Fatalf("states: %v", m)
 	}
 }
@@ -102,51 +104,6 @@ func TestContactValidationAndAbuse(t *testing.T) {
 	}
 	if n := len(listContact(t, e, admin, "?status=all")["items"].([]any)); n != 0 || len(mail.sent) != 0 {
 		t.Fatalf("invalid and honeypot messages must not be stored or mailed (stored %d, mailed %d)", n, len(mail.sent))
-	}
-	// a CR/LF in the subject cannot add headers or lines to the notification subject
-	t.Setenv("CONTACT_RECIPIENT_EMAIL", "inbox@bswa.example")
-	inj := map[string]any{"name": "Eve Smith", "email": "eve@example.org", "subject": "Hello\r\nBcc: victim@example.org", "message": "A normal message body here."}
-	if rec := e.do("POST", "/api/v1/contact", inj, nil); rec.Code != 201 {
-		t.Fatalf("inj: %d %s", rec.Code, rec.Body)
-	}
-	if s := mail.sent[0].subject; strings.ContainsAny(s, "\r\n") {
-		t.Fatalf("header injection: %q", s)
-	}
-}
-
-func TestContactNotificationFailureKeepsMessage(t *testing.T) {
-	t.Setenv("CONTACT_RECIPIENT_EMAIL", "inbox@bswa.example")
-	e, mail := contactEnv(t)
-	admin := e.admin(t)
-	mail.fail = true
-	if rec := e.do("POST", "/api/v1/contact", goodContact, nil); rec.Code != 201 || strings.Contains(rec.Body.String(), "smtp") {
-		t.Fatalf("visitor result must stay accurate and free of internals: %d %s", rec.Code, rec.Body)
-	}
-	m := listContact(t, e, admin, "")["items"].([]any)[0].(map[string]any)
-	if m["notifyStatus"] != "failed" {
-		t.Fatalf("failure not recorded: %v", m)
-	}
-	// retry once the mail system works again
-	mail.fail = false
-	id := m["id"].(string)
-	if rec := e.do("POST", "/api/v1/admin/contact/"+id+"/notify", map[string]string{}, admin); rec.Code != 200 {
-		t.Fatalf("retry: %d %s", rec.Code, rec.Body)
-	}
-	if got := listContact(t, e, admin, "")["items"].([]any)[0].(map[string]any)["notifyStatus"]; got != "sent" {
-		t.Fatalf("after retry: %v", got)
-	}
-}
-
-func TestContactNoRecipientConfigured(t *testing.T) {
-	t.Setenv("CONTACT_RECIPIENT_EMAIL", "")
-	e, mail := contactEnv(t)
-	admin := e.admin(t)
-	if rec := e.do("POST", "/api/v1/contact", goodContact, nil); rec.Code != 201 {
-		t.Fatalf("submit: %d", rec.Code)
-	}
-	res := listContact(t, e, admin, "")
-	if len(mail.sent) != 0 || res["items"].([]any)[0].(map[string]any)["notifyStatus"] != "skipped" || res["recipientConfigured"] != false {
-		t.Fatalf("missing recipient must be reported, not faked: %v %v", mail.sent, res)
 	}
 }
 

@@ -44,7 +44,6 @@ export default function ContactInbox() {
         ]}
         fields={[{ key: 'from', label: t('ad.from'), type: 'date', advanced: true }, { key: 'to', label: t('ad.to'), type: 'date', advanced: true }]} />
       <p className="muted small">{t('ad.ct.retention')}</p>
-      {list.data && !list.data.recipientConfigured && <p className="notice bad" role="status">{t('ad.ct.noRecipient')}</p>}
       <Notice notice={notice} onClose={clear} />
 
       {list.loading && <SkeletonRows />}
@@ -63,8 +62,6 @@ export default function ContactInbox() {
               { id: 'state', label: t('ad.ct.state'), width: '190px', cell: (x) => (
                 <div className="dt-stack">
                   <span className={`st st-ct-${x.status}`}><span className="st-dot" aria-hidden="true" />{t(`ad.ct.${x.status}`)}</span>
-                  {x.notifyStatus === 'failed' && <small className="dt-sub is-warn">{t('ad.ct.notifyFailed')}</small>}
-                  {x.notifyStatus === 'skipped' && <small className="dt-sub is-warn">{t('ad.ct.notifySkipped')}</small>}
                 </div>
               ) },
               { id: 'at', label: t('ad.ct.received'), width: '170px', cell: (x) => <small className="dt-sub">{when(x.createdAt)}</small> },
@@ -139,7 +136,6 @@ function MessageDrawer({ id, onClose, onChanged, notify, errText }) {
               <div><dt>{t('ad.ct.subject')}</dt><dd>{m.subject}</dd></div>
               <div><dt>{t('ad.ct.received')}</dt><dd>{when(m.createdAt)}</dd></div>
               <div><dt>{t('ad.ct.state')}</dt><dd>{t(`ad.ct.${m.status}`)}</dd></div>
-              <div><dt>{t('ad.ct.notify')}</dt><dd>{t(`ad.ct.notify.${m.notifyStatus}`)}</dd></div>
               <div><dt>{t('ad.ct.expires')}</dt><dd>{when(m.expiresAt)}</dd></div>
             </dl>
             <p className="ct-body">{m.message}</p>

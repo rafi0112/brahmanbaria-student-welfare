@@ -93,17 +93,3 @@ func TestSMTPMailerRefusesToSendAPasswordInClearText(t *testing.T) {
 		t.Fatalf("expected a refusal that does not leak the password: %v", err)
 	}
 }
-
-func TestContactRecipientFallsBackToTheSMTPAccount(t *testing.T) {
-	a := &App{}
-	t.Setenv("CONTACT_RECIPIENT_EMAIL", "")
-	t.Setenv("SMTP_HOST", "smtp.gmail.com")
-	t.Setenv("SMTP_USER", "club@gmail.com")
-	if a.contactRecipient() != "club@gmail.com" {
-		t.Fatal("the SMTP account must be the default recipient")
-	}
-	t.Setenv("CONTACT_RECIPIENT_EMAIL", "office@example.org")
-	if a.contactRecipient() != "office@example.org" {
-		t.Fatal("an explicit recipient wins")
-	}
-}

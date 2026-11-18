@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -62,26 +61,9 @@ type ContactStore interface {
 	PurgeExpiredContacts(ctx context.Context) (int, error)
 }
 
-// ---- mail helpers ----
-
-// ReplyMailer is a Mailer that can also set a Reply-To address.
-type ReplyMailer interface {
-	SendWithReplyTo(ctx context.Context, to, replyTo, subject, text string) error
-}
-
-// simulated reports a mailer that prints instead of delivering, so the admin is never told a mail was delivered when it was not.
-func simulated(m Mailer) bool { _, ok := m.(logMailer); return ok }
-
-func sendMail(ctx context.Context, m Mailer, to, replyTo, subject, text string) error {
-	if rm, ok := m.(ReplyMailer); ok && replyTo != "" {
-		return rm.SendWithReplyTo(ctx, to, replyTo, subject, text)
-	}
-	return m.Send(ctx, to, subject, text)
-}
-
-// oneLine removes anything that could break out of a header or subject line.
+// oneLine removes anything that could break out of a single line (a subject shown in the admin panel and its exports).
 func oneLine(s string, max int) string {
-	s = strings.Join(strings.FieldsFunc(s, func(r rune) bool { return r == '\r' || r == '\n' || r == 0 || r == ' ' || r == ' ' }), " ")
+	s = strings.Join(strings.FieldsFunc(s, func(r rune) bool { return r == '\r' || r == '\n' || r == 0 || r == '\u2028' || r == '\u2029' }), " ")
 	s = strings.TrimSpace(s)
 	if utf8.RuneCountInString(s) > max {
 		s = string([]rune(s)[:max])
@@ -89,49 +71,10 @@ func oneLine(s string, max int) string {
 	return s
 }
 
-// contactRecipient is CONTACT_RECIPIENT_EMAIL, or the SMTP account itself when none is set, so a message lands in the mailbox the
-// website sends from.
-func (a *App) contactRecipient() string {
-	if r := strings.TrimSpace(os.Getenv("CONTACT_RECIPIENT_EMAIL")); r != "" {
-		return r
-	}
-	if os.Getenv("SMTP_HOST") != "" {
-		return strings.TrimSpace(os.Getenv("SMTP_USER"))
-	}
-	return ""
-}
-
-// notifyContact tells the configured mailbox about a new message and records whether that worked.
-func (a *App) notifyContact(ctx context.Context, m ContactMessage) string {
-	to := a.contactRecipient()
-	if to == "" || !emailRx.MatchString(to) {
-		log.Printf("contact %s saved; CONTACT_RECIPIENT_EMAIL is not set, no notification sent", m.ID)
-		_ = a.Auth.Store.SetContactNotify(ctx, m.ID, "skipped")
-		return "skipped"
-	}
-	link := ""
-	if a.Auth.FrontendURL != "" {
-		link = "\n\nOpen the inbox: " + a.Auth.FrontendURL + "/admin/contact"
-	}
-	body := "New message from the website contact form.\n\n" +
-		"Name: " + oneLine(m.Name, 80) + "\n" +
-		"Email (typed by the visitor, not verified): " + oneLine(m.Email, 120) + "\n" +
-		"Subject: " + oneLine(m.Subject, 120) + "\n" +
-		"Received: " + m.CreatedAt + "\n\n" + m.Message + link
-	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	status := "sent"
-	if err := sendMail(cctx, a.Auth.Mailer, to, m.Email, "[Contact] "+oneLine(m.Subject, 120), body); err != nil {
-		log.Printf("contact %s: notification failed: %v", m.ID, err)
-		status = "failed"
-	}
-	_ = a.Auth.Store.SetContactNotify(ctx, m.ID, status)
-	return status
-}
-
 // ---- public form ----
 
-// submitContact stores the message first, then notifies. A mail failure never loses the message.
+// submitContact stores the message for the admins' inbox and answers at once. No email is sent: admins read messages in
+// the panel (and write back from their own mail if they want to).
 func (a *App) submitContact(w http.ResponseWriter, r *http.Request, c contactReq) {
 	in := ContactInput{Name: strings.TrimSpace(c.Name), Email: strings.ToLower(strings.TrimSpace(c.Email)), Subject: oneLine(c.Subject, 120), Message: strings.TrimSpace(c.Message)}
 	m, err := a.Auth.Store.CreateContact(r.Context(), in, time.Now().Add(contactRetention))
@@ -145,7 +88,7 @@ func (a *App) submitContact(w http.ResponseWriter, r *http.Request, c contactReq
 	} else if n > 0 {
 		log.Printf("contact purge: removed %d expired messages", n)
 	}
-	a.notifyContact(r.Context(), m)
+	_ = a.Auth.Store.SetContactNotify(r.Context(), m.ID, "skipped") // no email is sent for contact messages
 	writeJSON(w, http.StatusCreated, map[string]bool{"ok": true})
 }
 
@@ -156,7 +99,6 @@ func (a *App) contactRoutes(m *http.ServeMux, h func(func(http.ResponseWriter, *
 	m.HandleFunc("GET /api/v1/admin/contact", adm(a.listContact))
 	m.HandleFunc("GET /api/v1/admin/contact/{id}", adm(a.contactOne))
 	m.HandleFunc("POST /api/v1/admin/contact/{id}/status", adm(a.contactStatus))
-	m.HandleFunc("POST /api/v1/admin/contact/{id}/notify", adm(a.contactRenotify))
 	m.HandleFunc("POST /api/v1/admin/contact/{id}/delete", adm(a.contactDelete))
 }
 
@@ -188,7 +130,7 @@ func (a *App) listContact(w http.ResponseWriter, r *http.Request, _ User) {
 	_ = lo
 	_ = hi
 	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": pg, "pages": pages, "limit": limit, "counts": counts,
-		"retentionDays": 30, "recipientConfigured": a.contactRecipient() != "", "simulated": simulated(a.Auth.Mailer)})
+		"retentionDays": 30})
 }
 
 func (a *App) contactOne(w http.ResponseWriter, r *http.Request, _ User) {
@@ -197,7 +139,7 @@ func (a *App) contactOne(w http.ResponseWriter, r *http.Request, _ User) {
 		a.contactFail(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"item": m, "simulated": simulated(a.Auth.Mailer)})
+	writeJSON(w, 200, map[string]any{"item": m})
 }
 
 func (a *App) contactStatus(w http.ResponseWriter, r *http.Request, u User) {
@@ -219,19 +161,6 @@ func (a *App) contactStatus(w http.ResponseWriter, r *http.Request, u User) {
 	_ = a.Auth.Store.Audit(r.Context(), u.ID, "contact.status", "contact", id, map[string]any{"status": q.Status})
 	m, _ := a.Auth.Store.GetContact(r.Context(), id)
 	writeJSON(w, 200, map[string]any{"item": m})
-}
-
-func (a *App) contactRenotify(w http.ResponseWriter, r *http.Request, u User) {
-	id := r.PathValue("id")
-	m, err := a.Auth.Store.GetContact(r.Context(), id)
-	if err != nil {
-		a.contactFail(w, err)
-		return
-	}
-	st := a.notifyContact(r.Context(), m)
-	_ = a.Auth.Store.Audit(r.Context(), u.ID, "contact.renotify", "contact", id, map[string]any{"result": st})
-	fresh, _ := a.Auth.Store.GetContact(r.Context(), id)
-	writeJSON(w, 200, map[string]any{"item": fresh, "result": st})
 }
 
 func (a *App) contactDelete(w http.ResponseWriter, r *http.Request, u User) {
