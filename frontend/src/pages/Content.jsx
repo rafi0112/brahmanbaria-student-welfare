@@ -94,7 +94,7 @@ export function Gallery() {
   const years = [...new Set(all.map((i) => i.year || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : b.localeCompare(a)))
   const groups = years.map((y) => [y, inAlbum.filter((i) => (i.year || '') === y)]).filter(([y, list]) => list.length && (year === '' || y === year))
   const items = groups.flatMap(([, list]) => list) // the order the lightbox walks through
-  const yearName = (y) => (y ? n(y) : pick('অন্যান্য', 'Other'))
+  const yearName = (y) => (y ? n(y) : t('gallery.other'))
   const caption = (i) => pick(i.captionBn, i.captionEn) || i.alt
   useEffect(() => {
     if (open == null) return undefined
@@ -133,8 +133,8 @@ export function Gallery() {
                 </div>
               )}
               {years.filter(Boolean).length > 0 && (
-                <div className="chips gal-years" role="group" aria-label={pick('বছর', 'Year')}>
-                  <button className={`chip ${year === '' ? 'on' : ''}`} aria-pressed={year === ''} onClick={() => setYear('')}>{pick('সব বছর', 'All years')}</button>
+                <div className="chips gal-years" role="group" aria-label={t('gallery.year')}>
+                  <button className={`chip ${year === '' ? 'on' : ''}`} aria-pressed={year === ''} onClick={() => setYear('')}>{t('gallery.allYears')}</button>
                   {years.map((y) => <button key={y || 'none'} className={`chip ${year === y ? 'on' : ''}`} aria-pressed={year === y} onClick={() => setYear(y)}>{yearName(y)}</button>)}
                 </div>
               )}

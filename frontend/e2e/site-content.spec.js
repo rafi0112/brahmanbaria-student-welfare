@@ -50,7 +50,7 @@ test.describe('in English', () => {
       await page.goto(path)
       await expect(page.locator(`.phero-wrap.phero-v-${variant}`)).toBeVisible()
       await expect(page.locator('.phero-v-bleed')).toHaveCount(0)
-      await expect(page.locator('.phero-script')).toBeVisible()
+      await expect(page.locator('.phero-script')).toHaveCount(path === '/alumni' ? 0 : 1) // no line written on the Alumni picture
     }
     await page.goto('/students')
     await expect(page.locator('.phero-v-bleed')).toBeVisible()
@@ -138,6 +138,78 @@ test.describe('in English', () => {
     await page.locator('.ex-main').scrollIntoViewIfNeeded()
     await expect(page.locator('.ex-main figcaption')).toHaveCount(0)
     await expect(page.locator('.ex-inset')).toHaveCount(0)
+  })
+
+  test('admin: Website texts change the menu, the search and the About page; unused texts are not offered', async ({ page }) => {
+    await login(page)
+    await page.goto('/admin/site-texts')
+    const box = page.getByPlaceholder('Search the texts (Bangla or English)…')
+    const set = async (key, find, value) => {
+      await box.fill(find)
+      const row = page.locator(`.stx-row[data-text="${key}"]`)
+      await expect(row).toBeVisible()
+      await row.locator('textarea[lang=en]').fill(value)
+    }
+    await set('nav.students', 'Students', 'Our students')
+    await set('search.nameBloodGroupE', 'Name, blood group (e.g. B+), phone, place', 'Find anyone')
+    await set('about.title', 'About us', 'Who we are')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The site shows the new wording now.')).toBeVisible()
+    // a text no page uses is not listed
+    await box.fill('Quick links')
+    await expect(page.locator('.stx-row[data-text="students.quickLinks"]')).toHaveCount(0)
+
+    await page.goto('/about')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Who we are')
+    await expect(page.locator('.nav-links').getByRole('link', { name: 'Our students' })).toBeVisible()
+    await page.locator('.nav-tools').getByRole('button', { name: 'Search' }).click()
+    await expect(page.getByRole('dialog', { name: 'Search' }).getByRole('combobox')).toHaveAttribute('placeholder', 'Find anyone')
+
+    // back to the original wording
+    await page.goto('/admin/site-texts')
+    await page.getByLabel('Only changed texts (3)').check()
+    for (const k of ['nav.students', 'search.nameBloodGroupE', 'about.title']) await page.locator(`.stx-row[data-text="${k}"]`).getByRole('button', { name: 'Use the original' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The site shows the new wording now.')).toBeVisible()
+    await page.goto('/about')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('About us')
+  })
+
+  test('admin on a phone: a contact message with long words stays inside the screen', async ({ page }) => {
+    await page.request.post('/api/v1/contact', { data: { name: 'Long Words Visitor', email: 'a.very.long.email.address.for.testing@example-university.edu.bd', subject: 'Question_about_membership_without_any_spaces_at_all', message: 'See https://www.facebook.com/groups/some-very-long-group-name-without-spaces-1234567890/permalink/9876543210 please' } })
+    await login(page)
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/admin/contact')
+    await page.locator('.adm-main button').filter({ hasText: /^Open$/ }).first().click()
+    await expect(page.locator('.ct-detail')).toBeVisible()
+    const over = await page.evaluate(() => [...document.querySelectorAll('.ct-detail, .ct-detail *')].filter((e) => e.getBoundingClientRect().right > 376).length)
+    expect(over).toBe(0)
+  })
+
+  test('admin: My profile opens as a centred pop-up and still edits and saves', async ({ page }) => {
+    await login(page)
+    const made = await page.request.post('/api/v1/me/profile', { data: { name: 'Test Admin Person', batch: 16, department: 'Finance', session: '2019-20', occupation: 'Lecturer', workplace: 'Dhaka College', upazila: 'kasba', union: 'Kuti', phone: '01712345678', gender: 'female', bloodGroup: 'O+' } })
+    expect([201, 409]).toContain(made.status())
+    for (const [w, h] of [[1440, 900], [375, 812]]) {
+      await page.setViewportSize({ width: w, height: h })
+      await page.goto('/admin')
+      if (w < 800) await page.getByRole('button', { name: /menu|মেনু/i }).first().click().catch(() => {})
+      await page.locator('.adm-me').click()
+      const dlg = page.getByRole('dialog', { name: 'My profile' })
+      await expect(dlg).toBeVisible()
+      const b = await dlg.boundingBox()
+      expect(b.x, 'space on the left').toBeGreaterThan(4)
+      expect(b.x + b.width, 'space on the right').toBeLessThan(w - 4)
+      expect(Math.abs(b.x + b.width / 2 - w / 2), 'centred').toBeLessThan(4)
+      if (w > 800) {
+        await dlg.getByRole('button', { name: 'Edit' }).click()
+        await dlg.getByRole('textbox').first().fill('01811112222')
+        await dlg.getByRole('button', { name: 'Save' }).click()
+        await expect(dlg).toContainText('01811112222')
+      }
+      await page.keyboard.press('Escape')
+      await expect(dlg).toBeHidden()
+    }
   })
 
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {

@@ -5,7 +5,7 @@ import { useApp } from '../lib/app.jsx'
 // A profile shown over the page it was opened from (Students, Alumni) instead of on a page of its own. Escape, the ✕
 // button or a click outside close it; the page behind does not scroll; focus moves in and returns to where it was.
 export default function ProfileDialog({ label, onClose, children }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   const box = useRef(null)
   const press = useRef(false)
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function ProfileDialog({ label, onClose, children }) {
   return createPortal(
     <div className="pd" onPointerDown={(e) => { press.current = e.target === e.currentTarget }} onClick={(e) => { if (e.target === e.currentTarget && press.current) onClose() }}>
       <div className="pd-box" role="dialog" aria-modal="true" aria-label={label} ref={box} tabIndex={-1}>
-        <button type="button" className="pd-close" onClick={onClose} aria-label={pick('বন্ধ করুন', 'Close')}>✕</button>
+        <button type="button" className="pd-close" onClick={onClose} aria-label={t('common.close')}>✕</button>
         {children}
       </div>
     </div>,

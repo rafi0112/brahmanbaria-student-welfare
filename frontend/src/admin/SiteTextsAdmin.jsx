@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { Notice, PageHeader, SearchBox, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
 import { describe, marksIn } from './textLabels.js'
+import { UNUSED_TEXTS } from './unusedTexts.js'
 
 // Every text of the public site and the member pages, in Bangla and English, changed from here without touching code.
 // An admin's wording replaces the built-in one for everyone; emptying a box (or "Use the original") brings the built-in
@@ -26,13 +27,16 @@ const GROUPS = [
   ['blog', 'ব্লগ', 'Blog', ['blog']],
   ['help', 'যোগাযোগ ও প্রশ্নোত্তর', 'Contact and FAQ', ['help', 'faq', 'contact']],
   ['menu', 'মেনু ও ফুটার', 'Menu and footer', ['nav', 'footer', 'brand', 'brandSub', 'brandFull', 'theme', 'lang']],
+  ['shared', 'সার্চ, ছবি ও সব পাতার লেখা', 'Search, pictures and every page', ['search', 'viewer', 'editor', 'common', 'state', 'page', 'nf']],
   ['account', 'লগইন, নিবন্ধন ও সদস্য পাতা', 'Sign in, registration and member pages', ['auth', 'pw', 'join', 'verified', 'member', 'photo', 'dash', 'acct']],
 ]
 const groupOf = (key) => {
   const p = key.split('.')[0]
   return (GROUPS.find((g) => g[3].includes(p)) || ['other'])[0]
 }
-const ALL_KEYS = Object.keys(strings.en).filter((k) => !HIDDEN.has(k.split('.')[0]))
+// texts no page uses are left out: changing them would change nothing on the site
+const UNUSED = new Set(UNUSED_TEXTS)
+const ALL_KEYS = Object.keys(strings.en).filter((k) => !HIDDEN.has(k.split('.')[0]) && !UNUSED.has(k))
 const PAGE = 40
 
 // The box holds the wording the site shows now (the original until someone changes it); the admin edits it in place.

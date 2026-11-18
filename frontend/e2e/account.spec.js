@@ -93,7 +93,10 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await page.locator('#drawer').getByRole('button', { name: 'My profile' }).click()
   await expect(dlg).toBeVisible()
   const box = await dlg.boundingBox()
-  expect(Math.round(box.width)).toBe(390)
+  expect(box.width).toBeLessThan(390) // a pop-up with the page visible around it, not a full-screen page
+  expect(box.x).toBeGreaterThan(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  expect(box.y + box.height).toBeLessThanOrEqual(844)
   if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dialog-mobile.png` })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBe(0)

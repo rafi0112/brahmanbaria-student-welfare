@@ -243,8 +243,8 @@ export function BatchGroups({ items, sessions = {}, counts, gridClass, children 
   return groups.map((g) => (
     <section key={g.batch} className="batch-group" aria-labelledby={`batch-${g.batch}`}>
       <h2 className="batch-head" id={`batch-${g.batch}`}>
-        <span className="batch-no">{g.batch ? <>{t('students.batch')} {n(g.batch)}</> : pick('ব্যাচ উল্লেখ নেই', 'Batch not given')}</span>
-        {g.batch > 0 && sessions[g.batch] && <span className="batch-year">{pick('সেশন', 'Session')} {n(sessions[g.batch])}</span>}
+        <span className="batch-no">{g.batch ? <>{t('students.batch')} {n(g.batch)}</> : t('students.batchNotGiven')}</span>
+        {g.batch > 0 && sessions[g.batch] && <span className="batch-year">{t('students.session2')} {n(sessions[g.batch])}</span>}
         {g.batch > 0 && counts?.[g.batch] > 0 && <span className="batch-count">{n(counts[g.batch])} {pick('জন', counts[g.batch] === 1 ? 'person' : 'people')}</span>}
       </h2>
       <div className={gridClass}>{g.items.map((it) => children(it, k++))}</div>

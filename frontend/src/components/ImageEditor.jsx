@@ -25,7 +25,7 @@ export function editedFile(file, blob) {
 }
 
 export default function ImageEditor({ file, aspect: initialAspect = 'original', aspects, maxSide = MAX_SIDE, onDone, onCancel }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   const [src, setSrc] = useState('')
   const [img, setImg] = useState(null) // { el, w, h }
   const [failed, setFailed] = useState(false)
@@ -145,47 +145,47 @@ export default function ImageEditor({ file, aspect: initialAspect = 'original', 
 
   return createPortal(
     <dialog className="ie" ref={shell} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onCancel() }}>
-      <div className="ie-box" role="dialog" aria-modal="true" aria-label={pick('ছবি দেখুন ও ঠিক করুন', 'Preview and adjust the picture')} tabIndex={-1} ref={box}>
+      <div className="ie-box" role="dialog" aria-modal="true" aria-label={t('editor.previewAndAdjustThe')} tabIndex={-1} ref={box}>
         <header className="ie-head">
-          <h2>{pick('ছবি দেখুন ও ঠিক করুন', 'Preview and adjust the picture')}</h2>
-          <button type="button" className="ie-x" onClick={onCancel} aria-label={pick('বাতিল', 'Cancel')} disabled={busy}>✕</button>
+          <h2>{t('editor.previewAndAdjustThe')}</h2>
+          <button type="button" className="ie-x" onClick={onCancel} aria-label={t('editor.cancel')} disabled={busy}>✕</button>
         </header>
         <div className="ie-body">
           <div className={`ie-stage${img ? '' : ' is-loading'}`} ref={stageRef} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onWheel={wheel}
-            tabIndex={0} onKeyDown={nudge} aria-label={pick('ছবি সরাতে টানুন বা তীর-চাবি ব্যবহার করুন', 'Drag or use the arrow keys to move the picture')}>
-            {failed ? <p className="ie-fail">{pick('এই ছবিটি খোলা যায়নি। অন্য একটি ছবি বাছুন।', 'This picture could not be opened. Choose another one.')}</p>
+            tabIndex={0} onKeyDown={nudge} aria-label={t('editor.dragOrUseThe')}>
+            {failed ? <p className="ie-fail">{t('editor.thisPictureCouldNot')}</p>
               : img && <img className="ie-img" src={src} alt="" draggable={false} style={imgStyle} />}
             {img && <span className="ie-frame" style={{ width: frame.w, height: frame.h }} aria-hidden="true"><i /><i /></span>}
           </div>
           <div className="ie-tools">
-            <div className="ie-group" role="group" aria-label={pick('আকার', 'Shape')}>
-              <span className="ie-label">{pick('আকার (ক্রপ)', 'Shape (crop)')}</span>
+            <div className="ie-group" role="group" aria-label={t('editor.shape')}>
+              <span className="ie-label">{t('editor.shapeCrop')}</span>
               <div className="ie-chips">
                 {list.map(([id, bn, en]) => <button key={id} type="button" className={aspect === id ? 'on' : ''} aria-pressed={aspect === id} onClick={() => { setAspect(id); setZoom(1); setOff({ x: 0, y: 0 }) }}>{pick(bn, en)}</button>)}
               </div>
             </div>
-            <label className="ie-slider"><span>{pick('বড়-ছোট (জুম)', 'Zoom')}<b>{Math.round(zoom * 100)}%</b></span>
+            <label className="ie-slider"><span>{t('editor.zoom')}<b>{Math.round(zoom * 100)}%</b></span>
               <input type="range" min="1" max="4" step="0.01" value={zoom} onChange={(e) => setZoom(+e.target.value)} /></label>
             <div className="ie-row">
-              <button type="button" onClick={() => { setRot((r) => (r + 270) % 360); setOff({ x: 0, y: 0 }) }} aria-label={pick('বাঁয়ে ঘোরান', 'Turn left')}>⟲ {pick('বাঁয়ে', 'Left')}</button>
-              <button type="button" onClick={() => { setRot((r) => (r + 90) % 360); setOff({ x: 0, y: 0 }) }} aria-label={pick('ডানে ঘোরান', 'Turn right')}>⟳ {pick('ডানে', 'Right')}</button>
-              <button type="button" aria-pressed={flip} className={flip ? 'on' : ''} onClick={() => setFlip((f) => !f)}>⇋ {pick('উল্টো', 'Mirror')}</button>
+              <button type="button" onClick={() => { setRot((r) => (r + 270) % 360); setOff({ x: 0, y: 0 }) }} aria-label={t('editor.turnLeft')}>⟲ {t('editor.left')}</button>
+              <button type="button" onClick={() => { setRot((r) => (r + 90) % 360); setOff({ x: 0, y: 0 }) }} aria-label={t('editor.turnRight')}>⟳ {t('editor.right')}</button>
+              <button type="button" aria-pressed={flip} className={flip ? 'on' : ''} onClick={() => setFlip((f) => !f)}>⇋ {t('editor.mirror')}</button>
             </div>
             {canFilter && (
               <details className="ie-more">
-                <summary>{pick('আলো ও রং', 'Light and colour')}</summary>
-                {slider(pick('উজ্জ্বলতা', 'Brightness'), fx.b, (b) => setFx({ ...fx, b }), 50, 150)}
-                {slider(pick('কনট্রাস্ট', 'Contrast'), fx.c, (c) => setFx({ ...fx, c }), 50, 150)}
-                {slider(pick('রং', 'Colour'), fx.s, (s) => setFx({ ...fx, s }), 0, 200)}
+                <summary>{t('editor.lightAndColour')}</summary>
+                {slider(t('editor.brightness'), fx.b, (b) => setFx({ ...fx, b }), 50, 150)}
+                {slider(t('editor.contrast'), fx.c, (c) => setFx({ ...fx, c }), 50, 150)}
+                {slider(t('editor.colour'), fx.s, (s) => setFx({ ...fx, s }), 0, 200)}
               </details>
             )}
-            <p className="ie-hint">{pick('ছবি টেনে ফ্রেমের ভেতরে সরান। ফ্রেমের ভেতরের অংশটুকুই আপলোড হবে।', 'Drag the picture to place it in the frame. Only what is inside the frame is uploaded.')}</p>
-            {changed && <button type="button" className="ie-reset" onClick={reset}>{pick('আগের মতো করুন', 'Reset')}</button>}
+            <p className="ie-hint">{t('editor.dragThePictureTo')}</p>
+            {changed && <button type="button" className="ie-reset" onClick={reset}>{t('editor.reset')}</button>}
           </div>
         </div>
         <footer className="ie-foot">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDone(file)} disabled={busy || failed}>{pick('যেমন আছে তেমনই দিন', 'Use as it is')}</button>
-          <button type="button" className="btn btn-dark btn-sm" onClick={apply} disabled={busy || !img}>{busy ? pick('তৈরি হচ্ছে…', 'Preparing…') : pick('এই ছবিটি ব্যবহার করুন', 'Use this picture')}</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDone(file)} disabled={busy || failed}>{t('editor.useAsItIs')}</button>
+          <button type="button" className="btn btn-dark btn-sm" onClick={apply} disabled={busy || !img}>{busy ? t('editor.preparing') : t('editor.useThisPicture')}</button>
         </footer>
       </div>
     </dialog>,

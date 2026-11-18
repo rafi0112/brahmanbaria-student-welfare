@@ -8,7 +8,7 @@ const MAX = 6
 // A full-screen photo viewer: zoom with the + / − buttons, the keyboard (+ − 0), the mouse wheel or a pinch, double-click
 // (or double-tap) to zoom in and out, drag to move a zoomed photo, Escape or a click outside to close.
 export default function PhotoViewer({ src, alt = '', onClose }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   const [z, setZ] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -86,20 +86,20 @@ export default function PhotoViewer({ src, alt = '', onClose }) {
   const up = (e) => { pts.current.delete(e.pointerId); last.current.d = 0; if (pts.current.size === 0) setDragging(false) }
 
   return createPortal(
-    <div className="pv" role="dialog" aria-modal="true" aria-label={alt || pick('ছবি', 'Photo')} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="pv" role="dialog" aria-modal="true" aria-label={alt || t('viewer.photo')} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="pv-bar">
-        <button type="button" className="pv-btn" onClick={() => setZoom((v) => v / 1.4)} disabled={z <= MIN} aria-label={pick('ছোট করুন', 'Zoom out')}>−</button>
+        <button type="button" className="pv-btn" onClick={() => setZoom((v) => v / 1.4)} disabled={z <= MIN} aria-label={t('viewer.zoomOut')}>−</button>
         <span className="pv-pct" aria-live="polite">{Math.round(z * 100)}%</span>
-        <button type="button" className="pv-btn" onClick={() => setZoom((v) => v * 1.4)} disabled={z >= MAX} aria-label={pick('বড় করুন', 'Zoom in')}>+</button>
-        <button type="button" className="pv-btn pv-txt" onClick={() => setZoom(1)} disabled={z === 1}>{pick('রিসেট', 'Reset')}</button>
-        <button ref={closeBtn} type="button" className="pv-btn pv-close" onClick={onClose} aria-label={pick('বন্ধ করুন', 'Close')}>✕</button>
+        <button type="button" className="pv-btn" onClick={() => setZoom((v) => v * 1.4)} disabled={z >= MAX} aria-label={t('viewer.zoomIn')}>+</button>
+        <button type="button" className="pv-btn pv-txt" onClick={() => setZoom(1)} disabled={z === 1}>{t('viewer.reset')}</button>
+        <button ref={closeBtn} type="button" className="pv-btn pv-close" onClick={onClose} aria-label={t('viewer.close')}>✕</button>
       </div>
       <div className="pv-stage" ref={stage} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
         onClick={(e) => { if (e.target === stage.current && pressed.current === stage.current && moved.current < 5) onClose() }}
         onDoubleClick={() => setZoom((v) => (v > 1 ? 1 : 2.5))} style={{ cursor: z > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}>
         <img src={src} alt={alt} draggable="false" style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${z})`, transition: dragging ? 'none' : 'transform .18s ease-out' }} />
       </div>
-      <p className="pv-hint">{pick('স্ক্রল বা ডাবল-ক্লিক করে বড় করুন, টেনে সরান', 'Scroll or double-click to zoom, drag to move')}</p>
+      <p className="pv-hint">{t('viewer.scrollOrDoubleClick')}</p>
     </div>,
     document.body,
   )

@@ -66,7 +66,7 @@ export default function ProfileModal({ onClose }) {
 
   return (
     <>
-      <Modal title={t('ad.me.title')} onClose={onClose} busy={busy} guard={guard} drawer>
+      <Modal title={t('ad.me.title')} onClose={onClose} busy={busy} guard={guard} wide>
         <div className="me-head">
           <MonoAvatar name={name} size={56} />
           <div><strong>{name}</strong><span className="muted">{user.email}</span></div>

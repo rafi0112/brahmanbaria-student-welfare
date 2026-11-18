@@ -17,7 +17,7 @@ export function PlaceCard({ p, upazilas = [] }) {
         <div className="place-card-row">
           <div>
             <h3>{pick(p.nameBn, p.nameEn)}</h3>
-            <p className="muted loc"><Icon name="pin" size={14} /> {up ? pick(up.nameBn, up.nameEn) : pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</p>
+            <p className="muted loc"><Icon name="pin" size={14} /> {up ? pick(up.nameBn, up.nameEn) : t('students.brahmanbaria')}</p>
           </div>
           <span className="round-arrow" aria-hidden="true"><Icon name="arrow" size={16} /></span>
         </div>

@@ -1888,3 +1888,22 @@ html[lang='en'] :is(.phero-script, .cband-script, .cband-sign, .hero-script, .st
   .student-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
   .student-grid .sc-mono { aspect-ratio: 4 / 3; }
 }
+
+/* Alumni: the highlighted word of the heading in the same "premium" gold as the alumni cards */
+.phero-v-stack .st-title .hl, .phero-v-stack .st-title .hl * { color: #b07a1f; background: linear-gradient(135deg, #e7a33e 0%, #c98a2b 45%, #915907 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+:root[data-theme='dark'] .phero-v-stack .st-title .hl { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .phero-v-stack .st-title .hl { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; } }
+
+/* "My profile" on phones: a pop-up over the page (rounded, with the page visible around it), not a full-screen page */
+@media (max-width: 760px) {
+  .pdialog { width: calc(100vw - 20px); max-width: 560px; height: auto; max-height: calc(100dvh - 28px); margin: auto; border-radius: 20px; }
+  .pd-inner { height: auto; max-height: calc(100dvh - 28px); }
+  .pd-head { padding: 14px 14px 10px; gap: 10px; } .pd-head h2 { font-size: 1.2rem; overflow-wrap: anywhere; }
+  .pd-tabs { padding: 8px 12px 0; overflow-x: auto; } .pd-tabs button { padding: 8px 12px; white-space: nowrap; }
+  .pd-body { padding: 14px 12px 16px; } .pd-foot { padding: 10px 12px; }
+  .pd-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .pd-body .card-form { padding: 14px; }
+  .pd-body .two, .pd-body .grid-2 { grid-template-columns: minmax(0, 1fr) !important; }
+}
+.pdialog .pd-body .notice { border-radius: 14px; }
+.pdialog .pd-close { color: var(--ink); background: var(--paper-2); border: 1px solid var(--line); opacity: 1; }

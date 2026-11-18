@@ -147,14 +147,14 @@ function Header() {
         {/* on phones the bar keeps only the logo and the menu button; search, language and theme live here */}
         <div className="drawer-tools">
           <button type="button" className="dt-search" onClick={() => { setOpen(false); setSearchOpen(true) }}>
-            <Icon name="search" size={18} /><span>{pick('শিক্ষার্থী, অ্যালামনাই, স্থান খুঁজুন…', 'Search students, alumni, places…')}</span>
+            <Icon name="search" size={18} /><span>{t('nav.searchStudentsAlumniPlaces')}</span>
           </button>
           <div className="dt-row">
             <button type="button" className="dt-btn" onClick={toggleLang} aria-label={t('lang.toggle')}>
               <span className="dt-ico" aria-hidden="true">{lang === 'bn' ? 'EN' : 'বাং'}</span>{lang === 'bn' ? 'English' : 'বাংলা'}
             </button>
             <button type="button" className="dt-btn" onClick={toggleTheme} aria-label={t('theme.toggle')}>
-              <span className="dt-ico" aria-hidden="true"><ThemeGlyph dark={isDark()} /></span>{isDark() ? pick('আলো মোড', 'Light mode') : pick('অন্ধকার মোড', 'Dark mode')}
+              <span className="dt-ico" aria-hidden="true"><ThemeGlyph dark={isDark()} /></span>{isDark() ? t('nav.lightMode') : t('nav.darkMode')}
             </button>
           </div>
         </div>

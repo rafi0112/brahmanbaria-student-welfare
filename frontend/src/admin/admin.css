@@ -737,3 +737,21 @@
 /* multi-upload: a chosen picture opens in the editor from its thumbnail or the "Preview & adjust" button */
 .mu-thumb { padding: 0; border: 0; background: none; border-radius: 8px; cursor: zoom-in; line-height: 0; } .mu-thumb:disabled { cursor: default; }
 .mu-thumb img { border-radius: 8px; object-fit: cover; } .mu-edit { white-space: nowrap; }
+
+/* dialogs and drawers never grow wider than the screen: long words (links, emails, names without spaces) wrap inside */
+.ad-modal-body { grid-template-columns: minmax(0, 1fr); }
+.ad-modal-body > * { min-width: 0; }
+.me-facts > div { grid-template-columns: minmax(96px, 38%) minmax(0, 1fr) !important; }
+.me-facts dd, .me-head a, .me-head strong, .ct-body, .ct-detail { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+@media (max-width: 560px) {
+  .adm .ad-drawer { width: 100%; }
+  .ad-modal-body { padding: 16px; }
+  .ct-actions { justify-content: center; }
+}
+
+/* the admin's "My profile" pop-up: centred on desktop, a rounded sheet with a margin on phones */
+@media (max-width: 560px) {
+  .adm .modal-back.ad-back:not(.is-drawer) { padding: 10px; }
+  .adm .ad-modal { width: 100%; max-height: calc(100dvh - 20px); border-radius: 16px; }
+  .adm .ad-modal-wide { width: 100%; }
+}

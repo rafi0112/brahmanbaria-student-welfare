@@ -106,7 +106,7 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="stack" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={t('alumni.thoseWhoLeadThe')}>
+      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="stack" lede={t('alumni.lede')} src="/images/bswa/river.webp">
         <div className="banner-search" role="search">
           <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? t('alumni.nameProfessionBloodGroup') : t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
@@ -251,13 +251,13 @@ function ExecPhoto({ m, size = 96 }) {
 // One member's details in the pop-up: the photo (a click enlarges it), name, post, group, the committee and its term,
 // and the whole introduction (the cards show only its first lines).
 function SeatPhoto({ m }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   const [open, setOpen] = useState(false)
   const [bad, setBad] = useState(false)
   if (!m.photoUrl || bad) return <span className="sp-avatar" aria-hidden="true">{firstLetter(m.name)}</span>
   return (
     <>
-      <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${pick('ছবি বড় করে দেখুন', 'View the photo larger')}: ${m.name}`}>
+      <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${t('committee.viewThePhotoLarger')}: ${m.name}`}>
         <img src={m.photoUrl} alt="" onError={() => setBad(true)} /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
       </button>
       {open && <PhotoViewer src={m.photoUrl} alt={m.name} onClose={() => setOpen(false)} />}
@@ -284,14 +284,14 @@ function CommitteeProfile({ m, group, committee }) {
       <div className="sp-body">
         <div className="sp-main">
           <section className="sp-sec">
-            <h2>{pick('পরিচিতি', 'About')}</h2>
-            {m.bio ? <p className="cm-bio-full">{m.bio}</p> : <p className="muted">{pick('এখনো কোনো পরিচিতি যোগ করা হয়নি।', 'No introduction has been added yet.')}</p>}
+            <h2>{t('committee.about')}</h2>
+            {m.bio ? <p className="cm-bio-full">{m.bio}</p> : <p className="muted">{t('committee.noIntroductionHasBeen')}</p>}
           </section>
           <section className="sp-sec">
             <dl className="sp-facts">
-              <div><dt>{pick('কমিটি', 'Committee')}</dt><dd>{committee.name}</dd></div>
-              {term && <div><dt>{pick('মেয়াদ', 'Term')}</dt><dd>{term}</dd></div>}
-              {m.verified && <div><dt>{pick('সদস্যপদ', 'Membership')}</dt><dd>{t('verified.mark')}</dd></div>}
+              <div><dt>{t('committee.committee')}</dt><dd>{committee.name}</dd></div>
+              {term && <div><dt>{t('committee.term2')}</dt><dd>{term}</dd></div>}
+              {m.verified && <div><dt>{t('committee.membership')}</dt><dd>{t('verified.mark')}</dd></div>}
             </dl>
           </section>
         </div>

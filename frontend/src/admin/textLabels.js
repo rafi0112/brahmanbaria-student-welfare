@@ -38,6 +38,9 @@ const PLACES = [
   [/^page\./, 'সব পাতা › পাতা নম্বরের বোতাম', 'Every page › page number buttons', null],
   [/^nf\./, '“পাতা পাওয়া যায়নি” পাতা', '“Page not found” page', null],
   [/^common\./, 'অনেক পাতায় ব্যবহৃত লেখা', 'Used on many pages', null],
+  [/^search\./, 'সার্চ (উপরের খোঁজার বোতাম চাপলে যে জানালা খোলে)', 'Search (the window the search button opens)', '/'],
+  [/^viewer\./, 'ছবি বড় করে দেখার জানালা', 'The window that shows a photo large', '/students'],
+  [/^editor\./, 'আপলোডের আগে “ছবি দেখুন ও ঠিক করুন” জানালা', 'The “Preview and adjust the picture” window before an upload', null],
 ]
 
 // what kind of text it is, by the whole name, for groups whose texts are all of one kind

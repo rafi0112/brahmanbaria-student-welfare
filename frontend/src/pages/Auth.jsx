@@ -196,7 +196,7 @@ export default function Auth({ mode }) {
         {done && <Link className="btn btn-dark btn-block" to="/login">{t('nav.login')}</Link>}
         {showForm && (
           <form onSubmit={submit} noValidate>
-            {mode === 'register' && <p className="field-legend"><b className="field-req" aria-hidden="true">*</b> {pick('চিহ্নিত ঘরগুলো আবশ্যক। বাকিগুলো পরে প্রোফাইল থেকেও দেওয়া যাবে।', 'marks a required field. The rest can also be added later from your profile.')}</p>}
+            {mode === 'register' && <p className="field-legend"><b className="field-req" aria-hidden="true">*</b> {t('auth.marksARequiredField')}</p>}
             <div className={mode === 'register' ? 'form-grid' : undefined}>
             {cfg.fields.filter((f) => f !== 'terms').map((f) => (options[f] ? (
               <label key={f} className="field">
