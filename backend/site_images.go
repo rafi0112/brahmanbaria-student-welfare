@@ -22,7 +22,9 @@ const maxHeroSlides = 12
 
 // sitePageKeys are the pages whose top picture can be changed.
 var sitePageKeys = map[string]bool{"students": true, "alumni": true, "committee": true, "events": true, "gallery": true, "heritage": true,
-	"blog": true, "about": true, "help": true, "directory": true, "member": true}
+	"blog": true, "about": true, "help": true, "directory": true, "member": true,
+	// pictures inside pages (not at their top): the two beside the About text, the small one and the community photo on Home
+	"about-art-1": true, "about-art-2": true, "home-inset": true, "home-community": true}
 
 type HeroSlide struct {
 	ID        string `json:"id"`

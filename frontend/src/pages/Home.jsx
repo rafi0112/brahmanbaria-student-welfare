@@ -8,7 +8,6 @@ import Reveal from '../components/Reveal.jsx'
 import { Avatar, Photo } from '../components/ui.jsx'
 import { SketchArt, Vine } from '../components/Decor.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
-import { PostCard } from '../components/cards.jsx'
 import EventCarousel from '../components/EventCarousel.jsx'
 import HeroStage from '../components/HeroStage.jsx'
 import FacebookLink from '../components/FacebookLink.jsx'
@@ -54,7 +53,7 @@ function CountUp({ value, go, delay = 0 }) {
 
 // The four headline numbers on a cream band. They start counting, and their lines fill, when the band scrolls into view.
 function StatsBand({ items }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   const ref = useRef(null)
   const [seen, setSeen] = useState(false)
   useEffect(() => {
@@ -68,8 +67,8 @@ function StatsBand({ items }) {
     <section className={`stat-band${seen ? ' is-in' : ''}`} ref={ref} aria-labelledby="stat-h">
       <div className="wrap stat-band-in">
         <div className="stat-head">
-          <p className="eyebrow">{pick('এক নজরে', 'At a glance')}</p>
-          <h2 id="stat-h">{pick('সংখ্যায় আমাদের জেলা ও কমিউনিটি', 'Our district and community in numbers')}</h2>
+          <p className="eyebrow">{t('home.atAGlance')}</p>
+          <h2 id="stat-h">{t('home.ourDistrictAndCommunity')}</h2>
         </div>
         <dl className="stat-grid">
           {items.map(([k, v, ic, bn, en, subBn, subEn], i) => (
@@ -97,7 +96,6 @@ export default function Home() {
   const stats = useApi('/stats')
   const ups = useApi('/upazilas')
   const places = useApi('/heritage')
-  const posts = useApi('/blog')
   const events = useApi('/events')
   // upcoming events first (soonest first), then the most recent past ones
   const today = new Date().toISOString().slice(0, 10)
@@ -117,63 +115,6 @@ export default function Home() {
         <HeroStage />
       </section>
 
-      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
-      <section className="section wrap" aria-labelledby="events-h">
-        <Reveal className="section-head">
-          <div>
-            <p className="eyebrow">{pick('ইভেন্ট ও আয়োজন', 'Events')}</p>
-            <h2 id="events-h">{pick('আসন্ন ও সাম্প্রতিক ইভেন্ট', 'Upcoming and recent events')}</h2>
-          </div>
-          <Link className="link-arrow" to="/events">{pick('সব ইভেন্ট', 'All events')} <Icon name="arrow" size={15} className="arr" /></Link>
-        </Reveal>
-        <EventCarousel items={eventList} loading={events.loading} />
-      </section>
-
-      {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
-      <section className="explore2" aria-labelledby="explore-h">
-        <div className="explore2-grid">
-          <Reveal className="ex-media ex-frame">
-            {/* a photograph in a soft frame with a smaller one tucked over its corner; admins choose the main picture */}
-            <figure className="ex-main">
-              <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.webp'} width="1280" height="853" loading="lazy" decoding="async"
-                alt={pick('তিতাস নদীর সন্ধ্যা', 'Evening on the Titas river')} />
-              <figcaption><Icon name="pin" size={14} /> {pick('নদী · ঐতিহ্য · মানুষ', 'Rivers · Heritage · People')}</figcaption>
-            </figure>
-            <img className="ex-inset" src="/images/arifail-front-640.webp" width="640" height="427" loading="lazy" decoding="async" alt={pick('আড়িফাইল মসজিদ, সরাইল', 'Arifail Mosque, Sarail')} />
-          </Reveal>
-          <div className="ex-copy">
-            <Reveal>
-              <p className="eyebrow">{pick('অনেক গল্পের একটি জেলা', 'A district of many stories')}</p>
-              <h2 id="explore-h" className="ex-title">{pick('ঘুরে দেখুন ', 'Explore ')}<span className="hl">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span></h2>
-            </Reveal>
-            <Reveal className="ex-ups">
-              <p className="ex-label">{pick('নয়টি উপজেলা', 'The nine upazilas')}</p>
-              <div className="ex-ups-row">
-              <ul>
-                {[...upazilas].sort((x, y) => (x.slug === 'sadar' ? -1 : y.slug === 'sadar' ? 1 : 0)).map((u) => (
-                  <li key={u.slug}><Link to={`/directory/${u.slug}`}><Icon name="pin" size={15} /><span>{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</span><Icon name="arrow" size={13} className="arr" /></Link></li>
-                ))}
-              </ul>
-              <div className="ex-side">
-                <span className="ex-sun" aria-hidden="true" />
-                <SketchArt src="river" className="ex-sketch" />
-                <Link className="btn btn-dark ex-all" to="/directory">{pick('সব উপজেলা দেখুন', 'Explore all upazilas')} <Icon name="arrow" size={16} className="arr" /></Link>
-              </div>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- the district and the community in numbers: counts rise as the band comes into view ---------- */}
-      <StatsBand items={[
-        ['students', s ? (s.students || 0) + (s.alumni || 0) : undefined, 'users', 'শিক্ষার্থী ও অ্যালামনাই', 'Students and alumni',
-          s ? `বর্তমান ${n(s.students || 0)} · অ্যালামনাই ${n(s.alumni || 0)}` : '', s ? `${s.students || 0} current · ${s.alumni || 0} alumni` : ''],
-        ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas', 'ব্রাহ্মণবাড়িয়া জেলায়', 'in Brahmanbaria'],
-        ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads', 'নয়টি উপজেলা জুড়ে', 'across the nine upazilas'],
-        ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places', 'সূত্রসহ সংরক্ষিত', 'documented with sources'],
-      ]} />
-
       {/* ---------- interactive upazila map (real boundaries and counts) ---------- */}
       <section className="section-tint map-sec">
         <Vine className="vine-map" />
@@ -191,18 +132,78 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
+      <section className="explore2" aria-labelledby="explore-h">
+        <div className="explore2-grid">
+          <Reveal className="ex-media ex-frame">
+            {/* a photograph in a soft frame with a smaller one tucked over its corner; admins choose the main picture */}
+            <figure className="ex-main">
+              <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.webp'} width="1280" height="853" loading="lazy" decoding="async"
+                alt={t('home.eveningOnTheTitas')} />
+              <figcaption><Icon name="pin" size={14} /> {t('home.riversHeritagePeople')}</figcaption>
+            </figure>
+            <img className="ex-inset" src={site.pages['home-inset'] || '/images/arifail-front-640.webp'} width="640" height="427" loading="lazy" decoding="async" alt={t('home.arifailMosqueSarail')} />
+          </Reveal>
+          <div className="ex-copy">
+            <Reveal>
+              <p className="eyebrow">{t('home.aDistrictOfMany')}</p>
+              <h2 id="explore-h" className="ex-title">{t('home.explore')}<span className="hl">{t('home.brahmanbaria')}</span></h2>
+            </Reveal>
+            <Reveal className="ex-ups">
+              <p className="ex-label">{t('home.theNineUpazilas')}</p>
+              <div className="ex-ups-row">
+              <ul aria-busy={ups.loading || undefined}>
+                {ups.loading && !upazilas.length && Array.from({ length: 9 }, (_, k) => <li key={k} aria-hidden="true"><span className="sk sk-line ex-sk" /></li>)}
+                {[...upazilas].sort((x, y) => (x.slug === 'sadar' ? -1 : y.slug === 'sadar' ? 1 : 0)).map((u) => (
+                  <li key={u.slug}><Link to={`/directory/${u.slug}`}><Icon name="pin" size={15} /><span>{pick(u.nameBn, u.nameEn).replace(' উপজেলা', '').replace(' Upazila', '')}</span><Icon name="arrow" size={13} className="arr" /></Link></li>
+                ))}
+              </ul>
+              <div className="ex-side">
+                <span className="ex-sun" aria-hidden="true" />
+                <SketchArt src="river" className="ex-sketch" />
+                <Link className="btn btn-dark ex-all" to="/directory">{t('home.exploreAllUpazilas')} <Icon name="arrow" size={16} className="arr" /></Link>
+              </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
+      <section className="section wrap" aria-labelledby="events-h">
+        <Reveal className="section-head">
+          <div>
+            <p className="eyebrow">{t('home.events')}</p>
+            <h2 id="events-h">{t('home.upcomingAndRecentEvents')}</h2>
+          </div>
+          <Link className="link-arrow" to="/events">{t('home.allEvents')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
+        <EventCarousel items={eventList} loading={events.loading} />
+      </section>
+
+      {/* ---------- the district and the community in numbers: counts rise as the band comes into view ---------- */}
+      <StatsBand items={[
+        ['students', s ? (s.students || 0) + (s.alumni || 0) : undefined, 'users', 'শিক্ষার্থী ও অ্যালামনাই', 'Students and alumni',
+          s ? `বর্তমান ${n(s.students || 0)} · অ্যালামনাই ${n(s.alumni || 0)}` : '', s ? `${s.students || 0} current · ${s.alumni || 0} alumni` : ''],
+        ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas', 'ব্রাহ্মণবাড়িয়া জেলায়', 'in Brahmanbaria'],
+        ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads', 'নয়টি উপজেলা জুড়ে', 'across the nine upazilas'],
+        ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places', 'সূত্রসহ সংরক্ষিত', 'documented with sources'],
+      ]} />
+
       {/* ---------- student community: real community photograph beside an evergreen panel ---------- */}
       <section className="cband" aria-labelledby="cband-h">
         <div className="cband-photo">
-          <Photo id="boat-race" sizes="(min-width: 1000px) 50vw, 100vw" alt={pick('নৌকাবাইচ দেখতে নদীর তীরে মানুষের ভিড়', 'People gathered on the riverbank for a boat race')} />
-          <p className="cband-script" aria-hidden="true">{pick('ভিন্ন পথ, একসাথে আগামী', 'Different journeys, a stronger tomorrow')}</p>
+          {site.pages['home-community']
+            ? <img src={site.pages['home-community']} alt="" loading="lazy" decoding="async" />
+            : <Photo id="boat-race" sizes="(min-width: 1000px) 50vw, 100vw" alt={t('home.peopleGatheredOnThe')} />}
+          <p className="cband-script" aria-hidden="true">{t('home.differentJourneysAStronger')}</p>
         </div>
         <div className="cband-copy">
           <SketchArt src="heritage" className="cb-heritage" />
           <SketchArt src="students" className="cb-students" />
           <Reveal>
-            <p className="eyebrow eyebrow-line">{pick('শিক্ষার্থী কমিউনিটি', 'Student community')}</p>
-            <h2 id="cband-h">{pick('যারা গড়ছে আগামী', 'The people shaping tomorrow')}</h2>
+            <p className="eyebrow eyebrow-line">{t('home.studentCommunity')}</p>
+            <h2 id="cband-h">{t('home.thePeopleShapingTomorrow')}</h2>
             <p className="cband-lede">{t('community.body')}</p>
             {(students.data?.items || []).length > 0 && (
               <div className="cband-avatars">
@@ -212,27 +213,13 @@ export default function Home() {
             )}
             <div className="cband-actions">
               <Link className="btn btn-dark" to="/students">{t('community.cta')} <Icon name="arrow" size={16} className="arr" /></Link>
-              <Link className="btn btn-on-dark" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : pick('BSWA-তে যোগ দিন', 'Join BSWA')}</Link>
+              <Link className="btn btn-on-dark" to={joinTo}>{user ? t(user.role === 'admin' ? 'admin.title' : 'auth.account') : t('home.joinBswa')}</Link>
             </div>
             <FacebookLink />
-            <p className="cband-sign" aria-hidden="true">{pick('একই শিকড়, উজ্জ্বল পথ', 'Same roots, brighter paths')}</p>
+            <p className="cband-sign" aria-hidden="true">{t('home.sameRootsBrighterPaths')}</p>
           </Reveal>
         </div>
       </section>
-
-      {/* ---------- stories (only real, published articles; placeholders are never public) ---------- */}
-      {(posts.data?.items || []).length > 0 && (
-      <section className="section wrap" aria-labelledby="stories-h">
-        <Reveal className="section-head">
-          <div><h2 id="stories-h">{t('stories.title')}</h2><p className="muted">{t('stories.lede')}</p></div>
-          <Link className="link-arrow" to="/blog">{t('stories.all')} <Icon name="arrow" size={15} className="arr" /></Link>
-        </Reveal>
-        <div className="cards-3">
-          {(posts.data?.items || []).slice(0, 3).map((p, i) => <Reveal key={p.slug} delay={i * 70}><PostCard p={p} /></Reveal>)}
-        </div>
-      </section>
-      )}
-
     </>
   )
 }

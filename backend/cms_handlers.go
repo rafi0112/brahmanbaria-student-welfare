@@ -554,6 +554,23 @@ func (a *App) cmsReorder(w http.ResponseWriter, r *http.Request, u User) {
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
+// reorderSlots gives the new places for entries put in a new order. When only some entries are reordered (one page of
+// a long list, or one album), they swap among the places they already held, so the rest of the list keeps its order.
+// Places that clash (entries that never had one of their own) are numbered on from the first.
+func reorderSlots(current []int) []int {
+	slots := append([]int(nil), current...)
+	sort.Ints(slots)
+	for i := 1; i < len(slots); i++ {
+		if slots[i] <= slots[i-1] {
+			for j := range slots {
+				slots[j] = slots[0] + j
+			}
+			break
+		}
+	}
+	return slots
+}
+
 type bulkFailure struct {
 	ID    string `json:"id"`
 	Error string `json:"error"`
@@ -736,6 +753,7 @@ type galleryOut struct {
 	Source    string `json:"source"`
 	Category  string `json:"category"`
 	EventDate string `json:"eventDate"`
+	Year      string `json:"year"` // the picture's date when it has one, otherwise the year it was published, for grouping by year
 	Album     string `json:"album"`
 }
 
@@ -767,10 +785,18 @@ func (a *App) publicGallery(w http.ResponseWriter, r *http.Request) {
 	for i := range albumList {
 		live[albumList[i].ID] = &albumList[i]
 	}
-	imgs, _, err := a.Auth.Store.ListEntries(r.Context(), EntryQuery{Kind: KindImage, Public: true, Sort: "order", Limit: 100, Page: 1})
-	if err != nil {
-		a.cmsFail(w, err)
-		return
+	// every published picture, a page at a time (an upload of many pictures at once can pass one page)
+	var imgs []Entry
+	for page := 1; page <= 50; page++ {
+		batch, total, err := a.Auth.Store.ListEntries(r.Context(), EntryQuery{Kind: KindImage, Public: true, Sort: "order", Limit: 100, Page: page})
+		if err != nil {
+			a.cmsFail(w, err)
+			return
+		}
+		imgs = append(imgs, batch...)
+		if len(batch) == 0 || len(imgs) >= total {
+			break
+		}
 	}
 	want := r.URL.Query().Get("album")
 	items := []galleryOut{}
@@ -787,9 +813,19 @@ func (a *App) publicGallery(w http.ResponseWriter, r *http.Request) {
 		var d ImageData
 		_ = json.Unmarshal(e.Data, &d)
 		items = append(items, galleryOut{ID: e.ID, Image: d.Image, ImageURL: a.mediaURL(d.Image), CaptionBn: d.CaptionBn, CaptionEn: d.CaptionEn, Alt: d.Alt,
-			Credit: d.Credit, License: d.License, Source: d.Source, Category: d.Category, EventDate: d.EventDate, Album: e.ParentID})
+			Credit: d.Credit, License: d.License, Source: d.Source, Category: d.Category, EventDate: d.EventDate, Year: pictureYear(d.EventDate, e.PublishedAt, e.CreatedAt), Album: e.ParentID})
 	}
 	writeJSON(w, 200, map[string]any{"albums": albumList, "items": items})
+}
+
+// pictureYear is the first date that is known, as a year ("2025"), or "" when none is.
+func pictureYear(dates ...string) string {
+	for _, d := range dates {
+		if len(d) >= 4 && d[0] >= '1' && d[0] <= '2' && strings.Trim(d[:4], "0123456789") == "" {
+			return d[:4]
+		}
+	}
+	return ""
 }
 
 func sortPostsByDate(ps []postOut) {

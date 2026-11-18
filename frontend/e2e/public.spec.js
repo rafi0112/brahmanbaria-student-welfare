@@ -50,7 +50,8 @@ test('hero: the full name, two actions, three scenes; search opens a dialog from
   await expect(page.locator('.hs-tab').nth(0)).toHaveAttribute('aria-current', 'true')
   await page.getByRole('button', { name: 'Pause scenes' }).click()
   await expect(page.getByRole('button', { name: 'Play scenes' })).toHaveAttribute('aria-pressed', 'true')
-  // search opens a dialog with suggestions; typing finds a student and Enter opens the profile
+  // search opens a dialog with suggestions; typing finds a student and Enter opens the same profile pop-up as the
+  // Students page, over the page in view
   await page.locator('.nav-tools').getByRole('button', { name: 'Search' }).click()
   const dialog = page.getByRole('dialog', { name: 'Search' })
   await expect(dialog).toBeVisible()
@@ -58,8 +59,13 @@ test('hero: the full name, two actions, three scenes; search opens a dialog from
   await dialog.getByRole('combobox').fill('Diba')
   await expect(dialog.getByRole('option').first()).toContainText('Diba')
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/students\/s[0-9a-f]+$/)
   await expect(dialog).toBeHidden()
+  const found = page.getByRole('dialog', { name: 'Profile' })
+  await expect(found).toBeVisible()
+  await expect(found.locator('.sprofile.is-modal h1')).toContainText('Diba')
+  await expect(page).toHaveURL(/\/$/) // still on the home page behind it
+  await found.getByRole('button', { name: 'Close' }).click()
+  await expect(found).toBeHidden()
   await page.keyboard.press('Control+k')
   await expect(page.getByRole('dialog', { name: 'Search' })).toBeVisible()
   await page.keyboard.press('Escape')
@@ -324,4 +330,22 @@ test('event page: the uploaded picture is shown whole, not cropped; the students
   await page.goto('/students')
   await expect(page.locator('.student-card').first()).toBeVisible()
   await expect(page.locator('.dir-aside, .join-card, .loc-list')).toHaveCount(0)
+})
+
+test('search: clicking an alumnus opens the same profile pop-up as the Alumni page', async ({ page }) => {
+  const api = await (await page.request.get('/api/v1/alumni?limit=1')).json()
+  const name = api.items[0].name
+  await page.goto('/events')
+  await page.locator('.nav-tools').getByRole('button', { name: 'Search' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Search' })
+  await dialog.getByRole('combobox').fill(name)
+  const hit = dialog.getByRole('option').filter({ hasText: name }).first()
+  await expect(hit).toBeVisible()
+  await hit.click()
+  const dlg = page.getByRole('dialog', { name })
+  await expect(dlg).toBeVisible()
+  await expect(dlg.locator('.sprofile.is-modal h1')).toHaveText(name)
+  await expect(page).toHaveURL(/\/events$/)
+  await page.keyboard.press('Escape')
+  await expect(dlg).toBeHidden()
 })

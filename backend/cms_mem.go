@@ -333,8 +333,13 @@ func (m *memStore) ReorderEntries(_ context.Context, actorID, kind string, ids [
 		}
 		seen[id] = true
 	}
+	cur := make([]int, len(ids))
 	for i, id := range ids {
-		m.cms.entries[id].SortOrder = i + 1
+		cur[i] = m.cms.entries[id].SortOrder
+	}
+	slots := reorderSlots(cur)
+	for i, id := range ids {
+		m.cms.entries[id].SortOrder = slots[i]
 	}
 	m.auditLocked(actorID, kind+".reorder", kind, "", map[string]any{"count": len(ids)})
 	return nil

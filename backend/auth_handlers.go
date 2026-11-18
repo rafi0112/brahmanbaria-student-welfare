@@ -96,6 +96,8 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.alumniAdminRoutes(m, h)
 	a.settingsRoutes(m, h)
 	a.siteImagesRoutes(m, h)
+	a.siteTextsRoutes(m, h)
+	a.bulkImportRoutes(m, h)
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)

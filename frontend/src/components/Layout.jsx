@@ -5,6 +5,9 @@ import { LeafMark, SketchArt } from './Decor.jsx'
 import { AccountMenu, ProfileDialog } from './Account.jsx'
 import Icon from './Icon.jsx'
 import SearchDialog from './SearchDialog.jsx'
+import PersonDialog from './ProfileDialog.jsx'
+import { StudentDetail } from '../pages/Students.jsx'
+import { AlumniProfile } from '../pages/Community.jsx'
 import FacebookLink from './FacebookLink.jsx'
 import { CONTACT_EMAIL } from '../lib/contact.js'
 import { MotionLayer, Toasts, toast } from './Motion.jsx'
@@ -32,6 +35,7 @@ function Header() {
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [found, setFound] = useState(null) // a student or alumnus picked in the search, shown in the profile pop-up
   useEffect(() => { // "/" or Ctrl/⌘ + K opens search from anywhere except while typing
     const key = (e) => {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable
@@ -151,7 +155,12 @@ function Header() {
       </div>
       <button type="button" className="drawer-scrim" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} />
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
-      {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
+      {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} onProfile={setFound} />}
+      {found && (
+        <PersonDialog label={found.kind === 'alumni' ? found.a.name : t('students.profile2')} onClose={() => setFound(null)}>
+          {found.kind === 'alumni' ? <AlumniProfile a={found.a} view={found.view} /> : <StudentDetail id={String(found.id)} modal />}
+        </PersonDialog>
+      )}
       <Toasts t={t} />
       <MotionLayer />
     </header>

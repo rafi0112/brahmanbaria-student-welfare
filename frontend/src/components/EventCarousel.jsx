@@ -67,14 +67,14 @@ export default function EventCarousel({ items, loading }) {
     return (
       <div className="evc-empty">
         <Icon name="calendar" size={26} />
-        <p>{pick('এই মুহূর্তে কোনো ইভেন্ট প্রকাশিত নেই। নতুন আয়োজন প্রকাশিত হলেই এখানে দেখা যাবে।', 'No events are published right now. New ones appear here as soon as they are published.')}</p>
+        <p>{t('evc.noEventsArePublished')}</p>
         <Link className="btn btn-outline btn-sm" to="/help#contact">{t('events.suggest')}</Link>
       </div>
     )
   }
   const today = new Date().toISOString().slice(0, 10)
   return (
-    <div className={`evx${running ? ' is-running' : ''}${count > 1 ? ' evx-multi' : ''}`} ref={root} role="region" aria-roledescription="carousel" aria-label={pick('ইভেন্ট', 'Events')}
+    <div className={`evx${running ? ' is-running' : ''}${count > 1 ? ' evx-multi' : ''}`} ref={root} role="region" aria-roledescription="carousel" aria-label={t('evc.events')}
       tabIndex={0} onKeyDown={onKey} onMouseMove={onMove}
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => { setPaused(false); root.current?.style.setProperty('--px', 0); root.current?.style.setProperty('--py', 0) }}
       onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}
@@ -98,8 +98,8 @@ export default function EventCarousel({ items, loading }) {
             <div className="evx-shade" aria-hidden="true" />
             <div className="evx-copy">
               <p className="evx-kicker">
-                <span className={`evx-when ${e.date >= today ? 'up' : 'past'}`}>{e.date >= today ? pick('আসন্ন', 'Upcoming') : pick('সম্পন্ন', 'Past')}</span>
-                {e.featured && <span className="evx-feat">★ {pick('ফিচার্ড', 'Featured')}</span>}
+                <span className={`evx-when ${e.date >= today ? 'up' : 'past'}`}>{e.date >= today ? t('evc.upcoming') : t('evc.past')}</span>
+                {e.featured && <span className="evx-feat">★ {t('evc.featured')}</span>}
               </p>
               <h3 className="evx-title">{pick(e.titleBn, e.titleEn)}</h3>
               <p className="evx-meta">
@@ -108,8 +108,8 @@ export default function EventCarousel({ items, loading }) {
               </p>
               {(e.summaryBn || e.summaryEn || e.summary) && <p className="evx-sum">{pick(e.summaryBn, e.summaryEn) || e.summary}</p>}
               <div className="evx-actions">
-                {e.slug && <Link className="btn btn-dark" to={`/events/${e.slug}`} tabIndex={on ? 0 : -1}>{pick('বিস্তারিত দেখুন', 'View details')} <Icon name="arrow" size={16} className="arr" /></Link>}
-                <Link className="btn evx-ghost" to="/events" tabIndex={on ? 0 : -1}>{pick('সব ইভেন্ট', 'View all events')}</Link>
+                {e.slug && <Link className="btn btn-dark" to={`/events/${e.slug}`} tabIndex={on ? 0 : -1}>{t('evc.viewDetails')} <Icon name="arrow" size={16} className="arr" /></Link>}
+                <Link className="btn evx-ghost" to="/events" tabIndex={on ? 0 : -1}>{t('evc.viewAllEvents')}</Link>
               </div>
             </div>
             {d && <time className="evx-date" dateTime={e.date} aria-hidden="true"><b>{d.day}</b><span>{d.month}</span></time>}
@@ -118,8 +118,8 @@ export default function EventCarousel({ items, loading }) {
       })}
       {count > 1 && (
         <div className="evx-nav">
-          <button type="button" className="evx-arrow" onClick={() => go(i - 1)} aria-label={pick('আগের ইভেন্ট', 'Previous event')}><Icon name="arrow" size={20} /></button>
-          <div className="evx-dots" role="tablist" aria-label={pick('ইভেন্ট বেছে নিন', 'Choose an event')}>
+          <button type="button" className="evx-arrow" onClick={() => go(i - 1)} aria-label={t('evc.previousEvent')}><Icon name="arrow" size={20} /></button>
+          <div className="evx-dots" role="tablist" aria-label={t('evc.chooseAnEvent')}>
             {items.map((e, k) => (
               <button key={k} type="button" role="tab" aria-selected={k === i} className={`evx-dot${k === i ? ' is-on' : ''}`} onClick={() => go(k)}
                 aria-label={`${n(k + 1)}: ${pick(e.titleBn, e.titleEn)}`}>
@@ -128,7 +128,7 @@ export default function EventCarousel({ items, loading }) {
             ))}
           </div>
           <span className="evx-count num" aria-live="polite">{n(String(i + 1).padStart(2, '0'))} / {n(String(count).padStart(2, '0'))}</span>
-          <button type="button" className="evx-arrow" onClick={() => go(i + 1)} aria-label={pick('পরের ইভেন্ট', 'Next event')}><Icon name="arrow" size={20} /></button>
+          <button type="button" className="evx-arrow" onClick={() => go(i + 1)} aria-label={t('evc.nextEvent')}><Icon name="arrow" size={20} /></button>
         </div>
       )}
     </div>

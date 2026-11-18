@@ -37,7 +37,7 @@ export default function Directory() {
       </PageHero>
       <section className="section wrap">
         <Crumbs items={[{ to: '/', label: t('nav.home') }, { label: t('nav.directory') }]} />
-        <p className="hier">{t('dir.country')} <i>›</i> {pick('চট্টগ্রাম বিভাগ', 'Chattogram Division')} <i>›</i> {pick('ব্রাহ্মণবাড়িয়া জেলা', 'Brahmanbaria District')}</p>
+        <p className="hier">{t('dir.country')} <i>›</i> {t('dir.chattogramDivision')} <i>›</i> {t('dir.brahmanbariaDistrict')}</p>
         <div className="dir-layout">
           <Data q={ups} skeleton="block">
             {() => (
@@ -104,7 +104,7 @@ export function UpazilaDetail() {
             <>
               <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: '/directory', label: t('nav.directory') }, { label: pick(u.nameBn, u.nameEn) }]} />
               <header className="detail-head">
-                <p className="kicker">{pick('ব্রাহ্মণবাড়িয়া জেলা', 'Brahmanbaria District')}</p>
+                <p className="kicker">{t('dir.brahmanbariaDistrict')}</p>
                 <h1>{pick(u.nameBn, u.nameEn)}</h1>
                 {!u.verified && <Badge tone="muted">{t('dir.notVerified')}</Badge>}
               </header>

@@ -9,6 +9,7 @@ import Icon from './icons.jsx'
 import ListToolbar from './toolbar.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
+import BulkImport from './BulkImport.jsx'
 
 const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
 // The batches still studying: after the saved alumni batch ("alumni up to"). Graduated batches are managed on the Alumni page.
@@ -336,7 +337,8 @@ export function VerifiedMark({ label }) {
 }
 
 function Imported() {
-  const { t, n, lang } = useApp()
+  const { t, n, lang, pick } = useApp()
+  const [bulk, setBulk] = useState(false)
   const cut = useAlumniCut()
   const errText = useErrText()
   const when = useWhen(lang)
@@ -393,7 +395,9 @@ function Imported() {
     <>
       <div className="ad-subhead"><p className="notice">{t('ad.imp.note')}{list.data?.sample ? ` ${t('students.sample')}` : ''}</p>
         <span className="row"><button type="button" className="btn btn-outline btn-sm" disabled={exporting} onClick={exportCsv}><Icon name="download" size={15} /> {t('ad.imp.export')}</button>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setBulk(true)}><Icon name="upload" size={15} /> {pick('ফাইল থেকে একসাথে যোগ', 'Import from a file')}</button>
           <button type="button" className="btn btn-dark btn-sm" onClick={() => setForm({})}><Icon name="plus" size={15} /> {t('ad.imp.add')}</button></span></div>
+      {bulk && <BulkImport onClose={() => setBulk(false)} onDone={(added) => { if (added) { ok(pick(`${n(added)} জন যোগ হয়েছে।`, `${added} added.`)); list.retry() } }} />}
       {quota.data && (quota.data.configured
         ? <p className="muted small">{t('ad.inv.quota').replace('{h}', n(quota.data.usedHour)).replace('{hl}', n(quota.data.perHour)).replace('{d}', n(quota.data.usedDay)).replace('{dl}', n(quota.data.perDay))} <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !(quota.data.counts?.saved > 0)} onClick={sendBatch}>{t('ad.inv.sendBatch')} ({n(quota.data.counts?.saved || 0)})</button></p>
         : <p className="notice bad" role="status">{t(quota.data.keyStatus === 'invalid' ? 'ad.inv.keyInvalid' : 'ad.inv.off')}</p>)}

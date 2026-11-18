@@ -80,15 +80,21 @@ export function BlogPost() {
 
 /* ---------------- Gallery ---------------- */
 export function Gallery() {
-  const { t, pick } = useApp()
+  const { t, n, pick } = useApp()
   const site = useSiteImages()
   const res = useApi('/gallery')
   const [album, setAlbum] = useState('')
+  const [year, setYear] = useState('')
   const [open, setOpen] = useState(null)
   const closeRef = useRef(null)
   const all = res.data?.items || []
   const albums = res.data?.albums || []
-  const items = album ? all.filter((i) => i.album === album) : all
+  const inAlbum = album ? all.filter((i) => i.album === album) : all
+  // pictures by year, newest year first; pictures without any date come last
+  const years = [...new Set(all.map((i) => i.year || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : b.localeCompare(a)))
+  const groups = years.map((y) => [y, inAlbum.filter((i) => (i.year || '') === y)]).filter(([y, list]) => list.length && (year === '' || y === year))
+  const items = groups.flatMap(([, list]) => list) // the order the lightbox walks through
+  const yearName = (y) => (y ? n(y) : pick('অন্যান্য', 'Other'))
   const caption = (i) => pick(i.captionBn, i.captionEn) || i.alt
   useEffect(() => {
     if (open == null) return undefined
@@ -112,8 +118,8 @@ export function Gallery() {
           const hit = all.find((it) => it.imageUrl === site.galleryFeatured || (it.image && site.galleryFeatured.includes(`/images/${it.image}-`)))
           return (
             <figure className="gal-feature">
-              <img src={site.galleryFeatured} alt={hit ? hit.alt || caption(hit) : pick('ফিচার্ড ছবি', 'Featured picture')} />
-              <figcaption><b>★ {pick('ফিচার্ড ছবি', 'Featured')}</b>{hit && <strong>{caption(hit)}</strong>}</figcaption>
+              <img src={site.galleryFeatured} alt={hit ? hit.alt || caption(hit) : t('gallery.featuredPicture')} />
+              <figcaption><b>★ {t('gallery.featured')}</b>{hit && <strong>{caption(hit)}</strong>}</figcaption>
             </figure>
           )
         })()}
@@ -126,14 +132,29 @@ export function Gallery() {
                   {albums.map((a) => <button key={a.id} className={`chip ${album === a.id ? 'on' : ''}`} aria-pressed={album === a.id} onClick={() => setAlbum(a.id)}>{pick(a.titleBn, a.titleEn)}</button>)}
                 </div>
               )}
-              <div className="masonry">
-                {items.map((it, i) => (
-                  <button key={it.id} className="masonry-item" onClick={() => setOpen(i)} aria-label={caption(it)}>
-                    <MediaPhoto id={it.image} url={it.imageUrl} alt={it.alt || caption(it)} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
-                    <span>{caption(it)}</span>
-                  </button>
-                ))}
-              </div>
+              {years.filter(Boolean).length > 0 && (
+                <div className="chips gal-years" role="group" aria-label={pick('বছর', 'Year')}>
+                  <button className={`chip ${year === '' ? 'on' : ''}`} aria-pressed={year === ''} onClick={() => setYear('')}>{pick('সব বছর', 'All years')}</button>
+                  {years.map((y) => <button key={y || 'none'} className={`chip ${year === y ? 'on' : ''}`} aria-pressed={year === y} onClick={() => setYear(y)}>{yearName(y)}</button>)}
+                </div>
+              )}
+              {items.length === 0 && <Empty>{t('gallery.empty')}</Empty>}
+              {groups.map(([y, list]) => (
+                <section key={y || 'none'} className="gal-year" aria-label={yearName(y)}>
+                  {(groups.length > 1 || y) && <h2 className="gal-year-h">{yearName(y)} <small>{pick(`${n(list.length)}টি ছবি`, `${list.length} ${list.length === 1 ? 'picture' : 'pictures'}`)}</small></h2>}
+                  <div className="masonry">
+                    {list.map((it) => {
+                      const i = items.indexOf(it)
+                      return (
+                        <button key={it.id} className="masonry-item" onClick={() => setOpen(i)} aria-label={caption(it)}>
+                          <MediaPhoto id={it.image} url={it.imageUrl} alt={it.alt || caption(it)} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
+                          <span>{caption(it)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
             </>
           )}
         </Data>
@@ -165,6 +186,7 @@ export function Gallery() {
 /* ---------------- About ---------------- */
 export function About() {
   const { t } = useApp()
+  const site = useSiteImages()
   const stats = useApi('/stats')
   const { n } = useApp()
   const s = stats.data
@@ -178,7 +200,7 @@ export function About() {
           <h2>{t('about.mission')}</h2>
           <ul className="ticks">{['m1', 'm2', 'm3', 'm4'].map((k) => <li key={k}>{t(`about.${k}`)}</li>)}</ul>
         </div>
-        <div className="sketch-card"><img src="/art/heritage.webp" alt="" loading="lazy" /><img src="/art/students.webp" alt="" loading="lazy" /></div>
+        <div className={`sketch-card${site.pages['about-art-1'] || site.pages['about-art-2'] ? ' has-photo' : ''}`}><img src={site.pages['about-art-1'] || '/art/heritage.webp'} alt="" loading="lazy" /><img src={site.pages['about-art-2'] || '/art/students.webp'} alt="" loading="lazy" /></div>
       </section>
       <section className="section wrap">
         <h2>{t('about.values')}</h2>
@@ -261,7 +283,7 @@ function ContactSection() {
     </label>
   )
   const info = [
-    ['mail', pick('ইমেইল', 'Email'), <a key="m" className="ci-mail" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>],
+    ['mail', t('gallery.email'), <a key="m" className="ci-mail" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>],
     ['pin', t('contact.whereT'), t('footer.campus')],
     ['users', t('contact.whoT'), t('contact.whoD')],
     ['lock', t('contact.privT'), t('contact.privD')],

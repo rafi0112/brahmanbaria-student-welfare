@@ -22,13 +22,18 @@ export default function GalleryAdmin() {
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadDate, setUploadDate] = useState('') // the date given to every picture of this upload (optional), so they sit under its year
+  const [bulkDate, setBulkDate] = useState('')
+  const [drag, setDrag] = useState(null) // { from, over } while a picture is being dragged to a new place
   const albumList = albums.data?.items || []
   const rows = list.data?.items || []
   const current = albumList.find((a) => a.id === f.album)
   const albumName = (a) => pick(a.data.titleBn, a.data.titleEn) || a.title
   useEffect(() => setPicked([]), [f.album, f.q, f.status, f.page, f.limit, f.sort])
   const filtered = !!(f.q || f.status)
-  const canReorder = f.sort === 'order' && !filtered && list.data && list.data.pages === 1
+  // pictures can be put in order (drag and drop, or the arrows) whenever the list shows the gallery's own order; a page or an
+  // album is reordered among the places its pictures already hold, so the rest of the gallery keeps its order
+  const canReorder = f.sort === 'order' && !filtered && !!list.data
 
   const refresh = () => { list.retry(); albums.retry() }
 
@@ -36,9 +41,9 @@ export default function GalleryAdmin() {
   const addEntry = useCallback(async ({ path, file }) => {
     await api('/admin/content/image', {
       method: 'POST',
-      body: JSON.stringify({ parentId: current ? current.id : '', data: { image: path, alt: base(file.name) || 'Photo', captionEn: '' } }),
+      body: JSON.stringify({ parentId: current ? current.id : '', data: { image: path, alt: base(file.name) || 'Photo', captionEn: '', ...(uploadDate ? { eventDate: uploadDate } : {}) } }),
     })
-  }, [current])
+  }, [current, uploadDate])
 
   /* ---- status changes, bulk actions, reordering ---- */
   const run = async (fn, doneText) => {
@@ -52,11 +57,29 @@ export default function GalleryAdmin() {
     setPicked(r.failed.map((x) => x.id))
     return r
   }, (r) => `${t('ad.bulkDone').replace('{n}', n(r.done))}${r.failed.length ? ` ${t('ad.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`)
-  const move = (i, d) => {
+  const move = (i, d) => place(i, i + d)
+  // move the picture at `from` to the place `to` (in this list) and save the new order
+  const place = (from, to) => {
+    if (from === to || from == null || to == null) return
     const ids = rows.map((r) => r.id)
-    ;[ids[i], ids[i + d]] = [ids[i + d], ids[i]]
+    const [id] = ids.splice(from, 1)
+    ids.splice(to, 0, id)
     run(() => api('/admin/content/image/reorder', { method: 'POST', body: JSON.stringify({ ids }) }), t('ad.gal.reordered'))
   }
+  const setDate = (date) => run(async () => {
+    let done = 0
+    const failed = []
+    for (const id of picked) {
+      try {
+        const e = await api(`/admin/content/image/${id}`)
+        const { imageUrl, ...data } = e.data
+        await api(`/admin/content/image/${id}`, { method: 'PATCH', body: JSON.stringify({ parentId: e.parentId || '', featured: e.featured, sortOrder: e.sortOrder, data: { ...data, eventDate: date } }) })
+        done++
+      } catch { failed.push({ id }) }
+    }
+    setPicked(failed.map((x) => x.id))
+    return { done, failed }
+  }, (r) => `${t('ad.bulkDone').replace('{n}', n(r.done))}${r.failed.length ? ` ${t('ad.bulkFailed').replace('{n}', n(r.failed.length))}` : ''}`)
   const moveToAlbum = (albumId) => run(async () => {
     let done = 0
     const failed = []
@@ -85,6 +108,12 @@ export default function GalleryAdmin() {
         } />
       <Notice notice={notice} onClose={clear} />
 
+      {uploading && (
+        <div className="gal-up-date">
+          <label>{pick('এই ছবিগুলোর তারিখ (ঐচ্ছিক)', 'Date of these pictures (optional)')} <input type="date" value={uploadDate} onChange={(e) => setUploadDate(e.target.value)} /></label>
+          <small className="muted">{pick('তারিখ দিলে সাইটের গ্যালারিতে ছবিগুলো সেই বছরের নিচে দেখায়। না দিলে প্রকাশের বছর ধরা হয়।', 'With a date the gallery shows these pictures under that year; without one, the year they are published is used.')}</small>
+        </div>
+      )}
       {uploading && <MultiUpload profile="gallery" onStored={addEntry} onFinished={refresh} onClose={() => { setUploading(false); refresh() }} />}
 
       <div className="chips ad-albums" role="group" aria-label={t('ad.gal.albums')}>
@@ -124,6 +153,10 @@ export default function GalleryAdmin() {
             <option value="">{t('ad.gal.moveTo')}</option><option value="none">{t('ad.gal.noAlbum')}</option>
             {albumList.filter((a) => a.status !== 'archived').map((a) => <option key={a.id} value={a.id}>{albumName(a)}</option>)}
           </select>
+          <span className="gal-bulk-date">
+            <input type="date" aria-label={pick('ছবির তারিখ', 'Date of the pictures')} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy || !bulkDate} onClick={() => setDate(bulkDate)}>{pick('তারিখ দিন', 'Set the date')}</button>
+          </span>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPicked([])}>{t('ad.clearSel')}</button>
         </div>
       )}
@@ -132,12 +165,18 @@ export default function GalleryAdmin() {
       {list.error && <Data q={list}>{() => null}</Data>}
       {list.data && (rows.length === 0 ? (
         <EmptyState title={t(filtered ? 'ad.noMatch' : 'ad.gal.none')} text={t(filtered ? 'ad.noMatchHint' : 'ad.gal.noneHint')}
-          action={!filtered && <button type="button" className="btn btn-dark btn-sm" onClick={() => fileInput.current?.click()}>+ {t('ad.gal.upload')}</button>} />
+          action={!filtered && <button type="button" className="btn btn-dark btn-sm" onClick={() => setUploading(true)}>+ {t('ad.gal.upload')}</button>} />
       ) : (
         <>
+          {canReorder && rows.length > 1 && <p className="muted small">{pick('ক্রম বদলাতে ছবি টেনে অন্য ছবির জায়গায় ছাড়ুন (অথবা ↑ ↓ বোতাম)।', 'To change the order, drag a picture onto the place of another (or use the ↑ ↓ buttons).')}</p>}
           <ul className="ad-grid-cards">
             {rows.map((r, i) => (
-              <li key={r.id} className={`ad-card ${r.status === 'archived' ? 'ad-off' : ''}`}>
+              <li key={r.id} className={`ad-card ${r.status === 'archived' ? 'ad-off' : ''}${drag?.from === i ? ' is-dragging' : ''}${drag && drag.over === i && drag.from !== i ? ' is-drop' : ''}`}
+                draggable={canReorder && !busy}
+                onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id); setDrag({ from: i, over: i }) }}
+                onDragOver={(e) => { if (!drag) return; e.preventDefault(); if (drag.over !== i) setDrag({ ...drag, over: i }) }}
+                onDrop={(e) => { e.preventDefault(); if (drag) place(drag.from, i); setDrag(null) }}
+                onDragEnd={() => setDrag(null)}>
                 <label className="ad-card-check"><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.title}`} /></label>
                 <button type="button" className="ad-card-img" onClick={() => setEdit(r)} aria-label={`${t('ad.edit')} ${r.title}`}>
                   {thumb(r.data) ? <img src={thumb(r.data)} alt={r.data.alt || ''} loading="lazy" /> : <span aria-hidden="true">?</span>}
@@ -145,7 +184,7 @@ export default function GalleryAdmin() {
                 <div className="ad-card-body">
                   <strong title={r.title}>{pick(r.data.captionBn, r.data.captionEn) || r.data.alt || r.title}</strong>
                   <span><StatusBadge status={r.status} label={r.status === 'draft' ? t('ad.gal.hidden') : undefined} /></span>
-                  <small className="muted">{(albumList.find((a) => a.id === r.parentId) && albumName(albumList.find((a) => a.id === r.parentId))) || t('ad.gal.noAlbum')}</small>
+                  <small className="muted">{(albumList.find((a) => a.id === r.parentId) && albumName(albumList.find((a) => a.id === r.parentId))) || t('ad.gal.noAlbum')}{r.data.eventDate ? ` · ${n(r.data.eventDate.slice(0, 4))}` : ''}</small>
                   <div className="row">
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(r)}>{t('ad.edit')}</button>
                     {canReorder && <>

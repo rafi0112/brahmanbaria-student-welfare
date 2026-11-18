@@ -49,13 +49,13 @@ export default function Students() {
 
   return (
     <>
-      {profile && <ProfileDialog label={pick('প্রোফাইল', 'Profile')} onClose={closeProfile}><StudentDetail id={profile} modal /></ProfileDialog>}
-      <PageHero page="students" kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={pick('আজকের শিক্ষার্থী, আগামীর ব্রাহ্মণবাড়িয়া', 'Students today, stronger Brahmanbaria tomorrow')} />
+      {profile && <ProfileDialog label={t('students.profile2')} onClose={closeProfile}><StudentDetail id={profile} modal /></ProfileDialog>}
+      <PageHero page="students" kicker={t('students.kicker')} title={t('students.title')} variant="bleed" lede={t('students.lede')} src="/images/bswa/river.webp" script={t('students.studentsTodayStrongerBrahmanbaria')} />
       <div className="wrap">
         <form className="sbar" role="search" onSubmit={(e) => { e.preventDefault(); set({ q: text.trim(), page: 1 }) }}>
           <label className="sbar-q">
             <Icon name="search" size={18} />
-            <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? pick('নাম, বিভাগ, রক্তের গ্রুপ (যেমন B+) বা ফোন…', 'Name, department, blood group (e.g. B+) or phone…') : t('students.search')} aria-label={t('students.search')} />
+            <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? t('students.nameDepartmentBloodGroup') : t('students.search')} aria-label={t('students.search')} />
           </label>
           <div className="sbar-filters">
             <select value={f.batch} onChange={(e) => set({ batch: e.target.value, page: 1 })} aria-label={t('students.batch')}>

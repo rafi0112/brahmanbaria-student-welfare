@@ -17,7 +17,7 @@ function EventPicture({ e, sizes, eager }) {
 
 // One event in the list: picture with the date, status, title, when and where, and a short description.
 function EventTile({ e }) {
-  const { pick, n, lang } = useApp()
+  const { t, pick, n, lang } = useApp()
   const d = eventDate(e.date, lang, n)
   const up = e.date >= today()
   return (
@@ -25,7 +25,7 @@ function EventTile({ e }) {
       <div className="evp-card-img">
         <EventPicture e={e} sizes="(min-width: 1000px) 30vw, (min-width: 640px) 45vw, 92vw" />
         {d && <time className="evp-date" dateTime={e.date}><b>{d.day}</b><span>{d.month}</span></time>}
-        <span className={`evp-badge ${up ? 'up' : 'past'}`}>{up ? pick('আসন্ন', 'Upcoming') : pick('সম্পন্ন', 'Past')}</span>
+        <span className={`evp-badge ${up ? 'up' : 'past'}`}>{up ? t('events.upcoming2') : t('events.past2')}</span>
       </div>
       <div className="evp-card-body">
         <h3>{pick(e.titleBn, e.titleEn)}</h3>
@@ -34,7 +34,7 @@ function EventTile({ e }) {
           {e.venue && <span><Icon name="pin" size={14} /> {e.venue}</span>}
         </p>
         {(e.summaryBn || e.summaryEn || e.summary) && <p className="evp-sum">{pick(e.summaryBn, e.summaryEn) || e.summary}</p>}
-        <span className="evp-more">{pick('বিস্তারিত', 'Details')} <Icon name="arrow" size={15} className="arr" /></span>
+        <span className="evp-more">{t('events.details2')} <Icon name="arrow" size={15} className="arr" /></span>
       </div>
     </Link>
   )
@@ -81,7 +81,7 @@ export function Events() {
 
   return (
     <>
-      <PageHero page="events" kicker={t('events.kicker')} title={t('events.title')} variant="bleed" lede={t('events.lede')} src="/images/bswa/river.webp" script={pick('একসাথে আয়োজন, একসাথে আনন্দ', 'Together in every gathering')} />
+      <PageHero page="events" kicker={t('events.kicker')} title={t('events.title')} variant="bleed" lede={t('events.lede')} src="/images/bswa/river.webp" script={t('events.togetherInEveryGathering')} />
       <section className="section wrap evp">
         <Data q={res} skeleton="cards">
           {() => (items.length === 0 ? (
@@ -93,14 +93,14 @@ export function Events() {
                   <Link to={`/events/${featured.slug}`} className="evp-feature-link">
                     <div className="evp-feature-img"><EventPicture e={featured} sizes="(min-width: 1000px) 60vw, 100vw" eager /></div>
                     <div className="evp-feature-copy">
-                      <p className="eyebrow">{featured.featured ? pick('ফিচার্ড ইভেন্ট', 'Featured event') : pick('পরবর্তী ইভেন্ট', 'Next event')}</p>
+                      <p className="eyebrow">{featured.featured ? t('events.featuredEvent') : t('events.nextEvent')}</p>
                       <h2>{pick(featured.titleBn, featured.titleEn)}</h2>
                       <p className="evp-meta">
                         <span><Icon name="calendar" size={16} /> {eventDate(featured.date, lang, n)?.long || featured.date}{featured.time ? ` · ${featured.time}` : ''}</span>
                         {featured.venue && <span><Icon name="pin" size={16} /> {featured.venue}</span>}
                       </p>
                       {(featured.summaryBn || featured.summaryEn) && <p className="evp-sum">{pick(featured.summaryBn, featured.summaryEn)}</p>}
-                      <span className="btn btn-dark">{pick('বিস্তারিত দেখুন', 'View details')} <Icon name="arrow" size={16} className="arr" /></span>
+                      <span className="btn btn-dark">{t('events.viewDetails')} <Icon name="arrow" size={16} className="arr" /></span>
                     </div>
                   </Link>
                 </Reveal>
@@ -109,27 +109,27 @@ export function Events() {
               <div className="evp-toolbar" role="search">
                 <label className="evp-search">
                   <Icon name="search" size={18} />
-                  <input type="search" value={q} onChange={(e) => set({ q: e.target.value })} placeholder={pick('ইভেন্ট, স্থান বা বিষয় খুঁজুন…', 'Search events, venues or topics…')} aria-label={pick('ইভেন্ট খুঁজুন', 'Search events')} />
+                  <input type="search" value={q} onChange={(e) => set({ q: e.target.value })} placeholder={t('events.searchEventsVenuesOr')} aria-label={t('events.searchEvents')} />
                 </label>
-                <div className="evp-tabs" role="group" aria-label={pick('সময় অনুযায়ী', 'By time')}>
+                <div className="evp-tabs" role="group" aria-label={t('events.byTime')}>
                   {[['all', 'সব', 'All'], ['upcoming', 'আসন্ন', 'Upcoming'], ['past', 'সম্পন্ন', 'Past']].map(([k, bn, en]) => (
                     <button key={k} type="button" className={`chip ${when === k ? 'on' : ''}`} aria-pressed={when === k} onClick={() => set({ when: k })}>{pick(bn, en)} <span className="num">{n(counts[k])}</span></button>
                   ))}
                 </div>
                 <label className="evp-sort">
-                  <span className="sr-only">{pick('সাজান', 'Sort')}</span>
+                  <span className="sr-only">{t('events.sort')}</span>
                   <select value={sort} onChange={(e) => set({ sort: e.target.value })}>
-                    <option value="soon">{pick('আসন্ন আগে', 'Upcoming first')}</option>
-                    <option value="latest">{pick('নতুন তারিখ আগে', 'Newest date first')}</option>
-                    <option value="oldest">{pick('পুরনো তারিখ আগে', 'Oldest date first')}</option>
+                    <option value="soon">{t('events.upcomingFirst')}</option>
+                    <option value="latest">{t('events.newestDateFirst')}</option>
+                    <option value="oldest">{t('events.oldestDateFirst')}</option>
                   </select>
                 </label>
               </div>
               <p className="muted result-count" aria-live="polite">{n(list.length)} {pick('টি ইভেন্ট', list.length === 1 ? 'event' : 'events')}</p>
 
               {shown.length === 0 ? (
-                <Empty icon="search" title={pick('কিছু পাওয়া যায়নি', 'Nothing found')}>
-                  {pick('অন্য শব্দে খুঁজুন বা ফিল্টার বদলান।', 'Try other words or change the filter.')}
+                <Empty icon="search" title={t('events.nothingFound')}>
+                  {t('events.tryOtherWordsOr')}
                 </Empty>
               ) : (
                 <div className="evp-grid">{shown.map((e, i) => <Reveal key={e.slug} delay={(i % 3) * 60}><EventTile e={e} /></Reveal>)}</div>
@@ -164,7 +164,7 @@ export function EventDetail() {
               <div className="evd-hero">
                 <div className="evd-img"><EventPicture e={e} sizes="(min-width: 1000px) 60vw, 100vw" eager /></div>
                 <div className="evd-info">
-                  <span className={`evp-badge ${up ? 'up' : 'past'}`}>{up ? pick('আসন্ন', 'Upcoming') : pick('সম্পন্ন', 'Past')}</span>
+                  <span className={`evp-badge ${up ? 'up' : 'past'}`}>{up ? t('events.upcoming2') : t('events.past2')}</span>
                   <h1>{pick(e.titleBn, e.titleEn)}</h1>
                   <dl className="evd-facts">
                     <div><dt><Icon name="calendar" size={18} /></dt><dd>{d?.long || e.date}{end ? ` – ${end.long}` : ''}</dd></div>
@@ -173,23 +173,23 @@ export function EventDetail() {
                   </dl>
                   <div className="evd-actions">
                     {e.link && <a className="btn btn-dark" href={e.link} rel="noreferrer noopener">{t('events.details')} <Icon name="arrow" size={16} className="arr" /></a>}
-                    <Link className="btn btn-outline" to="/events">{pick('সব ইভেন্ট', 'All events')}</Link>
+                    <Link className="btn btn-outline" to="/events">{t('events.allEvents')}</Link>
                   </div>
                 </div>
               </div>
               {desc && <div className="evd-body">{desc.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</div>}
               {photos.length > 0 && (
                 <section className="evd-gallery" aria-labelledby="evd-gallery-h">
-                  <h2 id="evd-gallery-h">{pick('ছবি', 'Photos')} <span className="up-count num">{n(photos.length)}</span></h2>
+                  <h2 id="evd-gallery-h">{t('events.photos')} <span className="up-count num">{n(photos.length)}</span></h2>
                   <ul>
                     {photos.map((p, i) => (
-                      <li key={i}><button type="button" onClick={() => setOpen(i)} aria-label={`${pick('ছবি', 'Photo')} ${n(i + 1)}`}><img src={p.src} srcSet={p.srcSet} sizes="(min-width: 900px) 25vw, 45vw" alt="" loading="lazy" decoding="async" /></button></li>
+                      <li key={i}><button type="button" onClick={() => setOpen(i)} aria-label={`${t('events.photo')} ${n(i + 1)}`}><img src={p.src} srcSet={p.srcSet} sizes="(min-width: 900px) 25vw, 45vw" alt="" loading="lazy" decoding="async" /></button></li>
                     ))}
                   </ul>
                 </section>
               )}
               {open != null && photos[open] && (
-                <div className="evd-light" role="dialog" aria-modal="true" aria-label={pick('ছবি', 'Photo')} onClick={() => setOpen(null)}
+                <div className="evd-light" role="dialog" aria-modal="true" aria-label={t('events.photo')} onClick={() => setOpen(null)}
                   onKeyDown={(ev) => { if (ev.key === 'Escape') setOpen(null); if (ev.key === 'ArrowRight') setOpen((open + 1) % photos.length); if (ev.key === 'ArrowLeft') setOpen((open - 1 + photos.length) % photos.length) }} tabIndex={-1} ref={(el) => el?.focus()}>
                   <img src={photos[open].src} srcSet={photos[open].srcSet} sizes="90vw" alt="" onClick={(ev) => ev.stopPropagation()} />
                   <button type="button" className="evd-light-x" onClick={() => setOpen(null)} aria-label={t('nav.close')}>×</button>

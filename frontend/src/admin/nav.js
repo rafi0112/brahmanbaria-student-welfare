@@ -51,6 +51,7 @@ export const NAV = [
     { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
   ] },
   { id: 'siteImages', to: '/admin/site-images', icon: 'image', label: 'ad.nav.siteImages', group: 'content' },
+  { id: 'siteTexts', to: '/admin/site-texts', icon: 'pencil', label: 'ad.nav.siteTexts', group: 'content' },
   { id: 'manual', to: '/admin/manual', icon: 'book', label: 'ad.nav.manual', group: 'overview' },
 ]
 

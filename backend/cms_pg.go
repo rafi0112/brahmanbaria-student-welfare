@@ -372,21 +372,25 @@ func (s *pgStore) ReorderEntries(ctx context.Context, actorID, kind string, ids 
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	seen := map[string]bool{}
+	cur := make([]int, 0, len(ids))
 	for _, id := range ids {
 		if !okID(id) || seen[id] {
 			return ErrReorderMismatch
 		}
 		seen[id] = true
-		var n int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM cms_entries WHERE id = $1::uuid AND kind = $2`, id, kind).Scan(&n); err != nil {
-			return err
-		}
-		if n != 1 {
+		var order int
+		err := tx.QueryRow(ctx, `SELECT sort_order FROM cms_entries WHERE id = $1::uuid AND kind = $2 FOR UPDATE`, id, kind).Scan(&order)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrReorderMismatch
 		}
+		if err != nil {
+			return err
+		}
+		cur = append(cur, order)
 	}
+	slots := reorderSlots(cur)
 	for i, id := range ids {
-		if _, err := tx.Exec(ctx, `UPDATE cms_entries SET sort_order = $2, updated_by = NULLIF($3, '')::uuid, updated_at = now() WHERE id = $1::uuid`, id, i+1, actorID); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE cms_entries SET sort_order = $2, updated_by = NULLIF($3, '')::uuid, updated_at = now() WHERE id = $1::uuid`, id, slots[i], actorID); err != nil {
 			return err
 		}
 	}

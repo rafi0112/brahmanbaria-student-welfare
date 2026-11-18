@@ -168,7 +168,7 @@ export default function ListToolbar({ section, values, set, defaults = {}, searc
         </ul>
       )}
       <p className="ad-showing muted small" aria-live="polite">
-        {loading ? t('state.loading') : total ? `${t('ad.tb.showing')} ${n(from)}–${n(to)} ${t('ad.tb.of')} ${n(total)}` : t('ad.tb.none')}
+        {loading ? <span className="sk sk-line w40 tb-sk" aria-label={t('state.loading')} /> : total ? `${t('ad.tb.showing')} ${n(from)}–${n(to)} ${t('ad.tb.of')} ${n(total)}` : t('ad.tb.none')}
       </p>
     </div>
   )

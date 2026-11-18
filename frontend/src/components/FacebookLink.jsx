@@ -14,20 +14,20 @@ export function FacebookMark({ size = 20 }) {
 // (VITE_FACEBOOK_PAGE_URL), so a visitor is never sent to a made-up address.
 //   variant "button": the clear call to action in the community band; "footer": the small link in the footer.
 export default function FacebookLink({ variant = 'button' }) {
-  const { pick } = useApp()
+  const { t, pick } = useApp()
   if (!FACEBOOK_PAGE_URL) return null
-  const label = pick('ফেসবুক পেজ ঘুরে আসুন', 'Visit our Facebook page')
+  const label = t('fb.visitOurFacebookPage')
   if (variant === 'footer') {
     return (
       <a className="fb-foot" href={FACEBOOK_PAGE_URL} rel="noopener noreferrer">
-        <FacebookMark size={18} /> <span>{pick('ফেসবুক পেজ', 'Facebook page')}</span>
+        <FacebookMark size={18} /> <span>{t('fb.facebookPage')}</span>
       </a>
     )
   }
   return (
     <a className="fb-btn" href={FACEBOOK_PAGE_URL} rel="noopener noreferrer">
       <FacebookMark size={22} />
-      <span><b>{label}</b><small>{pick('সর্বশেষ খবর ও ছবি', 'Latest news and photos')}</small></span>
+      <span><b>{label}</b><small>{t('fb.latestNewsAndPhotos')}</small></span>
     </a>
   )
 }

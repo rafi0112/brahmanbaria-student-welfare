@@ -17,6 +17,14 @@ const PAGES = [
   ['help', 'যোগাযোগ', 'Contact'], ['directory', 'উপজেলা ডিরেক্টরি', 'Upazila directory'], ['member', 'সদস্যপদ', 'Membership'],
 ]
 
+// pictures inside a page (not at its top)
+const INNER = [
+  ['about-art-1', 'আমাদের সম্পর্কে: লেখার পাশের প্রথম ছবি', 'About: first picture beside the text'],
+  ['about-art-2', 'আমাদের সম্পর্কে: লেখার পাশের দ্বিতীয় ছবি', 'About: second picture beside the text'],
+  ['home-inset', 'হোম: “ঘুরে দেখুন” অংশের ছোট ছবি', 'Home: small picture in the “Explore” section'],
+  ['home-community', 'হোম: “যারা গড়ছে আগামী” অংশের ছবি', 'Home: “The people shaping tomorrow” picture'],
+]
+
 const legacyUrl = (ref) => (ref && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
 const thumbOf = (x) => x?.imageUrl || legacyUrl(x?.image) || ''
 
@@ -203,6 +211,16 @@ export default function SiteImagesAdmin() {
               <p className="muted small">{pick('যে পাতার ছবি বদলাবেন শুধু সেটিতে ছবি দিন। খালি থাকলে সেই পাতা ডিফল্ট ছবি দেখায়।', 'Set a picture only for the pages you want to change. A page left empty shows its built-in picture.')}</p>
               <div className="si-grid">
                 {PAGES.map(([key, bn, en]) => (
+                  <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => commit({ ...v, pages: { ...v.pages, [key]: x } })} />
+                ))}
+              </div>
+            </section>
+
+            <section className="si-card" aria-labelledby="si-inner">
+              <h2 id="si-inner">{pick('পাতার ভেতরের ছবি', 'Pictures inside the pages')}</h2>
+              <p className="muted small">{pick('খালি থাকলে সাইটের ডিফল্ট ছবি দেখায়।', 'Leave empty to show the built-in picture.')}</p>
+              <div className="si-grid">
+                {INNER.map(([key, bn, en]) => (
                   <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => commit({ ...v, pages: { ...v.pages, [key]: x } })} />
                 ))}
               </div>

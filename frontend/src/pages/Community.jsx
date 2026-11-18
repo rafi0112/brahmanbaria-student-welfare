@@ -16,10 +16,10 @@ function useDebounced(v, ms = 250) {
 }
 
 // An alumnus in a dialog over the list: everything the list already has about them, larger, with their photo to view bigger.
-function AlumniProfile({ a, view }) {
+export function AlumniProfile({ a, view }) {
   const { t, n, pick } = useApp()
   const role = [...new Set([a.designation, a.occupation].filter(Boolean))].join(' · ')
-  const facts = [[t('students.dept'), a.department], [t('students.batch'), a.batch ? n(a.batch) : ''], [pick('পেশা', 'Occupation'), a.occupation], [pick('কর্মস্থল', 'Workplace'), a.workplace]].filter(([, v]) => v)
+  const facts = [[t('students.dept'), a.department], [t('students.batch'), a.batch ? n(a.batch) : ''], [t('alumni.occupation'), a.occupation], [t('alumni.workplace'), a.workplace]].filter(([, v]) => v)
   return (
     <article className="sprofile is-modal">
       <div className="pm-cover" aria-hidden="true" />
@@ -43,7 +43,7 @@ function AlumniProfile({ a, view }) {
             <section className="sp-sec">
               <p className="privacy-note" role="status">
                 <Icon name="lock" size={16} />
-                {pick('পেশা, কর্মস্থল ও যোগাযোগের তথ্য শুধু লগইন করা সদস্যরা দেখতে পারেন।', 'Occupation, workplace and contact details are visible to signed-in members only.')}
+                {t('alumni.occupationWorkplaceAndContact')}
                 <Link className="link-arrow" to="/login">{t('students.signInMore')}</Link>
               </p>
             </section>
@@ -57,7 +57,7 @@ function AlumniProfile({ a, view }) {
                   {a.contact.bloodGroup && <div><dt>{t('students.blood')}</dt><dd><b className="blood-txt">{a.contact.bloodGroup}</b></dd></div>}
                   {a.contact.facebook && /^https?:\/\//i.test(a.contact.facebook) && <div><dt>Facebook</dt><dd><a href={a.contact.facebook} rel="noreferrer noopener">Facebook</a></dd></div>}
                 </dl>
-              ) : <p className="muted">{pick('কোনো যোগাযোগের তথ্য শেয়ার করা হয়নি।', 'No contact details are shared.')}</p>}
+              ) : <p className="muted">{t('alumni.noContactDetailsAre')}</p>}
             </section>
           )}
         </div>
@@ -84,9 +84,9 @@ export function Alumni() {
   const facets = res.data?.facets
   return (
     <>
-      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="bleed" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={pick('যাঁরা পথ দেখিয়েছেন, তাঁরাই আমাদের গর্ব', 'Those who lead the way make us proud')}>
+      <PageHero page="alumni" kicker={t('alumni.kicker')} title={t('alumni.pageTitle')} variant="bleed" lede={t('alumni.lede')} src="/images/bswa/river.webp" script={t('alumni.thoseWhoLeadThe')}>
         <div className="banner-search" role="search">
-          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? pick('নাম, পেশা, রক্তের গ্রুপ (যেমন B+) বা ফোন…', 'Name, profession, blood group (e.g. B+) or phone…') : t('alumni.search')} aria-label={t('alumni.search')} />
+          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={res.data?.view && res.data.view !== 'public' ? t('alumni.nameProfessionBloodGroup') : t('alumni.search')} aria-label={t('alumni.search')} />
           <span className="search-go" aria-hidden="true"><Icon name="search" size={18} /></span>
         </div>
       </PageHero>
@@ -106,8 +106,8 @@ export function Alumni() {
           {(d) => (
             <>
               <p className="privacy-note">🔒 {t('alumni.note')} {d.view === 'public'
-                ? <>{pick('যোগাযোগের তথ্য (ফোন, ইমেইল, ফেসবুক) ও রক্তের গ্রুপ শুধু লগইন করা সদস্যরা দেখতে পারেন।', 'Contact details (phone, email, Facebook) and blood group are shown to signed-in members only.')} <Link to="/login" state={{ from: '/alumni' }}>{t('nav.login')} →</Link></>
-                : pick('আপনি সদস্য হিসেবে যোগাযোগের তথ্য দেখছেন; দয়া করে দায়িত্বশীলভাবে ব্যবহার করুন।', 'You are seeing contact details as a member; please use them responsibly.')}</p>
+                ? <>{t('alumni.contactDetailsPhoneEmail')} <Link to="/login" state={{ from: '/alumni' }}>{t('nav.login')} →</Link></>
+                : t('alumni.youAreSeeingContact')}</p>
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}
                 {d.alumniUpToBatch > 0 && <> · {t('alumni.upTo').replace('{n}', n(d.alumniUpToBatch))} <Link className="link-arrow" to="/students">{t('alumni.laterStudents').replace('{n}', n(d.alumniUpToBatch + 1))} →</Link></>}</p>
               {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (

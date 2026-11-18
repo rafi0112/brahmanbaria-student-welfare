@@ -16,6 +16,7 @@ import GalleryAdmin from './admin/GalleryAdmin.jsx'
 import ActivityPage from './admin/ActivityPage.jsx'
 import ContactInbox from './admin/ContactInbox.jsx'
 import SiteImagesAdmin from './admin/SiteImagesAdmin.jsx'
+import SiteTextsAdmin from './admin/SiteTextsAdmin.jsx'
 import AdminManual from './admin/Manual.jsx'
 import { AlumniAdmin, EventsAdmin, FAQAdmin, ReferenceAdmin } from './admin/SiteDataAdmin.jsx'
 import { Alumni, Committee, Membership } from './pages/Community.jsx'
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="alumni" element={<AlumniAdmin />} />
         <Route path="places-data" element={<ReferenceAdmin />} />
         <Route path="site-images" element={<SiteImagesAdmin />} />
+        <Route path="site-texts" element={<SiteTextsAdmin />} />
         <Route path="manual" element={<AdminManual />} />
       </Route>
     </Routes>

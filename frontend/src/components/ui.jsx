@@ -87,9 +87,10 @@ export function PasswordInput({ id, onKeyUp, onKeyDown, onBlur, ...props }) {
   )
 }
 
-export function Loading() {
+// While something loads: a placeholder shaped like content (never a bare spinner or a "Loading…" line).
+export function Loading({ kind = 'detail' }) {
   const { t } = useApp()
-  return <div className="state" role="status" aria-live="polite"><span className="spinner" aria-hidden="true" />{t('state.loading')}</div>
+  return <div className="sk-wrap" role="status" aria-live="polite"><span className="sr-only">{t('state.loading')}</span><Skeleton kind={kind} /></div>
 }
 
 export function Empty({ children, icon, title, action }) {

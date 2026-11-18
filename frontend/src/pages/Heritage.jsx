@@ -44,9 +44,9 @@ export default function Heritage() {
       <section className="section wrap heritage-explore" aria-labelledby="explore-h">
         <Reveal className="section-head">
           <div>
-            <p className="eyebrow">{pick('অনেক গল্পের একটি জেলা', 'A district of many stories')}</p>
-            <h2 id="explore-h">{pick('ঘুরে দেখুন ', 'Explore ')}<span className="hl">{pick('ব্রাহ্মণবাড়িয়া', 'Brahmanbaria')}</span></h2>
-            <p className="lede">{pick('সমৃদ্ধ ইতিহাস, প্রাণবন্ত সংস্কৃতি, শান্ত নদী আর অনুপ্রেরণাদায়ী মানুষের জেলা। নয়টি উপজেলা জুড়ে এর ঐতিহ্য, প্রথা ও মানুষকে জানুন।', 'A land of rich history, vibrant culture, serene rivers and inspiring people. Discover its heritage, traditions and communities across nine upazilas.')}</p>
+            <p className="eyebrow">{t('heritage.aDistrictOfMany')}</p>
+            <h2 id="explore-h">{t('heritage.explore')}<span className="hl">{t('heritage.brahmanbaria')}</span></h2>
+            <p className="lede">{t('heritage.aLandOfRich')}</p>
           </div>
         </Reveal>
         <div className="ex-cards">

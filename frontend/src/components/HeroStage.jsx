@@ -21,7 +21,7 @@ const Arrow = ({ d = 'M5 12h14M13 6l6 6-6 6', size = 18, width = 2.2 }) => (
 // The name and actions sit low on the left, the chapter dock low on the right. Autoplay pauses while the dock is hovered
 // or focused, when the stage is off-screen or the tab hidden, or with the pause button, and never runs with reduced motion.
 export default function HeroStage() {
-  const { pick, n } = useApp()
+  const { t, pick, n } = useApp()
   const site = useSiteImages()
   // the slides an admin published, in their order; none published means the three built-in chapters. Until the answer
   // arrives (at most a moment) nothing is drawn, so a visitor never sees one set swap for the other.
@@ -91,17 +91,16 @@ export default function HeroStage() {
           <h1 id="hero-title" className="hs-title" lang="bn">
             <span className="hs-t1"><span className="hs-w">ব্রাহ্মণবাড়িয়া</span></span>
             <span className="hs-lock">
-              <span className="hs-org"><span className="hs-w" style={{ animationDelay: '.12s' }}>জেলা</span> <span className="hs-w" style={{ animationDelay: '.2s' }}>ছাত্রকল্যাণ</span> <span className="hs-w" style={{ animationDelay: '.28s' }}>পরিষদ,</span></span>
-              <span className="hs-uni"><span className="hs-w" style={{ animationDelay: '.38s' }}>জগন্নাথ বিশ্ববিদ্যালয়</span><small className="hs-w" lang="en" style={{ animationDelay: '.46s' }}>Jagannath University · Dhaka</small></span>
+              <span className="hs-org">{['জেলা', 'ছাত্রকল্যাণ', 'পরিষদ,', 'জগন্নাথ', 'বিশ্ববিদ্যালয়'].map((w, k) => <span key={w}>{k > 0 && ' '}<span className="hs-w" style={{ animationDelay: `${0.12 + k * 0.08}s` }}>{w}</span></span>)}</span>
             </span>
           </h1>
-          <p className="hs-tagbn hs-e2" lang="bn">ঐক্য, সহযোগিতা ও শিক্ষার্থীদের কল্যাণে আমরা একসাথে।</p>
+          <p className="hs-tagbn hs-e2" lang="bn">{t('hero.tagline')}</p>
           <div className="hs-actions hs-e3">
             <Link className="hs-b1" to="/gallery">
-              <span><b>{pick('BSWA ঘুরে দেখুন', 'Explore BSWA')}</b></span>
+              <span><b>{t('hero.exploreBswa')}</b></span>
               <span className="hs-orb"><span className="hs-a1"><Arrow /></span><span className="hs-a2"><Arrow /></span></span>
             </Link>
-            <Link className="hs-b2" to="/students">{pick('শিক্ষার্থীদের সাথে যুক্ত হোন', 'Connect with students')} <i><Arrow d="M7 17L17 7M9 7h8v8" size={16} width={2} /></i></Link>
+            <Link className="hs-b2" to="/students">{t('hero.connectWithStudents')} <i><Arrow d="M7 17L17 7M9 7h8v8" size={16} width={2} /></i></Link>
           </div>
         </div>
 
@@ -109,15 +108,15 @@ export default function HeroStage() {
         {count > 1 && <div className="hs-dock hs-e4" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocusCapture={() => setHeld(true)} onBlurCapture={() => setHeld(false)}>
           <div className="hs-now">
             <p className="hs-count"><span>{s.no}<small>/ {two(Math.max(count, 1) - 1)}</small></span><em key={i}>{pick(s.bn, s.en)}</em></p>
-            <button type="button" className="hs-ctl hs-step" onClick={() => go(i - 1)} aria-label={pick('আগের দৃশ্য', 'Previous scene')}><Arrow d="M15 5l-7 7 7 7" size={16} width={1.9} /></button>
-            <button type="button" className="hs-ctl hs-step" onClick={() => go(i + 1)} aria-label={pick('পরের দৃশ্য', 'Next scene')}><Arrow d="M9 5l7 7-7 7" size={16} width={1.9} /></button>
+            <button type="button" className="hs-ctl hs-step" onClick={() => go(i - 1)} aria-label={t('hero.previousScene')}><Arrow d="M15 5l-7 7 7 7" size={16} width={1.9} /></button>
+            <button type="button" className="hs-ctl hs-step" onClick={() => go(i + 1)} aria-label={t('hero.nextScene')}><Arrow d="M9 5l7 7-7 7" size={16} width={1.9} /></button>
             <button type="button" className="hs-ctl" onClick={() => setPaused(!paused)} aria-pressed={paused}
-              aria-label={paused ? pick('দৃশ্য চালু করুন', 'Play scenes') : pick('দৃশ্য থামান', 'Pause scenes')}>
+              aria-label={paused ? t('hero.playScenes') : t('hero.pauseScenes')}>
               {paused || reduce ? <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor" /></svg>
                 : <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" /></svg>}
             </button>
           </div>
-          <nav className="hs-strip" aria-label={pick('দৃশ্য', 'Scenes')}>
+          <nav className="hs-strip" aria-label={t('hero.scenes')}>
             {SCENES.map((sc, k) => (
               <button key={sc.id} type="button" className={`hs-tab${k === i ? ' is-on' : ''}`} aria-current={k === i ? 'true' : undefined} onClick={() => go(k)} title={pick(sc.bn, sc.en)}>
                 <img src={thumb(sc)} alt="" loading="lazy" decoding="async" style={{ objectPosition: sc.pos }} />

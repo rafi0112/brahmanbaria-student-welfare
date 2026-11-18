@@ -24,7 +24,7 @@ function useDebounced(v, ms = 220) {
 // blood group, phone or email), heritage places, upazilas, events and articles (filtered here). Before typing it offers
 // recent searches, blood groups, the nine upazilas and the main pages. Arrow keys move, Enter opens, Escape closes; with
 // nothing matched, Enter searches the student directory.
-export default function SearchDialog({ onClose }) {
+export default function SearchDialog({ onClose, onProfile }) {
   const { t, pick, n } = useApp()
   const nav = useNavigate()
   const [q, setQ] = useState('')
@@ -65,9 +65,9 @@ export default function SearchDialog({ onClose }) {
     add('pages', pick('পেজ', 'Pages'), pages.filter(([, l]) => norm(l).includes(needle)).slice(0, 4)
       .map(([to, l]) => ({ key: `p${to}`, to, title: l, sub: to, icon: 'arrow' })))
     add('students', pick('শিক্ষার্থী', 'Students'), (students.data?.items || []).slice(0, 5)
-      .map((s) => ({ key: `s${s.id}`, to: `/students/${s.id}`, title: s.name, blood: s.details?.bloodGroup, sub: [s.department, s.batch && `${pick('ব্যাচ', 'Batch')} ${n(s.batch)}`].filter(Boolean).join(' · '), icon: 'users' })))
+      .map((s) => ({ key: `s${s.id}`, to: `/students/${s.id}`, profile: { kind: 'student', id: s.id, name: s.name }, title: s.name, blood: s.details?.bloodGroup, sub: [s.department, s.batch && `${pick('ব্যাচ', 'Batch')} ${n(s.batch)}`].filter(Boolean).join(' · '), icon: 'users' })))
     add('alumni', pick('অ্যালামনাই', 'Alumni'), (alumni.data?.items || []).slice(0, 4)
-      .map((a) => ({ key: `a${a.id}`, to: `/alumni${qs({ q: a.name })}`, title: a.name, blood: a.contact?.bloodGroup, sub: [a.designation || a.occupation, a.workplace, a.batch && `${pick('ব্যাচ', 'Batch')} ${n(a.batch)}`].filter(Boolean).join(' · '), icon: 'grad' })))
+      .map((a) => ({ key: `a${a.id}`, to: `/alumni${qs({ q: a.name })}`, profile: { kind: 'alumni', a, view: alumni.data?.view }, title: a.name, blood: a.contact?.bloodGroup, sub: [a.designation || a.occupation, a.workplace, a.batch && `${pick('ব্যাচ', 'Batch')} ${n(a.batch)}`].filter(Boolean).join(' · '), icon: 'grad' })))
     add('places', pick('ঐতিহ্য', 'Heritage'), (places.data?.items || []).filter((p) => hit(needle, p.nameBn, p.nameEn, p.summary, p.upazila, p.category)).slice(0, 4)
       .map((p) => ({ key: `h${p.slug}`, to: `/heritage/${p.slug}`, title: pick(p.nameBn, p.nameEn), sub: pick(p.nameEn, p.nameBn), icon: 'landmark', img: p.images?.[0] && `/images/${p.images[0]}-640.webp` })))
     add('upazilas', pick('উপজেলা', 'Upazilas'), (upazilas.data?.items || []).filter((u) => hit(needle, u.nameBn, u.nameEn, u.slug, ...(u.unions || []))).slice(0, 4)
@@ -83,10 +83,12 @@ export default function SearchDialog({ onClose }) {
   useEffect(() => { setActive(0) }, [needle])
   useEffect(() => { list.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' }) }, [active])
 
-  const open = (to) => {
+  // a student or alumnus opens in the same profile pop-up as on the Students and Alumni pages, over the page in view
+  const open = (to, profile) => {
     if (needle) { saveRecent(q.trim()); setRecent(readRecent()) }
     onClose()
-    nav(to)
+    if (profile && onProfile) onProfile(profile)
+    else nav(to)
   }
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); onClose() }
@@ -94,7 +96,7 @@ export default function SearchDialog({ onClose }) {
     else if (e.key === 'ArrowUp' && flat.length) { e.preventDefault(); setActive((a) => (a - 1 + flat.length) % flat.length) }
     else if (e.key === 'Enter') {
       e.preventDefault()
-      if (flat[active]) open(flat[active].to)
+      if (flat[active]) open(flat[active].to, flat[active].profile)
       else if (needle) open(`/students${qs({ q: q.trim() })}`)
     }
   }
@@ -148,7 +150,7 @@ export default function SearchDialog({ onClose }) {
                       const me = idx
                       return (
                         <li key={it.key} id={`sd-${it.key}`} role="option" aria-selected={me === active} className={me === active ? 'is-on' : undefined}
-                          onMouseMove={() => setActive(me)} onClick={() => open(it.to)}>
+                          onMouseMove={() => setActive(me)} onClick={() => open(it.to, it.profile)}>
                           <span className="sd-ico" aria-hidden="true">{it.img ? <img src={it.img} alt="" loading="lazy" onError={(e) => { e.currentTarget.remove() }} /> : <Icon name={it.icon} size={16} />}</span>
                           <span className="sd-txt"><b>{it.title}</b>{it.sub && <small>{it.sub}</small>}</span>
                           {it.blood && <span className="sd-bg">{it.blood}</span>}

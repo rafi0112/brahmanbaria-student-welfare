@@ -197,7 +197,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ad.pm.searchPh')} /></label>
       <div aria-live="polite" className="pm-results">
         {term.length < 2 && <p className="muted small">{t('ad.pm.type')}</p>}
-        {res.loading && term.length >= 2 && <p className="muted small">{t('state.loading')}</p>}
+        {res.loading && term.length >= 2 && <SkeletonRows rows={2} />}
         {res.error && <p className="notice bad" role="alert">{t('ad.e.generic')}</p>}
         {res.data && items.length === 0 && <p className="muted small">{t('ad.pm.noResults')}</p>}
         {items.length > 0 && (
