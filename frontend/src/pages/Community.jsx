@@ -68,16 +68,15 @@ export function AlumniProfile({ a, view }) {
   )
 }
 
-// An alumnus in the list: the same shape as a student card, in the "premium" gold-on-graphite colours, with a gold
-// Alumni badge. The whole card opens the details pop-up; the name is the link.
+// An alumnus in the list: the same shape as a student card, in the "premium" gold-on-graphite colours. The whole card
+// opens the details pop-up; the name is the link.
 function AlumniCard({ a, onOpen }) {
-  const { t, n, pick } = useApp()
+  const { t, n } = useApp()
   const photo = usePhoto(a.photo)
   return (
     <article className="student-card alumni-card">
       <span className="sc-mono al-mono" aria-hidden="true">
         {photo ? <img src={photo} alt="" /> : <b>{initials(a.name)}</b>}
-        <span className="al-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z" /></svg>{pick('অ্যালামনাই', 'Alumni')}</span>
         <span className="sc-go"><Icon name="arrow" size={15} /></span>
       </span>
       <span className="student-info">

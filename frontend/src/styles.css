@@ -1869,3 +1869,22 @@ html[lang='en'] :is(.phero-script, .cband-script, .cband-sign, .hero-script, .st
 
 .ie::backdrop { background: transparent; }
 .ie:not([open]) { display: none; }
+
+/* Student and alumni cards: a modest, equal size on every screen. The grid fits as many ~230px columns as there is room
+   for (5 on a wide desktop), the picture is a short 16:10 strip, and the text keeps a fixed number of lines, so every
+   card in every batch has the same width and height. Phones keep two columns. */
+.student-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)) !important; gap: clamp(12px, 1.4vw, 18px) !important; align-items: stretch; }
+.student-grid > * { display: grid; min-width: 0; }
+.student-grid .student-card { height: 100%; grid-template-rows: auto 1fr; padding: 8px 8px 14px; }
+.student-grid .sc-mono { aspect-ratio: 16 / 10; margin-bottom: 10px; }
+.student-grid .sc-mono b { font-size: clamp(1.8rem, 2.4vw, 2.4rem); }
+.student-grid .sc-go { width: 28px; height: 28px; right: 8px; bottom: 8px; }
+.student-grid .student-info { align-content: start; padding-inline: 6px; }
+.student-grid .student-info h3 { font-size: .95rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.student-grid .sc-dept { font-size: .84rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; }
+.student-grid .sc-meta { font-size: .78rem; min-height: 1.4em; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+.student-grid .student-extra { font-size: .78rem; }
+@media (max-width: 640px) {
+  .student-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+  .student-grid .sc-mono { aspect-ratio: 4 / 3; }
+}

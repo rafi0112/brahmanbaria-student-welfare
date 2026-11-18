@@ -136,13 +136,11 @@ export default function Home() {
       <section className="explore2" aria-labelledby="explore-h">
         <div className="explore2-grid">
           <Reveal className="ex-media ex-frame">
-            {/* a photograph in a soft frame with a smaller one tucked over its corner; admins choose the main picture */}
+            {/* a photograph in a soft frame; admins choose it */}
             <figure className="ex-main">
               <img data-parallax="0.05" src={site.explore || '/images/titas-evening-1280.webp'} width="1280" height="853" loading="lazy" decoding="async"
                 alt={t('home.eveningOnTheTitas')} />
-              <figcaption><Icon name="pin" size={14} /> {t('home.riversHeritagePeople')}</figcaption>
             </figure>
-            <img className="ex-inset" src={site.pages['home-inset'] || '/images/arifail-front-640.webp'} width="640" height="427" loading="lazy" decoding="async" alt={t('home.arifailMosqueSarail')} />
           </Reveal>
           <div className="ex-copy">
             <Reveal>

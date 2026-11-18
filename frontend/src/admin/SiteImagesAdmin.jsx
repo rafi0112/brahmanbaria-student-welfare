@@ -21,7 +21,6 @@ const PAGES = [
 const INNER = [
   ['about-art-1', 'আমাদের সম্পর্কে: লেখার পাশের প্রথম ছবি', 'About: first picture beside the text'],
   ['about-art-2', 'আমাদের সম্পর্কে: লেখার পাশের দ্বিতীয় ছবি', 'About: second picture beside the text'],
-  ['home-inset', 'হোম: “ঘুরে দেখুন” অংশের ছোট ছবি', 'Home: small picture in the “Explore” section'],
   ['home-community', 'হোম: “যারা গড়ছে আগামী” অংশের ছবি', 'Home: “The people shaping tomorrow” picture'],
 ]
 

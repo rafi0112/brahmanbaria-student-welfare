@@ -69,7 +69,7 @@ test.describe('in English', () => {
     }
     await page.goto('/alumni')
     const card = page.locator('.alumni-card').first()
-    await expect(card.locator('.al-badge')).toHaveText('Alumni')
+    await expect(card.locator('.al-badge')).toHaveCount(0) // no Alumni tag on the cards
     await expect(card).toHaveClass(/student-card/)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
   })
@@ -120,6 +120,24 @@ test.describe('in English', () => {
     await expect(page.locator('.mu-item').getByRole('button', { name: 'Adjust again' })).toBeVisible()
     const dims = await page.locator('.mu-item img').first().evaluate((i) => new Promise((r) => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.src = i.src }))
     expect(dims).toEqual([200, 200]) // the square cut from the middle of the 300×200 picture
+  })
+
+  test('desktop: student and alumni cards are a modest, equal size; Explore has one picture without a caption', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    for (const [path, sel] of [['/students', '.student-card'], ['/alumni', '.alumni-card']]) {
+      await page.goto(path)
+      await expect(page.locator(sel).first()).toBeVisible()
+      const boxes = await page.locator(sel).evaluateAll((els) => els.slice(0, 24).map((e) => [e.offsetWidth, e.offsetHeight])) // layout size (an entrance animation may be scaling some)
+      expect(new Set(boxes.map((b) => b[0])).size, path + ' one width').toBe(1)
+      expect(new Set(boxes.map((b) => b[1])).size, path + ' one height').toBe(1)
+      expect(boxes[0][0], path + ' not gigantic').toBeLessThanOrEqual(300)
+      const pic = await page.locator(sel + ' .sc-mono').first().boundingBox()
+      expect(pic.height).toBeLessThanOrEqual(180)
+    }
+    await page.goto('/')
+    await page.locator('.ex-main').scrollIntoViewIfNeeded()
+    await expect(page.locator('.ex-main figcaption')).toHaveCount(0)
+    await expect(page.locator('.ex-inset')).toHaveCount(0)
   })
 
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {

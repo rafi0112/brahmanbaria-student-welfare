@@ -145,8 +145,8 @@ export default function AdminManual() {
             <p>{T('শিক্ষার্থী, অ্যালামনাই, কমিটি, ইভেন্ট, গ্যালারি, ঐতিহ্য, ব্লগ ইত্যাদি পাতার শুরুতে যে ছবি থাকে তা এখান থেকে বদলানো যায়। যে পাতার ছবি বদলাতে চান শুধু সেটিতে ছবি দিন; খালি রাখলে ডিফল্ট ছবি থাকবে।',
               'The picture at the start of the Students, Alumni, Committee, Events, Gallery, Heritage, Blog and other pages can be changed here. Set a picture only for the pages you want to change; empty means the built-in picture stays.')}</p>
             <h3>{T('পাতার ভেতরের ছবি', 'Pictures inside the pages')}</h3>
-            <p>{T('“আমাদের সম্পর্কে” পাতার লেখার পাশের দুটি ছবি, এবং হোম পেজের “ঘুরে দেখুন” অংশের ছোট ছবি ও “যারা গড়ছে আগামী” অংশের ছবি “পাতার ভেতরের ছবি” অংশ থেকে বদলান। খালি রাখলে সাইটের নিজের ছবি থাকে।',
-              'The two pictures beside the text of the About page, the small picture in the Home “Explore” section and the “The people shaping tomorrow” picture are changed under “Pictures inside the pages”. Empty means the site’s own picture stays.')}</p>
+            <p>{T('“আমাদের সম্পর্কে” পাতার লেখার পাশের দুটি ছবি, এবং হোম পেজের “যারা গড়ছে আগামী” অংশের ছবি “পাতার ভেতরের ছবি” অংশ থেকে বদলান। খালি রাখলে সাইটের নিজের ছবি থাকে।',
+              'The two pictures beside the text of the About page, and the “The people shaping tomorrow” picture are changed under “Pictures inside the pages”. Empty means the site’s own picture stays.')}</p>
             <h3>{T('গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া”', 'Gallery featured picture and “Explore Brahmanbaria”')}</h3>
             <p>{T('গ্যালারি পাতার শুরুতে বড় করে দেখানোর জন্য একটি ফিচার্ড ছবি বেছে নিতে পারেন। হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” অংশের ছবিও এখান থেকে বদলায়।',
               'Choose a featured picture to show large at the start of the Gallery page. The “Explore Brahmanbaria” picture on the home page is changed here too.')}</p>
