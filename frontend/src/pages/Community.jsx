@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useApi, qs } from '../lib/api.js'
+import { useApi, usePhoto, qs } from '../lib/api.js'
+import { initials } from '../lib/initials.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
@@ -67,6 +68,27 @@ export function AlumniProfile({ a, view }) {
   )
 }
 
+// An alumnus in the list: the same shape as a student card, in the "premium" gold-on-graphite colours, with a gold
+// Alumni badge. The whole card opens the details pop-up; the name is the link.
+function AlumniCard({ a, onOpen }) {
+  const { t, n, pick } = useApp()
+  const photo = usePhoto(a.photo)
+  return (
+    <article className="student-card alumni-card">
+      <span className="sc-mono al-mono" aria-hidden="true">
+        {photo ? <img src={photo} alt="" /> : <b>{initials(a.name)}</b>}
+        <span className="al-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z" /></svg>{pick('অ্যালামনাই', 'Alumni')}</span>
+        <span className="sc-go"><Icon name="arrow" size={15} /></span>
+      </span>
+      <span className="student-info">
+        <h3><a className="al-open" href={`?profile=${a.id}`} onClick={(e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); onOpen(a.id) } }}>{a.name}</a>{a.verified && <VerifiedMark size={15} />}</h3>
+        <p className="sc-dept">{a.department || '—'}</p>
+        <p className="sc-meta">{a.batch ? <span>{t('students.batch')} {n(a.batch)}</span> : null}</p>
+      </span>
+    </article>
+  )
+}
+
 export function Alumni() {
   const { t, n, pick } = useApp()
   const [sp, setSp] = useSearchParams()
@@ -112,21 +134,8 @@ export function Alumni() {
               <p className="muted result-count" aria-live="polite">{n(d.total)} {t('alumni.found')}
                 {d.alumniUpToBatch > 0 && <> · {t('alumni.upTo').replace('{n}', n(d.alumniUpToBatch))} <Link className="link-arrow" to="/students">{t('alumni.laterStudents').replace('{n}', n(d.alumniUpToBatch + 1))} →</Link></>}</p>
               {d.items.length === 0 ? <Empty icon="search" title={t('alumni.noneTitle')}>{t('alumni.noneHint')}</Empty> : (
-                <BatchGroups items={d.items} sessions={d.facets?.batchSessions} counts={!f.q && !f.department ? d.facets?.batches : null} gridClass="cards-3">
-                  {(a) => (
-                    <article key={a.id} className="alumni-card">
-                      <header className="al-head">
-                        <Avatar name={a.name} size={56} photo={a.photo} />
-                        <div>
-                          <h3><a className="al-open" href={`?profile=${a.id}`} onClick={(e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); openProfile(a.id) } }}>{a.name}</a></h3>
-                        </div>
-                      </header>
-                      <p className="al-chips">
-                        {a.department && <span className="chip-mini">{a.department}</span>}
-                        {a.batch ? <span className="chip-mini is-batch">{t('students.batch')} {n(a.batch)}</span> : null}
-                      </p>
-                    </article>
-                  )}
+                <BatchGroups items={d.items} sessions={d.facets?.batchSessions} counts={!f.q && !f.department ? d.facets?.batches : null} gridClass="student-grid">
+                  {(a) => <AlumniCard key={a.id} a={a} onOpen={openProfile} />}
                 </BatchGroups>
               )}
               <Pagination page={d.page} pages={d.pages} onPage={(p) => set({ page: p })} />

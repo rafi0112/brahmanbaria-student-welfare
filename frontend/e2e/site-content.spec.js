@@ -56,6 +56,24 @@ test.describe('in English', () => {
     await expect(page.locator('.phero-v-bleed')).toBeVisible()
   })
 
+  test('phones: buttons are not screen-wide and sit in the middle; alumni cards are the premium kind', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 })
+    for (const [path, sel] of [['/login', 'form button[type=submit]'], ['/students', '.sbar-go'], ['/', '.ex-all']]) {
+      await page.goto(path)
+      const b = page.locator(sel).first()
+      await b.scrollIntoViewIfNeeded()
+      const box = await b.boundingBox()
+      expect(box.width, path + ' button width').toBeLessThanOrEqual(322)
+      expect(box.height, path + ' button height').toBeLessThanOrEqual(46)
+      expect(Math.abs(box.x + box.width / 2 - 375 / 2), path + ' centred').toBeLessThan(24)
+    }
+    await page.goto('/alumni')
+    const card = page.locator('.alumni-card').first()
+    await expect(card.locator('.al-badge')).toHaveText('Alumni')
+    await expect(card).toHaveClass(/student-card/)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+  })
+
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path)
