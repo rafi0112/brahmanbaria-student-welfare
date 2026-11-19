@@ -27,14 +27,14 @@ func init() {
 }
 
 type EventData struct {
-	TitleEn   string `json:"titleEn"`
-	TitleBn   string `json:"titleBn"`
-	Date      string `json:"date"`    // YYYY-MM-DD
-	EndDate   string `json:"endDate"` // optional, for events over several days
-	Time      string `json:"time"`
-	Venue     string `json:"venue"`
-	SummaryEn string `json:"summaryEn"`
-	SummaryBn string `json:"summaryBn"`
+	TitleEn   string   `json:"titleEn"`
+	TitleBn   string   `json:"titleBn"`
+	Date      string   `json:"date"`    // YYYY-MM-DD
+	EndDate   string   `json:"endDate"` // optional, for events over several days
+	Time      string   `json:"time"`
+	Venue     string   `json:"venue"`
+	SummaryEn string   `json:"summaryEn"`
+	SummaryBn string   `json:"summaryBn"`
 	Image     string   `json:"image"`
 	Gallery   []string `json:"gallery,omitempty"` // more photos of the event (uploaded or bundled), shown on its page
 	Link      string   `json:"link"`              // registration or details page

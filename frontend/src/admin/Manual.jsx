@@ -22,7 +22,7 @@ export default function AdminManual() {
     ['events', T('ইভেন্ট', 'Events')], ['blog', T('ব্লগ ও ঐতিহ্য', 'Blog and heritage')],
     ['committee', T('কার্যনির্বাহী কমিটি', 'Executive committee')], ['contact', T('যোগাযোগ বার্তা', 'Contact messages')],
     ['roles', T('অ্যাডমিন ও ভূমিকা', 'Admins and roles')], ['faq', T('প্রশ্নোত্তর ও রেফারেন্স তথ্য', 'FAQ and reference data')],
-    ['rules', T('নিয়ম ও সতর্কতা', 'Rules and cautions')],
+    ['editable', T('কী কী বদলানো যায়', 'What can be changed')], ['rules', T('নিয়ম ও সতর্কতা', 'Rules and cautions')], ['handover', T('হস্তান্তর ও রক্ষণাবেক্ষণ', 'Handover and upkeep')],
   ]
 
   return (
@@ -151,6 +151,10 @@ export default function AdminManual() {
             <h3>{T('পাতার ভেতরের ছবি', 'Pictures inside the pages')}</h3>
             <p>{T('“আমাদের সম্পর্কে” পাতার লেখার পাশের দুটি ছবি, এবং হোম পেজের “যারা গড়ছে আগামী” অংশের ছবি “পাতার ভেতরের ছবি” অংশ থেকে বদলান। খালি রাখলে সাইটের নিজের ছবি থাকে।',
               'The two pictures beside the text of the About page, and the “The people shaping tomorrow” picture are changed under “Pictures inside the pages”. Empty means the site’s own picture stays.')}</p>
+            <p>{T('একই অংশে আছে: শিক্ষার্থীর প্রোফাইল পাতার উপরের ছবি, এবং ঐতিহ্য পাতার তিনটি “ঘুরে দেখুন” কার্ড ও চারটি সংস্কৃতির ছবি।', 'The same part also holds the picture at the top of a student’s profile page, and the Heritage page’s three “Explore” cards and four culture pictures.')}</p>
+            <h3>{T('লোগো ও স্কেচ', 'Logo and sketches')}</h3>
+            <p>{T('উপরের মেনু, ফুটার ও লগইন পাতার লোগো, আর হোম ও ফুটারের পেনসিল-স্কেচগুলো “লোগো ও স্কেচ” অংশ থেকে বদলায়। লোগোর জন্য বর্গাকার, স্বচ্ছ পটভূমির PNG ভালো। ব্রাউজার ট্যাবের ছোট আইকন ও ইমেইলের লোগো এখান থেকে বদলায় না (ডেভেলপার বদলাতে পারেন)।',
+              'The logo of the top menu, footer and sign-in pages, and the pencil sketches on Home and in the footer, are changed under “Logo and sketches”. For the logo a square PNG with a transparent background works best. The small browser-tab icon and the logo in emails do not change from here (the developer can change them).')}</p>
             <h3>{T('গ্যালারির ফিচার্ড ছবি ও “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া”', 'Gallery featured picture and “Explore Brahmanbaria”')}</h3>
             <p>{T('গ্যালারি পাতার শুরুতে বড় করে দেখানোর জন্য একটি ফিচার্ড ছবি বেছে নিতে পারেন। হোম পেজের “ঘুরে দেখুন ব্রাহ্মণবাড়িয়া” অংশের ছবিও এখান থেকে বদলায়।',
               'Choose a featured picture to show large at the start of the Gallery page. The “Explore Brahmanbaria” picture on the home page is changed here too.')}</p>
@@ -231,6 +235,8 @@ export default function AdminManual() {
             <h2>{T('যোগাযোগ বার্তা', 'Contact messages')} <Go to="/admin/contact">{open}</Go></h2>
             <p>{T('সাইটের যোগাযোগ ফর্ম থেকে আসা বার্তা এখানে জমা হয়। বার্তা খুলে পড়ুন, উত্তর দিতে প্রেরকের ইমেইল বা ফোনে যোগাযোগ করুন, তারপর পঠিত চিহ্ন দিন। স্প্যাম হলে মুছে ফেলুন।',
               'Messages from the site’s contact form collect here. Open and read one, reply through the sender’s email or phone, then mark it read. Delete spam.')}</p>
+            <p className="man-note">{T('বার্তা আসলে কোনো ইমেইল আসে না; নিয়মিত এই পাতা দেখুন। নতুন বার্তার সংখ্যা ড্যাশবোর্ডে ও এই পাতার “নতুন” ট্যাবে দেখায়। প্রতিটি বার্তা ৩০ দিন পর নিজে থেকেই মুছে যায়।',
+              'No email arrives for a message; check this page regularly. The number of new messages shows on the dashboard and on this page’s “New” tab. Every message is deleted on its own after 30 days.')}</p>
           </section>
 
           <section id="m-roles">
@@ -255,6 +261,45 @@ export default function AdminManual() {
               <li>{T('পাসওয়ার্ড: নিজের অ্যাডমিন পাসওয়ার্ড কারও সাথে ভাগ করবেন না। পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হয়, তবে অ্যাডমিন অ্যাকাউন্টে লম্বা ও অনুমান করা কঠিন পাসওয়ার্ড ব্যবহার করুন।', 'Password: never share your admin password. A password needs at least 6 characters, but use a long, hard-to-guess one for an admin account.')}</li>
               <li>{T('ছবি: স্পষ্ট, শালীন ও অনুমতি আছে এমন ছবি ব্যবহার করুন। প্রতিটি মূল ছবি ১৫ MB-এর মধ্যে রাখুন।', 'Pictures: use clear, decent pictures you have permission for. Keep each original under 15 MB.')}</li>
               <li>{T('ভুল হলে: কার্যক্রম পাতায় দেখে নিন কী বদলেছে, তারপর সম্পাদনা করে ঠিক করুন। সমাধান না হলে সাইটের ডেভেলপারকে জানান।', 'If something goes wrong: check the Activity page to see what changed, then edit to fix it. If it is not solved, tell the site’s developer.')}</li>
+            </ul>
+          </section>
+
+          <section id="m-editable">
+            <h2>{T('কী কী বদলানো যায়', 'What can be changed')}</h2>
+            <p>{T('সাইটের প্রায় সবকিছু কোড ছাড়াই অ্যাডমিন প্যানেল থেকে বদলানো যায়:', 'Almost everything on the site is changed from the admin panel, without code:')}</p>
+            <ul>
+              <li><b>{T('লেখা', 'Words')}</b> — <Go to="/admin/site-texts">{T('ওয়েবসাইটের লেখা', 'Website texts')}</Go>: {T('মেনু, ফুটার, প্রতিটি পাতার শিরোনাম ও বর্ণনা, বোতাম, বার্তা, হোম পেজের “আমাদের কথা” ও সংখ্যার অংশ, হিরোর নাম, ঐতিহ্য পাতার কার্ড।', 'menu, footer, every page’s headings and descriptions, buttons, messages, Home’s “About us” and numbers, the hero name, the Heritage cards.')}</li>
+              <li><b>{T('ছবি ও ভিডিও', 'Pictures and videos')}</b> — <Go to="/admin/site-images">{T('সাইটের ছবি', 'Site pictures')}</Go>: {T('হোম স্লাইড (ছবি, ভিডিও, YouTube), প্রতিটি পাতার উপরের ছবি, পাতার ভেতরের ছবি, গ্যালারির ফিচার্ড ছবি, লোগো ও স্কেচ।', 'home slides (pictures, videos, YouTube), the picture at the top of each page, pictures inside pages, the gallery’s featured picture, the logo and sketches.')}</li>
+              <li><b>{T('বিষয়বস্তু', 'Content')}</b> — {T('ইভেন্ট, ব্লগ, ঐতিহ্য, গ্যালারি, কমিটি, প্রশ্নোত্তর, শিক্ষার্থী, অ্যালামনাই, উপজেলা ও বিভাগ: প্রতিটির নিজের পাতা থেকে।', 'events, blog, heritage, gallery, committee, FAQ, students, alumni, upazilas and departments: each from its own page.')}</li>
+            </ul>
+            <p className="muted small">{T('ডিজাইনের অংশ হিসেবে যা বদলায় না: পাতার উপরের ছবির চারপাশের ছোট পাতা ও ফুলের নকশা, রং ও ফন্ট, ব্রাউজার ট্যাবের আইকন এবং ইমেইলের নকশা।', 'Fixed as part of the design: the small leaf and flower ornaments around page-top pictures, colours and fonts, the browser-tab icon and the email designs.')}</p>
+          </section>
+
+          <section id="m-handover">
+            <h2>{T('হস্তান্তর ও রক্ষণাবেক্ষণ', 'Handover and upkeep')}</h2>
+            <h3>{T('সাইট কোথায় চলে', 'Where the site runs')}</h3>
+            <ul>
+              <li>{T('ওয়েবসাইট (যা দর্শক দেখেন): Cloudflare Pages। GitHub-এ নতুন কোড গেলে নিজে থেকেই আপডেট হয়।', 'The website (what visitors see): Cloudflare Pages. It updates on its own when new code reaches GitHub.')}</li>
+              <li>{T('সার্ভার (API): Render। নতুন কোড গেলে Render-এ নতুন “Deploy” হতে হয়; Auto-Deploy বন্ধ থাকলে Render ড্যাশবোর্ড থেকে “Manual Deploy” চাপুন।', 'The server (API): Render. New code needs a new Render “Deploy”; if Auto-Deploy is off, press “Manual Deploy” in the Render dashboard.')}</li>
+              <li>{T('ডেটাবেস, লগইন ও ছবি-ভিডিও রাখার জায়গা: Supabase।', 'Database, sign-in and picture/video storage: Supabase.')}</li>
+            </ul>
+            <h3>{T('একবার করে রাখার কাজ', 'One-time setup')}</h3>
+            <ol>
+              <li>{T('ভিডিও ফাইল আপলোডের জন্য: Supabase › SQL Editor-এ backend/storage/executive_photos.sql ফাইলটি একবার চালান (এটি শুধু “site-video” জায়গা তৈরি করে, কিছু মোছে না)। YouTube লিংক এটি ছাড়াই চলে।', 'For video file uploads: run backend/storage/executive_photos.sql once in Supabase › SQL Editor (it only creates the “site-video” storage, it deletes nothing). YouTube links work without it.')}</li>
+              <li>{T('Supabase › Authentication: পাসওয়ার্ডের সর্বনিম্ন দৈর্ঘ্য ৬; Site URL হবে সাইটের ঠিকানা; Emails › SMTP Settings-এ যে Gmail থেকে নিবন্ধন ও পাসওয়ার্ড-রিসেটের মেইল যাবে তার App Password।', 'Supabase › Authentication: minimum password length 6; Site URL set to the site’s address; Emails › SMTP Settings with the Gmail App Password that sends sign-up and password-reset mail.')}</li>
+              <li>{T('ইমেইলের নকশা: docs/email-templates ফোল্ডারের তিনটি ফাইল Supabase › Emails › Templates-এ (Confirm signup, Invite user, Reset password) বসানো আছে কিনা দেখুন।', 'Email designs: check that the three files in docs/email-templates are in Supabase › Emails › Templates (Confirm signup, Invite user, Reset password).')}</li>
+            </ol>
+            <h3>{T('সব ঠিক আছে কিনা দেখা', 'Checking that all is well')}</h3>
+            <ul>
+              <li>{T('সার্ভার চালু আছে কিনা: সার্ভারের ঠিকানার শেষে /api/v1/health খুলুন; “ok” দেখাবে, আর “version”-এ শেষ যে কোড চালু হয়েছে তার নম্বর।', 'Is the server up: open the server address followed by /api/v1/health; it shows “ok”, and “version” is the code that is running.')}</li>
+              <li>{T('Render-এর বিনামূল্যের প্ল্যানে অনেকক্ষণ কেউ না এলে সার্ভার ঘুমিয়ে যায়; তখন প্রথম পাতা খুলতে ৩০-৬০ সেকেন্ড লাগতে পারে। এটি স্বাভাবিক।', 'On Render’s free plan the server sleeps when nobody visits for a while; the first page may then take 30-60 seconds. This is normal.')}</li>
+              <li>{T('Render-এর বিনামূল্যের প্ল্যানে ইমেইল পাঠানো (SMTP) বন্ধ, তাই যোগাযোগ ফর্মের বার্তা শুধু অ্যাডমিন প্যানেলে জমা হয়। নিবন্ধন ও পাসওয়ার্ডের মেইল Supabase পাঠায়, তাই সেগুলো চলে।', 'Sending email (SMTP) is blocked on Render’s free plan, so contact messages are kept in the admin panel only. Sign-up and password mail is sent by Supabase, so it works.')}</li>
+            </ul>
+            <h3>{T('নতুন অ্যাডমিন ও দায়িত্ব বদল', 'New admins and changing hands')}</h3>
+            <ul>
+              <li>{T('নতুন কমিটি এলে: নতুনদের সাইটে নিবন্ধন করতে বলুন, তারপর “অ্যাডমিন ব্যবস্থাপনা” থেকে তাঁদের অ্যাডমিন করুন। পুরোনোদের অ্যাডমিন ভূমিকা সরিয়ে দিন।', 'When a new committee comes in: ask the new people to register on the site, then make them admins under “Admin management”. Remove the old admins’ role.')}</li>
+              <li>{T('Supabase, Render, Cloudflare, GitHub ও Gmail অ্যাকাউন্টের পাসওয়ার্ড সংগঠনের দায়িত্বশীল দুইজনের কাছে নিরাপদে রাখুন; কাজ ছাড়ার সময় পাসওয়ার্ড বদলে দিন।', 'Keep the passwords of the Supabase, Render, Cloudflare, GitHub and Gmail accounts safely with two responsible people of the association; change them when someone leaves.')}</li>
+              <li>{T('গোপন কী (secret key, App Password) কখনো কাউকে মেসেজে বা চ্যাটে পাঠাবেন না; শুধু ড্যাশবোর্ডের সেটিংসে বসান।', 'Never send secret keys or App Passwords in messages or chats; only enter them in the dashboards’ settings.')}</li>
             </ul>
           </section>
         </div>

@@ -29,7 +29,14 @@ type App struct {
 
 func (a *App) Routes() http.Handler {
 	m := http.NewServeMux()
-	m.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
+	// the running version (Render sets RENDER_GIT_COMMIT), so anyone can see whether the latest commit is live
+	m.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		out := map[string]string{"status": "ok"}
+		if c := os.Getenv("RENDER_GIT_COMMIT"); len(c) >= 7 {
+			out["version"] = c[:7]
+		}
+		writeJSON(w, 200, out)
+	})
 	m.HandleFunc("GET /api/v1/stats", a.stats)
 	m.HandleFunc("GET /api/v1/students", a.students)
 	m.HandleFunc("GET /api/v1/students/{id}", a.studentOne)
@@ -81,6 +88,8 @@ func (a *App) cors(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Vary", "Origin")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY") // the API is never shown inside a frame
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

@@ -145,4 +145,3 @@ func (a *App) mediaCleanup(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	writeJSON(w, 200, out)
 }
-

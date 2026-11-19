@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -61,7 +61,6 @@ func TestStudentsPaginationAndFilter(t *testing.T) {
 		t.Fatal("limit above max must fall back to default")
 	}
 }
-
 
 func TestStudentsHidePrivateFields(t *testing.T) {
 	a := testApp(t)

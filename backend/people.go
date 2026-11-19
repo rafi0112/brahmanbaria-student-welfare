@@ -42,8 +42,8 @@ type Person struct {
 	ShowPhone  string
 	ShowEmail  string
 	ShowBlood  string
-	PhotoVer   string            // set when the member has a photo
-	Occupation string            // members: what a graduate does now, shown on the Alumni page
+	PhotoVer   string // set when the member has a photo
+	Occupation string // members: what a graduate does now, shown on the Alumni page
 	Workplace  string
 	Extra      map[string]string // directory records: the original form's private columns (admins only)
 	// AccountVerified: an approved member whose email is confirmed. Shown to everyone as the verified mark.
@@ -67,7 +67,7 @@ type personPublic struct {
 	Batch      *int   `json:"batch"`
 	Department string `json:"department"`
 	Upazila    string `json:"upazila"`
-	Verified   bool   `json:"verified"` // the verified mark: an approved member with a confirmed email
+	Verified   bool   `json:"verified"`        // the verified mark: an approved member with a confirmed email
 	Photo      string `json:"photo,omitempty"` // everyone sees it: a member's own photo, or the photo link the original form carried
 }
 

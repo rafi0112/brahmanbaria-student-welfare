@@ -35,7 +35,7 @@ type HeroSlide struct {
 	ID        string `json:"id"`
 	Image     string `json:"image"`
 	ImageURL  string `json:"imageUrl,omitempty"`
-	Video     string `json:"video,omitempty"`    // an uploaded video (site-video bucket); shown instead of the picture
+	Video     string `json:"video,omitempty"` // an uploaded video (site-video bucket); shown instead of the picture
 	VideoURL  string `json:"videoUrl,omitempty"`
 	YouTube   string `json:"youtube,omitempty"` // a YouTube video id; shown instead of the picture
 	CaptionBn string `json:"captionBn"`
