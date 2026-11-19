@@ -196,6 +196,7 @@ function Footer() {
         </div>
         <nav aria-label={t('footer.explore')}>
           <h2>{t('footer.explore')}</h2>
+          <Link to="/">{t('nav.home')}</Link>
           <Link to="/about">{t('nav.about')}</Link>
           <Link to="/students">{t('nav.students')}</Link>
           <Link to="/events">{t('nav.events')}</Link>
