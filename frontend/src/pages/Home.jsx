@@ -115,21 +115,36 @@ export default function Home() {
         <HeroStage />
       </section>
 
-      {/* ---------- interactive upazila map (real boundaries and counts) ---------- */}
-      <section className="section-tint map-sec">
-        <Vine className="vine-map" />
-        <div className="section wrap explore">
-          <Reveal className="explore-copy">
-            <p className="eyebrow">{t('explore.kicker')}</p>
-            <h2>{t('explore.title')}</h2>
-            <p className="lede">{t('explore.lede')}</p>
-            <MapPanel u={upazilas.find((u) => u.slug === sel)} />
-            <Link className="link-arrow" to="/directory">{t('explore.cta')} <Icon name="arrow" size={15} className="arr" /></Link>
-          </Reveal>
-          <Reveal delay={80}>
-            <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(pl) => nav(`/heritage/${pl.slug}`)} />
-          </Reveal>
-        </div>
+      {/* ---------- about: what the association is, why it exists and how it works (every text is editable) ---------- */}
+      <section className="hab section wrap" aria-labelledby="hab-h">
+        <Reveal className="hab-head">
+          <p className="eyebrow">{t('home.aboutKicker')}</p>
+          <h2 id="hab-h">{t('home.aboutTitle')}</h2>
+          <p className="hab-lede">{t('home.aboutLede')}</p>
+          <Link className="link-arrow" to="/about">{t('home.aboutMore')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
+        <ol className="hab-cards">
+          {[['home.aboutWhatT', 'home.aboutWhat', 'users'], ['home.aboutWhyT', 'home.aboutWhy', 'book'], ['home.aboutHowT', 'home.aboutHow', 'landmark']].map(([head, body, ic], n2) => (
+            <Reveal as="li" key={head} delay={n2 * 90} className="hab-card">
+              <span className="hab-no" aria-hidden="true">{n(n2 + 1)}</span>
+              <span className="hab-ico" aria-hidden="true"><Icon name={ic} size={20} /></span>
+              <h3>{t(head)}</h3>
+              <p>{t(body)}</p>
+            </Reveal>
+          ))}
+        </ol>
+      </section>
+
+      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
+      <section className="section wrap" aria-labelledby="events-h">
+        <Reveal className="section-head">
+          <div>
+            <p className="eyebrow">{t('home.events')}</p>
+            <h2 id="events-h">{t('home.upcomingAndRecentEvents')}</h2>
+          </div>
+          <Link className="link-arrow" to="/events">{t('home.allEvents')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </Reveal>
+        <EventCarousel items={eventList} loading={events.loading} />
       </section>
 
       {/* ---------- explore Brahmanbaria: scenic image and the nine upazilas (the discovery and culture cards live on the heritage page) ---------- */}
@@ -167,16 +182,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- events: a carousel that moves on its own, from the published events in the database ---------- */}
-      <section className="section wrap" aria-labelledby="events-h">
-        <Reveal className="section-head">
-          <div>
-            <p className="eyebrow">{t('home.events')}</p>
-            <h2 id="events-h">{t('home.upcomingAndRecentEvents')}</h2>
-          </div>
-          <Link className="link-arrow" to="/events">{t('home.allEvents')} <Icon name="arrow" size={15} className="arr" /></Link>
-        </Reveal>
-        <EventCarousel items={eventList} loading={events.loading} />
+      {/* ---------- interactive upazila map (real boundaries and counts) ---------- */}
+      <section className="section-tint map-sec">
+        <Vine className="vine-map" />
+        <div className="section wrap explore">
+          <Reveal className="explore-copy">
+            <p className="eyebrow">{t('explore.kicker')}</p>
+            <h2>{t('explore.title')}</h2>
+            <p className="lede">{t('explore.lede')}</p>
+            <MapPanel u={upazilas.find((u) => u.slug === sel)} />
+            <Link className="link-arrow" to="/directory">{t('explore.cta')} <Icon name="arrow" size={15} className="arr" /></Link>
+          </Reveal>
+          <Reveal delay={80}>
+            <UpazilaMap upazilas={upazilas} places={placeList} selected={sel} onSelect={setSel} onPin={(pl) => nav(`/heritage/${pl.slug}`)} />
+          </Reveal>
+        </div>
       </section>
 
       {/* ---------- the district and the community in numbers: counts rise as the band comes into view ---------- */}

@@ -141,6 +141,10 @@ export default function AdminManual() {
             </ol>
             <p>{T('কোনো স্লাইড প্রকাশিত না থাকলে সাইট নিজের তিনটি ডিফল্ট ছবি দেখায়। এই তিনটি ছবি স্লাইডের তালিকাতেই আছে; এগুলোর ক্যাপশন বদলানো, ক্রম বদলানো, লুকানো বা মুছে ফেলা যায়, নতুন ছবিও যোগ করা যায়। সব স্লাইড মুছলে তিনটি ডিফল্ট ছবি ফিরে আসে। চওড়া (ল্যান্ডস্কেপ) ও পরিষ্কার ছবি ব্যবহার করুন, অন্তত ১৬০০ পিক্সেল চওড়া।',
               'If no slide is published, the site shows its three built-in pictures. Those three are in the slide list itself: edit their captions, reorder, hide or delete them, and add new pictures. Delete every slide and the three built-in pictures come back. Use wide (landscape), clear pictures, at least 1600 pixels wide.')}</p>
+            <h3>{T('ভিডিও স্লাইড', 'Video slides')}</h3>
+            <p>{T('“অথবা একটি ভিডিও” অংশ থেকে একটি ভিডিও ফাইল (MP4 বা WebM, সর্বোচ্চ ৫০ MB) আপলোড করুন, অথবা YouTube ভিডিওর লিংক দিন। ভিডিও স্লাইড ছবির স্লাইডের মতোই পুরো ফ্রেম জুড়ে শব্দ ছাড়া চলে। আপলোড করা ভিডিও শেষ পর্যন্ত (সর্বোচ্চ ১ মিনিট), আর YouTube ভিডিও ২০ সেকেন্ড চলে, তারপর পরের স্লাইড আসে। ক্যাপশন, ক্রম, পাবলিশ ও মোছা ছবির স্লাইডের মতোই।',
+              'Under “Or a video”, upload a video file (MP4 or WebM, up to 50 MB) or paste a YouTube link. A video slide fills the same frame as a picture and plays without sound. An uploaded video plays to its end (at most a minute) and a YouTube video for 20 seconds, then the next slide comes. Captions, order, publishing and deleting work as for picture slides.')}</p>
+            <p className="man-note">{T('iPhone-এর .mov ভিডিও সব ব্রাউজারে চলে না; MP4 হিসেবে সেভ করে দিন। বড় ভিডিও YouTube-এ রেখে লিংক দেওয়াই ভালো: সাইট দ্রুত খোলে এবং জায়গাও লাগে না।', 'iPhone .mov videos do not play in every browser; save them as MP4. For a long video, put it on YouTube and paste the link: the site opens faster and no storage is used.')}</p>
             <h3>{T('প্রতিটি পাতার উপরের ছবি', 'The picture at the top of each page')}</h3>
             <p>{T('শিক্ষার্থী, অ্যালামনাই, কমিটি, ইভেন্ট, গ্যালারি, ঐতিহ্য, ব্লগ ইত্যাদি পাতার শুরুতে যে ছবি থাকে তা এখান থেকে বদলানো যায়। যে পাতার ছবি বদলাতে চান শুধু সেটিতে ছবি দিন; খালি রাখলে ডিফল্ট ছবি থাকবে।',
               'The picture at the start of the Students, Alumni, Committee, Events, Gallery, Heritage, Blog and other pages can be changed here. Set a picture only for the pages you want to change; empty means the built-in picture stays.')}</p>
@@ -177,6 +181,13 @@ export default function AdminManual() {
               <li>{T('অ্যালবাম তৈরি করে ছবিগুলো অনুষ্ঠান অনুযায়ী ভাগ করা যায়।', 'Create albums to group pictures by occasion.')}</li>
               <li>{T('ক্রম বদলাতে একটি ছবি মাউস দিয়ে টেনে অন্য ছবির জায়গায় ছেড়ে দিন (ফোনে ↑ ↓ বোতাম ব্যবহার করুন)। নতুন ক্রম সাথে সাথে সংরক্ষণ হয়। এটি “ক্রম অনুযায়ী” সাজানো থাকলে এবং কোনো খোঁজ/ফিল্টার না থাকলে কাজ করে।', 'To change the order, drag a picture with the mouse and drop it on the place of another (on a phone use the ↑ ↓ buttons). The new order is saved at once. This works while the list is sorted “by order” with no search or filter.')}</li>
             </ol>
+            <h3>{T('গ্যালারিতে ভিডিও', 'Videos in the gallery')}</h3>
+            <ol>
+              <li>{T('“+ ভিডিও যোগ করুন” চাপুন।', 'Press “+ Add a video”.')}</li>
+              <li>{T('ভিডিও ফাইল আপলোড করুন (MP4 বা WebM, সর্বোচ্চ ৫০ MB), অথবা YouTube লিংক দিয়ে “YouTube ভিডিও যোগ করুন” চাপুন।', 'Upload a video file (MP4 or WebM, up to 50 MB), or paste a YouTube link and press “Add the YouTube video”.')}</li>
+              <li>{T('ক্যাপশন, অ্যালবাম ও তারিখ দিয়ে “গ্যালারিতে যোগ করুন” চাপুন। ছবির মতোই ভিডিওটি প্রথমে লুকানো থাকে; “সাইটে দেখান” চাপলে গ্যালারিতে দেখা যায়।', 'Give a caption, album and date and press “Add to the gallery”. Like a picture, the video starts hidden; press “Show on site” to put it in the gallery.')}</li>
+            </ol>
+            <p>{T('গ্যালারিতে ভিডিওর ছবির উপর ▶ চিহ্ন থাকে; দর্শক ক্লিক করলে বড় করে শব্দসহ চলে। চাইলে সম্পাদনা থেকে একটি কভার ছবিও দিতে পারেন।', 'In the gallery a video shows a ▶ mark; a visitor clicks it to watch it large, with sound. You can also give it a cover picture from its edit form.')}</p>
             <h3>{T('বছর অনুযায়ী সাজানো', 'Grouped by year')}</h3>
             <p>{T('সাইটের গ্যালারি পাতায় ছবিগুলো বছর অনুযায়ী ভাগ হয়ে দেখায়, আর দর্শক বছর বেছে দেখতে পারেন। ছবির বছর আসে তার “তারিখ” থেকে; তারিখ না থাকলে যে বছর প্রকাশ হয়েছে সেটি ধরা হয়।', 'On the site’s Gallery page pictures appear grouped by year, and visitors can pick a year. A picture’s year comes from its “date”; without a date, the year it was published is used.')}</p>
             <ul>

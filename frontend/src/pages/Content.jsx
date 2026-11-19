@@ -6,6 +6,7 @@ import { useApp } from '../lib/app.jsx'
 import { CONTACT_EMAIL } from '../lib/contact.js'
 import { useSiteImages } from '../lib/site.jsx'
 import { useBase } from '../lib/base.js'
+import { youtubeEmbed, youtubeThumb } from '../lib/video.js'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
 import { PostCard } from '../components/cards.jsx'
@@ -147,7 +148,12 @@ export function Gallery() {
                       const i = items.indexOf(it)
                       return (
                         <button key={it.id} className="masonry-item" onClick={() => setOpen(i)} aria-label={caption(it)}>
-                          <MediaPhoto id={it.image} url={it.imageUrl} alt={it.alt || caption(it)} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />
+                          {it.youtube && !it.imageUrl && !it.image
+                            ? <span className={`photo shape-${['a', 'b', 'c'][i % 3]} gal-vthumb`}><img src={youtubeThumb(it.youtube)} alt={it.alt || caption(it)} loading="lazy" decoding="async" /></span>
+                            : it.videoUrl && !it.imageUrl && !it.image
+                              ? <span className={`photo shape-${['a', 'b', 'c'][i % 3]} gal-vthumb`}><video src={`${it.videoUrl}#t=0.5`} muted playsInline preload="metadata" aria-hidden="true" /></span>
+                              : <MediaPhoto id={it.image} url={it.imageUrl} alt={it.alt || caption(it)} shape={`shape-${['a', 'b', 'c'][i % 3]}`} sizes="(min-width: 900px) 25vw, 50vw" />}
+                          {(it.youtube || it.videoUrl) && <b className="gal-play" aria-hidden="true">▶</b>}
                           <span>{caption(it)}</span>
                         </button>
                       )
@@ -164,7 +170,11 @@ export function Gallery() {
           <button ref={closeRef} className="icon-btn lb-close" onClick={() => setOpen(null)} aria-label={t('gallery.close')}>✕</button>
           <button className="icon-btn lb-prev" onClick={() => setOpen((open - 1 + items.length) % items.length)} aria-label={t('gallery.prev')}>‹</button>
           <figure>
-            <img src={m.imageUrl || `/images/${m.image}-1280.webp`} alt={m.alt || caption(m)} />
+            {m.youtube
+              ? <div className="lb-video"><iframe key={m.id} src={youtubeEmbed(m.youtube, { autoplay: true })} title={caption(m) || 'YouTube'} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div>
+              : m.videoUrl
+                ? <video key={m.id} className="lb-vfile" src={m.videoUrl} poster={m.imageUrl || undefined} controls autoPlay playsInline />
+                : <img src={m.imageUrl || `/images/${m.image}-1280.webp`} alt={m.alt || caption(m)} />}
             <figcaption>
               <strong>{caption(m)}</strong>
               {(m.credit || m.license || m.source) && (

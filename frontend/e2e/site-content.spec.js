@@ -25,9 +25,9 @@ async function login(page) {
 test.describe('in English', () => {
   test.beforeEach(as('en'))
 
-  test('home: sections in the agreed order, the hero line on one line, no "Jagannath University · Dhaka"', async ({ page }) => {
+  test('home: About, Events, Explore, Discover, numbers, people in that order; the hero line on one line, no "Jagannath University · Dhaka"', async ({ page }) => {
     await page.goto('/')
-    const heads = ['Discover the beauty of our land', 'Explore Brahmanbaria', 'Upcoming and recent events', 'Our district and community in numbers', 'The people shaping tomorrow']
+    const heads = ["A few words about the Brahmanbaria District Students' Welfare Association", 'Upcoming and recent events', 'Explore Brahmanbaria', 'Discover the beauty of our land', 'Our district and community in numbers', 'The people shaping tomorrow']
     const tops = []
     for (const h of heads) {
       const el = page.getByRole('heading', { name: h })

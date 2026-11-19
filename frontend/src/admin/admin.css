@@ -758,3 +758,15 @@
 
 /* admin dropdown lists follow the panel's light or dark colours */
 .adm select option, .adm select optgroup { background-color: var(--a-surface); color: var(--a-text); }
+
+/* video picker (slides and gallery) */
+.vp { display: grid; gap: 8px; } .vp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vp-link { flex: 1 1 240px; min-width: 0; padding: 7px 10px; border: 1px solid var(--a-line); border-radius: var(--a-r); background: var(--a-surface); color: var(--a-text); font: inherit; }
+.vp-ok { display: flex; align-items: center; gap: 10px; margin: 0; font-size: .85rem; } .vp-ok img { border-radius: 6px; object-fit: cover; }
+.si-video { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--a-line); } .si-video h3 { margin: 0 0 2px; }
+.si-thumb { position: relative; display: block; } .si-thumb img, .si-thumb video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.si-kind { position: absolute; left: 6px; top: 6px; padding: 2px 7px; border-radius: 99px; background: rgba(0, 0, 0, .65); color: #fff; font-size: .68rem; font-weight: 700; }
+.si-slides .si-thumb { width: 150px; height: 84px; border-radius: 8px; overflow: hidden; background: rgba(0, 0, 0, .06); } .si-slides .si-thumb img { width: 100%; height: 100%; }
+
+.gal-vedit { display: grid; gap: 8px; justify-items: start; } .gal-vedit video, .gal-vedit img { width: min(100%, 360px); border-radius: 10px; background: #000; }
+.ad-card-img { position: relative; } .ad-card-img video { width: 100%; height: 100%; object-fit: cover; }

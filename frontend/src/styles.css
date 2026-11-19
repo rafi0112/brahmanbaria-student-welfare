@@ -1940,3 +1940,36 @@ dialog.pdialog .pd-body * { max-width: 100%; }
 select option, select optgroup { background-color: var(--card); color: var(--ink); }
 select option:disabled { color: var(--muted); }
 .sbar-filters select, .filters-bar select, .evp-sort select { color: var(--ink); }
+
+/* home slides: a video or a YouTube video fills the same frame as a picture */
+.hs-fr .hs-vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hs-yt { position: absolute; inset: 0; overflow: hidden; container-type: size; background: #000; }
+.hs-yt iframe { position: absolute; top: 50%; left: 50%; width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); transform: translate(-50%, -50%); border: 0; pointer-events: none; }
+.hs-tab { position: relative; } .hs-tab-vid { display: block; width: 100%; height: 100%; background: linear-gradient(135deg, #0b4d3c, #1d2226); }
+.hs-tab-play { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; font-size: 9px; padding-left: 2px; pointer-events: none; }
+
+/* gallery videos: a play mark on the thumbnail, and a player in the viewer */
+.masonry-item { position: relative; }
+.gal-vthumb { display: block; overflow: hidden; background: #111; aspect-ratio: 16 / 10; }
+.gal-vthumb img, .gal-vthumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-play { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; font-size: 18px; padding-left: 4px; box-shadow: 0 0 0 3px rgba(255, 255, 255, .7); pointer-events: none; transition: transform var(--dur) var(--ease); }
+.masonry-item:hover .gal-play { transform: translate(-50%, -50%) scale(1.08); }
+.lb-video { width: min(1100px, 92vw); aspect-ratio: 16 / 9; max-height: 78vh; border-radius: 14px; overflow: hidden; background: #000; }
+.lb-video iframe { width: 100%; height: 100%; border: 0; display: block; }
+.lb-vfile { display: block; max-width: min(1100px, 92vw); max-height: 78vh; margin: 0 auto; border-radius: 14px; background: #000; }
+/* a video thumbnail is not the caption: it sits in the flow like a picture */
+.masonry-item .gal-vthumb { position: relative; inset: auto; left: auto; right: auto; bottom: auto; z-index: 0; transform: none; opacity: 1; padding: 0; background: #111; border-radius: inherit; }
+
+/* Home: "About us" right after the hero: the heading and a short introduction, then what / why / how in three cards */
+.hab { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr); gap: clamp(24px, 4vw, 64px); align-items: start; }
+.hab-head { position: sticky; top: calc(var(--nav-h) + 24px); }
+.hab-head h2 { font-size: clamp(1.7rem, 2.8vw, 2.5rem); line-height: 1.2; margin: 0 0 14px; }
+.hab-lede { color: var(--ink-2); font-size: 1.04rem; line-height: 1.75; margin: 0 0 18px; max-width: 52ch; }
+.hab-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.hab-card { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 18px; row-gap: 6px; padding: 22px 24px; border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
+.hab-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--teal) 70%, var(--accent))); }
+.hab-ico { grid-row: span 2; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: color-mix(in srgb, var(--teal) 12%, var(--card)); color: var(--teal); }
+.hab-card h3 { margin: 2px 0 0; font-size: 1.15rem; } .hab-card p { margin: 0; color: var(--ink-2); line-height: 1.75; }
+.hab-no { position: absolute; right: 18px; top: 10px; font: 700 2.4rem/1 var(--font-head); color: color-mix(in srgb, var(--ink) 7%, transparent); }
+@media (max-width: 900px) { .hab { grid-template-columns: minmax(0, 1fr); } .hab-head { position: static; } }
+@media (max-width: 560px) { .hab-card { grid-template-columns: minmax(0, 1fr); padding: 18px 18px 20px; } .hab-ico { grid-row: auto; width: 42px; height: 42px; } .hab-no { font-size: 2rem; } }
