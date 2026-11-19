@@ -33,7 +33,9 @@ export function Blog() {
       </PageHero>
       <section className="section wrap">
         <Data q={res} skeleton="cards">
-          {(d) => d.items.length === 0 ? <Empty /> : (
+          {(d) => d.items.length === 0 ? (
+            <Empty icon="book" title={t('blog.emptyT')} action={<a className="btn btn-dark" href="#write">{t('blogw.title')}</a>}>{t(cat ? 'blog.emptyCat' : 'blog.emptyD')}</Empty>
+          ) : (
             <div className="blog-layout">
               <PostCard p={d.items[0]} big />
               <div className="blog-side">
