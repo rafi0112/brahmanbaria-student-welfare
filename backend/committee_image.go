@@ -52,6 +52,7 @@ type ImageStore interface {
 type supabaseStorage struct {
 	baseURL, apiKey string
 	client          *http.Client
+	big             *http.Client // for videos: a large file needs minutes, not seconds
 }
 
 func newSupabaseStorage(baseURL, apiKey string) *supabaseStorage {
@@ -62,7 +63,7 @@ func newSupabaseStorage(baseURL, apiKey string) *supabaseStorage {
 	if baseURL == "" || apiKey == "" {
 		return nil
 	}
-	return &supabaseStorage{baseURL: baseURL, apiKey: apiKey, client: &http.Client{Timeout: 12 * time.Second}}
+	return &supabaseStorage{baseURL: baseURL, apiKey: apiKey, client: &http.Client{Timeout: 12 * time.Second}, big: &http.Client{Timeout: 15 * time.Minute}}
 }
 
 // PublicBase is the URL prefix under which a bucket's objects are readable.
@@ -81,7 +82,11 @@ func (s *supabaseStorage) Put(ctx context.Context, userToken, bucket, name, cont
 	req.Header.Set("x-upsert", "false") // never overwrite an existing object
 	// a file is named after its content and never changes, so browsers and the CDN may keep it for a year
 	req.Header.Set("cache-control", "max-age=31536000")
-	res, err := s.client.Do(req)
+	client := s.client
+	if len(data) > maxPhotoBytes && s.big != nil {
+		client = s.big
+	}
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}

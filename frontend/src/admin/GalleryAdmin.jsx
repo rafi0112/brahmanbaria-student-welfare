@@ -5,8 +5,10 @@ import { Data } from '../components/ui.jsx'
 import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pager, SkeletonRows, StatusBadge, slugFrom, useErrText, useFilters, useNotice } from './kit.jsx'
 import ListToolbar from './toolbar.jsx'
 import MultiUpload from './MultiUpload.jsx'
+import VideoPicker from './VideoPicker.jsx'
+import { youtubeThumb } from '../lib/video.js'
 
-const thumb = (d) => d.imageUrl || (d.image ? `/images/${d.image}-640.webp` : '')
+const thumb = (d) => d.imageUrl || (d.image ? `/images/${d.image}-640.webp` : '') || (d.youtube ? youtubeThumb(d.youtube, 'mqdefault') : '')
 const base = (name) => name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim().slice(0, 120)
 
 export default function GalleryAdmin() {
@@ -22,6 +24,7 @@ export default function GalleryAdmin() {
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [addingVideo, setAddingVideo] = useState(false)
   const [uploadDate, setUploadDate] = useState('') // the date given to every picture of this upload (optional), so they sit under its year
   const [bulkDate, setBulkDate] = useState('')
   const [drag, setDrag] = useState(null) // { from, over } while a picture is being dragged to a new place
@@ -103,6 +106,7 @@ export default function GalleryAdmin() {
         action={
           <div className="row">
             <button type="button" className="btn btn-dark btn-sm" onClick={() => setUploading(true)}>+ {t('ad.gal.upload')}</button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setAddingVideo(true)}>+ {pick('ভিডিও যোগ করুন', 'Add a video')}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAlbumEdit({})}>+ {t('ad.gal.newAlbum')}</button>
           </div>
         } />
@@ -114,6 +118,7 @@ export default function GalleryAdmin() {
           <small className="muted">{pick('তারিখ দিলে সাইটের গ্যালারিতে ছবিগুলো সেই বছরের নিচে দেখায়। না দিলে প্রকাশের বছর ধরা হয়।', 'With a date the gallery shows these pictures under that year; without one, the year they are published is used.')}</small>
         </div>
       )}
+      {addingVideo && <VideoModal albums={albumList.filter((a) => a.status !== 'archived')} albumName={albumName} current={current} onClose={() => setAddingVideo(false)} onAdded={() => { setAddingVideo(false); ok(pick('ভিডিও গ্যালারিতে যোগ হয়েছে। “দেখান” চাপলে সাইটে দেখা যাবে।', 'The video was added to the gallery. Press “Show” to put it on the site.')); refresh() }} />}
       {uploading && <MultiUpload profile="gallery" onStored={addEntry} onFinished={refresh} onClose={() => { setUploading(false); refresh() }} />}
 
       <div className="chips ad-albums" role="group" aria-label={t('ad.gal.albums')}>
@@ -179,7 +184,8 @@ export default function GalleryAdmin() {
                 onDragEnd={() => setDrag(null)}>
                 <label className="ad-card-check"><input type="checkbox" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} aria-label={`${t('ad.select')} ${r.title}`} /></label>
                 <button type="button" className="ad-card-img" onClick={() => setEdit(r)} aria-label={`${t('ad.edit')} ${r.title}`}>
-                  {thumb(r.data) ? <img src={thumb(r.data)} alt={r.data.alt || ''} loading="lazy" /> : <span aria-hidden="true">?</span>}
+                  {thumb(r.data) ? <img src={thumb(r.data)} alt={r.data.alt || ''} loading="lazy" /> : r.data.videoUrl ? <video src={`${r.data.videoUrl}#t=0.5`} muted playsInline preload="metadata" /> : <span aria-hidden="true">?</span>}
+                  {(r.data.video || r.data.youtube) && <b className="si-kind">{r.data.youtube ? 'YouTube' : pick('ভিডিও', 'Video')}</b>}
                 </button>
                 <div className="ad-card-body">
                   <strong title={r.title}>{pick(r.data.captionBn, r.data.captionEn) || r.data.alt || r.title}</strong>
@@ -214,7 +220,7 @@ export default function GalleryAdmin() {
 /* ---------------------------------------------------------------- one image */
 
 function ImageModal({ row, albums, albumName, onClose, onChanged }) {
-  const { t } = useApp()
+  const { t, pick } = useApp()
   const errText = useErrText()
   const init = (r) => ({ ...r.data, parentId: r.parentId || '' })
   const [v, setV] = useState(() => init(row))
@@ -229,7 +235,7 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
   const save = async (e) => {
     e.preventDefault()
     setBusy(true); setErrs({}); setMsg('')
-    const { parentId, imageUrl, ...data } = v
+    const { parentId, imageUrl, videoUrl, ...data } = v
     try { onChanged(await api(`/admin/content/image/${row.id}`, { method: 'PATCH', body: JSON.stringify({ parentId, featured: row.featured, sortOrder: row.sortOrder, data }) }), t('ad.saved')) } catch (err) {
       if (err.fields) setErrs(err.fields)
       setMsg(err.fields ? t('ad.e.validation') : errText(err))
@@ -243,7 +249,14 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
     <Modal title={t('ad.gal.editImage')} onClose={() => { if (!dirty || window.confirm(t('ad.leaveConfirm'))) onClose() }} drawer busy={busy}>
       <p><StatusBadge status={row.status} label={row.status === 'draft' ? t('ad.gal.hidden') : undefined} /></p>
       <form onSubmit={save} noValidate className="ad-form">
-        <ImagePicker profile="gallery" label={t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
+        {(v.video || v.youtube) && (
+          <div className="gal-vedit">
+            <strong>{v.youtube ? 'YouTube' : pick('ভিডিও', 'Video')}</strong>
+            {v.youtube ? <img src={youtubeThumb(v.youtube, 'mqdefault')} alt="" width="192" height="108" /> : <video src={v.videoUrl} controls preload="metadata" />}
+            <details><summary>{pick('ভিডিও বদলান', 'Replace the video')}</summary><VideoPicker compact onPick={(x) => setV({ ...v, video: x.video || '', videoUrl: x.videoUrl || '', youtube: x.youtube || '' })} /></details>
+          </div>
+        )}
+        <ImagePicker profile="gallery" label={v.video || v.youtube ? pick('কভার ছবি (ঐচ্ছিক)', 'Cover picture (optional)') : t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
           onChange={(m) => m && setV({ ...v, image: m.path, imageUrl: m.url })} hint={t('ad.gal.replaceHint')} />
         {errs.image && <small className="err" role="alert">{errs.image}</small>}
         <div className="ad-grid">
@@ -276,6 +289,47 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
 }
 
 /* ---------------------------------------------------------------- albums */
+
+// A new gallery video: an uploaded file or a YouTube link, a caption, and optionally an album and a date. It starts
+// hidden, like an uploaded picture, until an admin shows it.
+function VideoModal({ albums, albumName, current, onClose, onAdded }) {
+  const { pick } = useApp()
+  const errText = useErrText()
+  const [vid, setVid] = useState(null)
+  const [f, setF] = useState({ captionBn: '', captionEn: '', parentId: current?.id || '', eventDate: '' })
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const save = async () => {
+    setBusy(true); setMsg('')
+    try {
+      await api('/admin/content/image', { method: 'POST', body: JSON.stringify({ parentId: f.parentId, data: { video: vid.video || '', youtube: vid.youtube || '', image: '', captionBn: f.captionBn, captionEn: f.captionEn, alt: f.captionEn || f.captionBn || 'Video', eventDate: f.eventDate } }) })
+      onAdded()
+    } catch (e) { setMsg(Object.values(e.fields || {})[0] || errText(e)) } finally { setBusy(false) }
+  }
+  return (
+    <Modal title={pick('গ্যালারিতে ভিডিও যোগ করুন', 'Add a video to the gallery')} onClose={onClose} busy={busy}>
+      <div className="ad-form">
+        {!vid ? <VideoPicker onPick={setVid} /> : (
+          <div className="gal-vedit">
+            {vid.youtube ? <img src={youtubeThumb(vid.youtube, 'mqdefault')} alt="" width="192" height="108" /> : <video src={vid.videoUrl} controls preload="metadata" />}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setVid(null)}>{pick('অন্য ভিডিও বাছুন', 'Choose another video')}</button>
+          </div>
+        )}
+        <div className="ad-grid">
+          <Field label={pick('ক্যাপশন (বাংলা)', 'Caption (Bangla)')}>{(id) => <input id={id} value={f.captionBn} maxLength={300} onChange={(e) => setF({ ...f, captionBn: e.target.value })} lang="bn" />}</Field>
+          <Field label={pick('ক্যাপশন (ইংরেজি)', 'Caption (English)')}>{(id) => <input id={id} value={f.captionEn} maxLength={300} onChange={(e) => setF({ ...f, captionEn: e.target.value })} />}</Field>
+          <Field label={pick('অ্যালবাম', 'Album')}>{(id) => <select id={id} value={f.parentId} onChange={(e) => setF({ ...f, parentId: e.target.value })}><option value="">{pick('কোনো অ্যালবাম নয়', 'No album')}</option>{albums.map((a) => <option key={a.id} value={a.id}>{albumName(a)}</option>)}</select>}</Field>
+          <Field label={pick('তারিখ (ঐচ্ছিক)', 'Date (optional)')}>{(id) => <input id={id} type="date" value={f.eventDate} onChange={(e) => setF({ ...f, eventDate: e.target.value })} />}</Field>
+        </div>
+        {msg && <p className="notice bad" role="alert">{msg}</p>}
+        <div className="row">
+          <button type="button" className="btn btn-dark btn-sm" disabled={busy || !vid} onClick={save}>{busy ? pick('সংরক্ষণ হচ্ছে…', 'Saving…') : pick('গ্যালারিতে যোগ করুন', 'Add to the gallery')}</button>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>{pick('বাতিল', 'Cancel')}</button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 function AlbumModal({ album, onClose, onChanged }) {
   const { t } = useApp()

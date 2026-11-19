@@ -16,6 +16,12 @@ VALUES ('site-media', 'site-media', true, 5242880, ARRAY['image/jpeg', 'image/pn
 ON CONFLICT (id) DO UPDATE
   SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
 
+-- videos for the home slides and the gallery: public read, MP4/WebM only, 50 MB (the most one file may be on the free plan)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('site-video', 'site-video', true, 52428800, ARRAY['video/mp4', 'video/webm'])
+ON CONFLICT (id) DO UPDATE
+  SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
+
 -- SECURITY DEFINER so the check can read public.users, which is private (row level security without policies).
 CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
 LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
@@ -33,3 +39,8 @@ DROP POLICY IF EXISTS "site media: admins upload" ON storage.objects;
 CREATE POLICY "site media: admins upload" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'site-media' AND public.is_admin());
+
+DROP POLICY IF EXISTS "site video: admins upload" ON storage.objects;
+CREATE POLICY "site video: admins upload" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'site-video' AND public.is_admin());

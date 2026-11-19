@@ -94,6 +94,9 @@ export async function uploadMedia({ file, driveUrl, endpoint = '/admin/media', o
   })
 }
 
+// Uploads one video file (MP4 or WebM) for the home slides or the gallery; resolves { path, url } once it is stored.
+export const uploadVideo = (file, { onProgress, signal } = {}) => uploadMedia({ file, endpoint: '/admin/video', onProgress, signal })
+
 // Downloads a protected file (for example the members CSV) with the admin's token.
 export async function downloadFile(path, filename) {
   const res = await fetch(`${BASE}/api/v1${path}`, { credentials: 'include', headers: await bearer() })

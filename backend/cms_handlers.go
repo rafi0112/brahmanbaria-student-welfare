@@ -68,6 +68,8 @@ type AlbumData struct {
 
 type ImageData struct {
 	Image     string `json:"image"`
+	Video     string `json:"video,omitempty"`   // an uploaded video; the picture, when given, is its cover
+	YouTube   string `json:"youtube,omitempty"` // a YouTube video id
 	CaptionBn string `json:"captionBn"`
 	CaptionEn string `json:"captionEn"`
 	Alt       string `json:"alt"`
@@ -286,9 +288,19 @@ func parseImage(raw json.RawMessage, b *entryBody) (EntryInput, map[string]strin
 	if err := json.Unmarshal(raw, &d); err != nil {
 		return EntryInput{}, map[string]string{"data": "invalid"}
 	}
-	trimAll(&d.Image, &d.CaptionBn, &d.CaptionEn, &d.Alt, &d.Credit, &d.License, &d.Source, &d.Category, &d.EventDate)
-	if d.Image == "" || !validImageRef(d.Image) {
-		errs["image"] = "Upload an image first."
+	trimAll(&d.Image, &d.Video, &d.YouTube, &d.CaptionBn, &d.CaptionEn, &d.Alt, &d.Credit, &d.License, &d.Source, &d.Category, &d.EventDate)
+	if d.YouTube != "" {
+		if yt := youtubeID(d.YouTube); yt != "" {
+			d.YouTube = yt
+		} else {
+			errs["youtube"] = "That is not a YouTube video link."
+		}
+	}
+	if !validVideoRef(d.Video) {
+		errs["video"] = "Upload the video again."
+	}
+	if !validImageRef(d.Image) || (d.Image == "" && d.Video == "" && d.YouTube == "") {
+		errs["image"] = "Upload an image or a video first."
 	}
 	if d.Alt == "" && d.CaptionEn == "" && d.CaptionBn == "" {
 		errs["alt"] = "Add a caption or alt text so the picture can be described."
@@ -307,7 +319,7 @@ func parseImage(raw json.RawMessage, b *entryBody) (EntryInput, map[string]strin
 	if !validDate(d.EventDate) {
 		errs["eventDate"] = "Use a valid date."
 	}
-	title := firstNonEmpty(d.CaptionEn, d.CaptionBn, d.Alt, "Image")
+	title := firstNonEmpty(d.CaptionEn, d.CaptionBn, d.Alt, map[bool]string{true: "Video", false: "Image"}[d.Video != "" || d.YouTube != ""])
 	b.Slug = "" // images have no URL name
 	out, _ := json.Marshal(d)
 	return EntryInput{Kind: KindImage, Title: title, Featured: b.Featured, SortOrder: b.SortOrder, ParentID: strings.TrimSpace(b.ParentID), Data: out}, errs
@@ -384,6 +396,9 @@ func (a *App) entryOut(e Entry) Entry {
 		if ref, _ := m[key].(string); photoRx.MatchString(ref) {
 			m[key+"Url"] = a.mediaURL(ref)
 		}
+	}
+	if ref, _ := m["video"].(string); videoRx.MatchString(ref) {
+		m["videoUrl"] = a.videoURL(ref)
 	}
 	for key, out := range map[string]string{"images": "imageUrls", "gallery": "galleryUrls"} {
 		if imgs, ok := m[key].([]any); ok {
@@ -753,6 +768,8 @@ type galleryOut struct {
 	Source    string `json:"source"`
 	Category  string `json:"category"`
 	EventDate string `json:"eventDate"`
+	VideoURL  string `json:"videoUrl,omitempty"`
+	YouTube   string `json:"youtube,omitempty"`
 	Year      string `json:"year"` // the picture's date when it has one, otherwise the year it was published, for grouping by year
 	Album     string `json:"album"`
 }
@@ -813,7 +830,7 @@ func (a *App) publicGallery(w http.ResponseWriter, r *http.Request) {
 		var d ImageData
 		_ = json.Unmarshal(e.Data, &d)
 		items = append(items, galleryOut{ID: e.ID, Image: d.Image, ImageURL: a.mediaURL(d.Image), CaptionBn: d.CaptionBn, CaptionEn: d.CaptionEn, Alt: d.Alt,
-			Credit: d.Credit, License: d.License, Source: d.Source, Category: d.Category, EventDate: d.EventDate, Year: pictureYear(d.EventDate, e.PublishedAt, e.CreatedAt), Album: e.ParentID})
+			Credit: d.Credit, License: d.License, Source: d.Source, Category: d.Category, EventDate: d.EventDate, VideoURL: a.videoURL(d.Video), YouTube: d.YouTube, Year: pictureYear(d.EventDate, e.PublishedAt, e.CreatedAt), Album: e.ParentID})
 	}
 	writeJSON(w, 200, map[string]any{"albums": albumList, "items": items})
 }

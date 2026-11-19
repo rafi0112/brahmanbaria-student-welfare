@@ -33,6 +33,7 @@ type Auth struct {
 	Images         ImageStore
 	PhotoBase      string
 	MediaBase      string
+	VideoBase      string // public address prefix of the site-video bucket
 	DriveBase      string
 	DriveAllowHost func(string) bool
 	// AllowPrivateImageHosts lets tests fetch from a local server; production never sets it.
@@ -97,6 +98,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.settingsRoutes(m, h)
 	a.siteImagesRoutes(m, h)
 	a.siteTextsRoutes(m, h)
+	a.videoRoutes(m, h)
 	a.bulkImportRoutes(m, h)
 	a.contactRoutes(m, h)
 	a.importedRoutes(m, h)

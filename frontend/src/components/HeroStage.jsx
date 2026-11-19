@@ -4,12 +4,15 @@ import images from '../data/images.json'
 import { BUILT_IN } from '../data/heroSlides.js'
 import { useApp } from '../lib/app.jsx'
 import { useSiteImages } from '../lib/site.jsx'
+import { youtubeEmbed, youtubeThumb } from '../lib/video.js'
 
 const SCENE_MS = 6000
+const YOUTUBE_MS = 20000 // a YouTube slide's length is not known here; it stays this long
+const VIDEO_MAX_MS = 60000 // an uploaded video plays to its end, but never holds the stage longer than this
 
 // a built-in chapter has sized files; a slide an admin chose has one address
 const src = (sc) => (sc.url ? { src: sc.url } : { src: `/images/${sc.id}-1280.webp`, srcSet: `/images/${sc.id}-640.webp 640w, /images/${sc.id}-1280.webp 1280w${images[sc.id]?.wide ? `, /images/${sc.id}-1920.webp 1920w` : ''}` })
-const thumb = (sc) => sc.url || `/images/${sc.id}-640.webp`
+const thumb = (sc) => sc.url || (sc.yt ? youtubeThumb(sc.yt, 'mqdefault') : sc.video ? '' : `/images/${sc.id}-640.webp`)
 const two = (k) => String(k + 1).padStart(2, '0')
 
 const Arrow = ({ d = 'M5 12h14M13 6l6 6-6 6', size = 18, width = 2.2 }) => (
@@ -29,7 +32,7 @@ export default function HeroStage() {
   useEffect(() => { const id = setTimeout(() => setWaited(true), 2500); return () => clearTimeout(id) }, [])
   const custom = site.hero.length > 0
   const SCENES = useMemo(() => (custom
-    ? site.hero.map((h, k) => { const b = BUILT_IN.find((x) => x.id === h.image); return { id: h.id, url: h.imageUrl, no: two(k), bn: h.captionBn || h.captionEn, en: h.captionEn || h.captionBn, wm: b?.wm || '', pos: b?.pos || '50% 45%', boost: b?.boost ?? 0.55 } })
+    ? site.hero.map((h, k) => { const b = BUILT_IN.find((x) => x.id === h.image); return { id: h.id, url: h.imageUrl, video: h.videoUrl || '', yt: h.youtube || '', no: two(k), bn: h.captionBn || h.captionEn, en: h.captionEn || h.captionBn, wm: b?.wm || '', pos: b?.pos || '50% 45%', boost: b?.boost ?? 0.55 } })
     : (site.ready || waited ? BUILT_IN.map((b, k) => ({ ...b, no: two(k) })) : [])), [custom, site.hero, site.ready, waited])
   const [i, setI] = useState(0)
   const [prev, setPrev] = useState(null)
@@ -51,11 +54,24 @@ export default function HeroStage() {
     return () => { document.removeEventListener('visibilitychange', v); io.disconnect() }
   }, [])
   const running = !reduce && !paused && !held && !hidden && inView && count > 1
+  // how long each slide stays: a picture 6 s, an uploaded video its own length (6-60 s), a YouTube video 20 s
+  const [lengths, setLengths] = useState({})
+  const msOf = (sc) => (!sc ? SCENE_MS : sc.yt ? YOUTUBE_MS : sc.video ? Math.min(VIDEO_MAX_MS, Math.max(SCENE_MS, lengths[sc.id] || 15000)) : SCENE_MS)
+  const curMs = msOf(SCENES[i])
   useEffect(() => {
     if (!running) return undefined
-    const id = setTimeout(() => go(i + 1), SCENE_MS)
+    const id = setTimeout(() => go(i + 1), curMs)
     return () => clearTimeout(id)
-  }, [running, i, go])
+  }, [running, i, go, curMs])
+  // only the slide in view plays its video, from the start; the others wait
+  const vids = useRef({})
+  useEffect(() => {
+    SCENES.forEach((sc, k) => {
+      const v = vids.current[sc.id]
+      if (!v) return
+      if (k === i && !reduce && !hidden && inView && !paused) { v.play?.().catch(() => {}) } else { v.pause?.(); if (k !== i) v.currentTime = 0 }
+    })
+  }, [i, SCENES, reduce, hidden, inView, paused])
   useEffect(() => { // scrolling away: --sp runs 0 → 1 over the stage's height
     if (reduce) return undefined
     let raf = 0
@@ -77,7 +93,14 @@ export default function HeroStage() {
       <div className="hs-stage" aria-hidden="true">
         {SCENES.map((sc, k) => (
           <div key={sc.id} className={`hs-fr${k === i ? ' is-on' : k === prev ? ' is-prev' : ''}`}>
-            <img {...src(sc)} sizes="100vw" alt="" decoding="async" fetchpriority={k === 0 ? 'high' : undefined} style={{ objectPosition: sc.pos }} />
+            {sc.video
+              ? <video ref={(el) => { vids.current[sc.id] = el }} className="hs-vid" src={sc.video} poster={sc.url || undefined} muted playsInline loop={count <= 1} preload={k === i ? 'auto' : 'metadata'}
+                  onLoadedMetadata={(e) => { const d = e.currentTarget.duration; if (d && Number.isFinite(d)) setLengths((m) => ({ ...m, [sc.id]: Math.round(d * 1000) })) }} />
+              : sc.yt
+                ? (k === i && !reduce
+                  ? <span className="hs-yt"><iframe src={youtubeEmbed(sc.yt, { background: true })} title={pick(sc.bn, sc.en) || 'YouTube'} allow="autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" tabIndex={-1} /></span>
+                  : <img src={youtubeThumb(sc.yt, 'hqdefault')} alt="" decoding="async" />)
+                : <img {...src(sc)} sizes="100vw" alt="" decoding="async" fetchpriority={k === 0 ? 'high' : undefined} style={{ objectPosition: sc.pos }} />}
           </div>
         ))}
         <div className="hs-shade" /><div className="hs-boost" />
@@ -119,9 +142,10 @@ export default function HeroStage() {
           <nav className="hs-strip" aria-label={t('hero.scenes')}>
             {SCENES.map((sc, k) => (
               <button key={sc.id} type="button" className={`hs-tab${k === i ? ' is-on' : ''}`} aria-current={k === i ? 'true' : undefined} onClick={() => go(k)} title={pick(sc.bn, sc.en)}>
-                <img src={thumb(sc)} alt="" loading="lazy" decoding="async" style={{ objectPosition: sc.pos }} />
+                {thumb(sc) ? <img src={thumb(sc)} alt="" loading="lazy" decoding="async" style={{ objectPosition: sc.pos }} /> : <span className="hs-tab-vid" aria-hidden="true" />}
+                {(sc.video || sc.yt) && <span className="hs-tab-play" aria-hidden="true">▶</span>}
                 <span className="sr-only">{sc.no} {pick(sc.bn, sc.en)}</span>
-                <span className="hs-bar" aria-hidden="true"><i key={k === i ? `${i}-${running}` : 'off'} style={{ animationDuration: `${SCENE_MS}ms` }} /></span>
+                <span className="hs-bar" aria-hidden="true"><i key={k === i ? `${i}-${running}-${msOf(sc)}` : 'off'} style={{ animationDuration: `${msOf(sc)}ms` }} /></span>
               </button>
             ))}
           </nav>

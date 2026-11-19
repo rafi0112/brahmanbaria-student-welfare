@@ -30,6 +30,9 @@ type HeroSlide struct {
 	ID        string `json:"id"`
 	Image     string `json:"image"`
 	ImageURL  string `json:"imageUrl,omitempty"`
+	Video     string `json:"video,omitempty"`    // an uploaded video (site-video bucket); shown instead of the picture
+	VideoURL  string `json:"videoUrl,omitempty"`
+	YouTube   string `json:"youtube,omitempty"` // a YouTube video id; shown instead of the picture
 	CaptionBn string `json:"captionBn"`
 	CaptionEn string `json:"captionEn"`
 	Published bool   `json:"published"`
@@ -86,7 +89,11 @@ func checkSiteImages(in *SiteImages) map[string]string {
 	seen := map[string]bool{}
 	for i := range in.Hero {
 		h := &in.Hero[i]
-		h.ImageURL = ""
+		h.ImageURL, h.VideoURL = "", ""
+		h.Video = strings.TrimSpace(h.Video)
+		if yt := youtubeID(h.YouTube); yt != "" || h.YouTube == "" {
+			h.YouTube = yt
+		}
 		h.ID = strings.TrimSpace(h.ID)
 		h.CaptionBn, h.CaptionEn = strings.TrimSpace(h.CaptionBn), strings.TrimSpace(h.CaptionEn)
 		if h.ID == "" || len(h.ID) > 40 || seen[h.ID] {
@@ -95,8 +102,15 @@ func checkSiteImages(in *SiteImages) map[string]string {
 			h.ID = hex.EncodeToString(b)
 		}
 		seen[h.ID] = true
-		if !okSiteImage(h.Image) {
-			errs["hero"] = "Every slide needs a picture. Upload it again."
+		switch {
+		case h.Video != "" && !videoRx.MatchString(h.Video):
+			errs["hero"] = "One of the slide videos could not be used. Upload it again."
+		case h.YouTube != "" && !youtubeRx.MatchString(h.YouTube):
+			errs["hero"] = "One of the YouTube links is not a YouTube video."
+		case h.Image != "" && !okSiteImage(h.Image):
+			errs["hero"] = "One of the slide pictures could not be used. Upload it again."
+		case h.Image == "" && h.Video == "" && h.YouTube == "":
+			errs["hero"] = "Every slide needs a picture or a video."
 		}
 		if utf8.RuneCountInString(h.CaptionBn) > 120 || utf8.RuneCountInString(h.CaptionEn) > 120 {
 			errs["hero"] = "Keep each caption within 120 characters."
@@ -134,7 +148,8 @@ func (a *App) siteImagesOut(si SiteImages, publicOnly bool) map[string]any {
 			continue
 		}
 		h.ImageURL = a.siteImageURL(h.Image)
-		if publicOnly && h.ImageURL == "" {
+		h.VideoURL = a.videoURL(h.Video)
+		if publicOnly && h.ImageURL == "" && h.VideoURL == "" && h.YouTube == "" {
 			continue
 		}
 		hero = append(hero, h)

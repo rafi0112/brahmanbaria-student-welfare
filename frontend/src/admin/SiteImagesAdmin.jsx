@@ -6,6 +6,8 @@ import { Data } from '../components/ui.jsx'
 import { builtInSlides } from '../data/heroSlides.js'
 import { ImagePicker, Modal, Notice, PageHeader, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
+import VideoPicker from './VideoPicker.jsx'
+import { youtubeThumb } from '../lib/video.js'
 
 // The pictures of the public site that admins choose: the home page slides (order, published or not), the picture at
 // the top of each page, the Gallery page's featured picture and the "Explore Brahmanbaria" picture. A picture comes
@@ -25,7 +27,7 @@ const INNER = [
 ]
 
 const legacyUrl = (ref) => (ref && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
-const thumbOf = (x) => x?.imageUrl || legacyUrl(x?.image) || ''
+const thumbOf = (x) => x?.imageUrl || legacyUrl(x?.image) || (x?.youtube ? youtubeThumb(x.youtube, 'mqdefault') : '')
 
 // Choose one picture from the gallery (published and hidden pictures alike; archived ones are left out).
 function GalleryPick({ onPick, onClose }) {
@@ -98,7 +100,7 @@ export default function SiteImagesAdmin() {
   const pending = useRef(null)
   const running = useRef(false)
   const toBody = (x) => ({
-    hero: x.hero.map(({ id, image, captionBn, captionEn, published }) => ({ id, image, captionBn, captionEn, published })),
+    hero: x.hero.map(({ id, image, video, youtube, captionBn, captionEn, published }) => ({ id, image: image || '', video: video || '', youtube: youtube || '', captionBn, captionEn, published })),
     pages: Object.fromEntries(Object.entries(x.pages).filter(([, y]) => y?.image).map(([k, y]) => [k, y.image])),
     galleryFeatured: x.galleryFeatured?.image || '', explore: x.explore?.image || '',
   })
@@ -142,7 +144,7 @@ export default function SiteImagesAdmin() {
   }
   const addSlide = (g) => {
     if (v.hero.length >= 12) { bad(pick('সর্বোচ্চ ১২টি স্লাইড রাখা যায়।', 'At most 12 slides.')); return }
-    commit({ ...v, hero: [...v.hero, { id: '', image: g.image, imageUrl: g.imageUrl, captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
+    commit({ ...v, hero: [...v.hero, { id: '', image: g.image || '', imageUrl: g.imageUrl || '', video: g.video || '', videoUrl: g.videoUrl || '', youtube: g.youtube || '', captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
   }
   const live = v ? v.hero.filter((h) => h.published).length : 0
 
@@ -167,7 +169,10 @@ export default function SiteImagesAdmin() {
                         <select value={i + 1} onChange={(e) => moveTo(i, Number(e.target.value))} aria-label={pick('এই ছবি কত নম্বরে দেখাবে', 'At which number this picture shows')}>
                           {v.hero.map((_, k) => <option key={k} value={k + 1}>{n(k + 1)}</option>)}
                         </select></label>
-                      <img src={thumbOf(h)} alt="" />
+                      <span className="si-thumb">
+                        {thumbOf(h) ? <img src={thumbOf(h)} alt="" /> : h.videoUrl ? <video src={`${h.videoUrl}#t=0.5`} muted playsInline preload="metadata" /> : <img alt="" />}
+                        {(h.video || h.youtube) && <b className="si-kind">{h.youtube ? 'YouTube' : pick('ভিডিও', 'Video')}</b>}
+                      </span>
                       <div className="si-cap">
                         <label><span>{pick('ক্যাপশন (বাংলা)', 'Caption (Bangla)')}</span><input value={h.captionBn} maxLength={120} onChange={(e) => slide(i, { captionBn: e.target.value })} onBlur={() => dirty && persist(v)} placeholder="নৌকাবাইচ · আমাদের ঐতিহ্য" /></label>
                         <label><span>{pick('ক্যাপশন (ইংরেজি)', 'Caption (English)')}</span><input value={h.captionEn} maxLength={120} onChange={(e) => slide(i, { captionEn: e.target.value })} onBlur={() => dirty && persist(v)} placeholder="Boat race · Our heritage" /></label>
@@ -192,6 +197,11 @@ export default function SiteImagesAdmin() {
                   <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setAdding(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
                 </div>
                 {adding && <GalleryPick onClose={() => setAdding(false)} onPick={(g) => { addSlide(g); setAdding(false) }} />}
+                <div className="si-video">
+                  <h3>{pick('অথবা একটি ভিডিও', 'Or a video')}</h3>
+                  <p className="muted small">{pick('ভিডিও স্লাইড পুরো স্ক্রিন জুড়ে, ছবির মতো একই ফ্রেমে, শব্দ ছাড়া চলে। আপলোড করা ভিডিও শেষ পর্যন্ত (সর্বোচ্চ ১ মিনিট) আর YouTube ভিডিও ২০ সেকেন্ড দেখিয়ে পরের স্লাইডে যায়।', 'A video slide fills the same frame as a picture and plays without sound. An uploaded video plays to its end (at most a minute); a YouTube video shows for 20 seconds, then the next slide comes.')}</p>
+                  <VideoPicker onPick={(x) => addSlide(x)} />
+                </div>
               </div>
             </section>
 

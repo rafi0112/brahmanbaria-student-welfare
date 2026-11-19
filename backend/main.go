@@ -123,7 +123,7 @@ func main() {
 		}
 		app.Auth.Verifier = newSupabaseVerifier(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", ""))
 		if st := newSupabaseStorage(env("SUPABASE_URL", ""), env("SUPABASE_PUBLISHABLE_KEY", "")); st != nil {
-			app.Auth.Images, app.Auth.PhotoBase, app.Auth.MediaBase = st, st.PublicBase(photoBucket), st.PublicBase(mediaBucket)
+			app.Auth.Images, app.Auth.PhotoBase, app.Auth.MediaBase, app.Auth.VideoBase = st, st.PublicBase(photoBucket), st.PublicBase(mediaBucket), st.PublicBase(videoBucket)
 		}
 		if app.Auth.Verifier == nil {
 			log.Printf("Supabase bearer auth disabled: configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")
