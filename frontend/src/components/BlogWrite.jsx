@@ -14,7 +14,7 @@ import { toast } from './Motion.jsx'
 const MAX_PHOTOS = 6
 const DRAFT_KEY = 'bswa-blog-draft'
 const readDraft = () => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY)) || {} } catch { return {} } }
-const STATUS = { new: 'blogw.st.new', read: 'blogw.st.read', accepted: 'blogw.st.accepted', declined: 'blogw.st.declined' }
+const STATUS = { new: 'blogw.st.new', read: 'blogw.st.read', accepted: 'blogw.st.accepted', published: 'blogw.st.published', declined: 'blogw.st.declined' }
 
 export default function BlogWrite() {
   const { t, n } = useApp()
@@ -200,7 +200,10 @@ function MySubmissions({ n }) {
         {items.map((x) => (
           <li key={x.id}>
             <div><b>{x.title}</b><small className="muted">{new Date(x.createdAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {n(x.photos)} {t('blogw.photosN')}</small></div>
-            <span className={`bw-st bw-st-${x.status}`}>{t(STATUS[x.status] || STATUS.new)}</span>
+            <span className="bw-mine-end">
+              <span className={`bw-st bw-st-${x.status}`}>{t(STATUS[x.status] || STATUS.new)}</span>
+              {x.postSlug && <Link className="link-arrow" to={`/blog/${x.postSlug}`}>{t('blogw.read')} →</Link>}
+            </span>
           </li>
         ))}
       </ul>

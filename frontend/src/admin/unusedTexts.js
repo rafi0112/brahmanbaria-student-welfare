@@ -5,7 +5,7 @@ export const UNUSED_TEXTS = [
   'acct.openDashboard',
   'alumni.thoseWhoLeadThe',
   'alumni.title',
-  'blog.read',
+  'blog.sample',
   'collage.body',
   'collage.cta',
   'collage.kicker',

@@ -799,3 +799,6 @@
 .bs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--a-line); }
 .bs-actions .danger { color: var(--a-bad); }
 @media (max-width: 560px) { .bs-row { grid-template-columns: auto minmax(0, 1fr); } .bs-row > .st { grid-column: 2; justify-self: start; } }
+.adm .st-bs-published { background: var(--a-ok-bg); color: var(--a-ok); }
+.blog-sample { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.blog-sample-tag { font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--a-warn-bg); color: var(--a-warn); }

@@ -7,22 +7,27 @@ import { CONTACT_EMAIL } from '../lib/contact.js'
 import { useSiteImages } from '../lib/site.jsx'
 import { useBase } from '../lib/base.js'
 import { youtubeEmbed, youtubeThumb } from '../lib/video.js'
-import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
+import { Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
 import BlogWrite from '../components/BlogWrite.jsx'
-import { PostCard } from '../components/cards.jsx'
+import { BlogCard, BlogFeature, useNiceDate } from '../components/BlogCards.jsx'
+import { initials } from '../lib/initials.js'
 import Icon from '../components/Icon.jsx'
 import { toast } from '../components/Motion.jsx'
 import { FAQSection } from './Community.jsx'
 
 /* ---------------- Blog ---------------- */
 export function Blog() {
-  const base = useBase()
-  const { t, pick } = useApp()
+  const { t, n, pick } = useApp()
   const [sp, setSp] = useSearchParams()
   const cat = sp.get('category') || ''
   const res = useApi(`/blog${cat ? `?category=${cat}` : ''}`)
   const cats = ['student-life', 'heritage', 'community']
+  const [q, setQ] = useState('')
+  const [shown, setShown] = useState(9)
+  useEffect(() => { setShown(9) }, [cat, q])
+  const words = q.trim().toLowerCase()
+  const match = (p) => !words || [p.titleBn, p.titleEn, p.author, p.excerptBn, p.excerptEn, ...(p.tags || [])].some((x) => String(x || '').toLowerCase().includes(words))
   return (
     <>
       <PageHero page="blog" kicker={t('blog.kicker')} title={t('blog.title')} lede={t('blog.lede')} src="/images/bb-sunset-1280.webp">
@@ -31,23 +36,34 @@ export function Blog() {
           {cats.map((c) => <button key={c} className={`chip ${cat === c ? 'on' : ''}`} onClick={() => setSp({ category: c })}>{t(`cat.${c}`)}</button>)}
         </div>
       </PageHero>
-      <section className="section wrap">
+      <section className="section wrap blog-page">
         <Data q={res} skeleton="cards">
-          {(d) => d.items.length === 0 ? (
-            <Empty icon="book" title={t('blog.emptyT')} action={<a className="btn btn-dark" href="#write">{t('blogw.title')}</a>}>{t(cat ? 'blog.emptyCat' : 'blog.emptyD')}</Empty>
-          ) : (
-            <div className="blog-layout">
-              <PostCard p={d.items[0]} big />
-              <div className="blog-side">
-                {d.items.slice(1).map((p) => (
-                  <Link key={p.slug} to={`${base}/blog/${p.slug}`} className="post-row">
-                    <MediaPhoto id={p.image} url={p.imageUrl} shape="shape-a" sizes="160px" />
-                    <div><h3>{pick(p.titleBn, p.titleEn)}</h3><small className="muted">{p.date}</small></div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          {(d) => {
+            if (d.items.length === 0) return <Empty icon="book" title={t('blog.emptyT')} action={<a className="btn btn-dark" href="#write">{t('blogw.title')}</a>}>{t(cat ? 'blog.emptyCat' : 'blog.emptyD')}</Empty>
+            const list = d.items.filter(match)
+            const lead = words ? null : (list.find((p) => p.featured) || list[0])
+            const rest = list.filter((p) => p !== lead)
+            return (
+              <>
+                <div className="blog-bar">
+                  <label className="blog-search">
+                    <Icon name="search" size={17} />
+                    <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('blog.search')} aria-label={t('blog.search')} />
+                  </label>
+                  <span className="muted small" aria-live="polite">{t('blog.count').replace('{n}', n(list.length))}</span>
+                  <a className="btn btn-outline btn-sm blog-write-link" href="#write"><Icon name="arrow" size={14} className="arr" /> {t('blogw.title')}</a>
+                </div>
+                {list.length === 0 && <Empty>{t('blog.noMatch')}</Empty>}
+                {lead && <BlogFeature p={lead} />}
+                {rest.length > 0 && (
+                  <div className="blog-grid">{rest.slice(0, shown).map((p) => <BlogCard key={p.slug} p={p} />)}</div>
+                )}
+                {rest.length > shown && (
+                  <div className="blog-more"><button type="button" className="btn btn-outline" onClick={() => setShown((x) => x + 9)}>{t('blog.more')}</button></div>
+                )}
+              </>
+            )
+          }}
         </Data>
       </section>
       <BlogWrite />
@@ -59,27 +75,62 @@ export function BlogPost() {
   const base = useBase()
   const { slug } = useParams()
   const { t, pick, n } = useApp()
+  const nice = useNiceDate()
   const res = useApi(`/blog/${slug}`)
   const more = useApi('/blog')
+  const [pct, setPct] = useState(0)
+  useEffect(() => { // reading progress along the top of the page
+    const on = () => { const h = document.documentElement; const max = h.scrollHeight - h.clientHeight; setPct(max > 0 ? Math.min(100, (h.scrollTop / max) * 100) : 0) }
+    on(); addEventListener('scroll', on, { passive: true }); addEventListener('resize', on)
+    return () => { removeEventListener('scroll', on); removeEventListener('resize', on) }
+  }, [slug])
+  const share = async (title) => {
+    const url = location.href
+    try {
+      if (navigator.share) { await navigator.share({ title, url }); return }
+    } catch (e) { if (e?.name === 'AbortError') return }
+    try { await navigator.clipboard.writeText(url); toast({ text: t('events.linkCopied') }) } catch { /* no clipboard */ }
+  }
   return (
-    <section className="section wrap narrow">
-      <Data q={res} skeleton="detail">
-        {(p) => (
-          <article className="article">
-            <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/blog`, label: t('nav.blog') }, { label: pick(p.titleBn, p.titleEn) }]} />
-            <div className="row"><Badge tone="gold">{t(`cat.${p.category}`)}</Badge>{p.sample && <Badge tone="muted">{t('blog.sample')}</Badge>}</div>
-            <h1>{pick(p.titleBn, p.titleEn)}</h1>
-            <p className="muted">{p.author} · {p.date} · {n(p.readMin)} {t('blog.min')}</p>
-            <MediaPhoto id={p.image} url={p.imageUrl} alt={p.imageAlt} shape="shape-a" sketch eager sizes="(min-width: 900px) 720px, 95vw" />
-            {!p.imageUrl && <Credit id={p.image} />}
-            <div className="prose"><Markdown text={pick(p.bodyBn, p.bodyEn).join('\n\n')} /></div>
-            <Link className="link-arrow" to={`${base}/blog`}>← {t('blog.back')}</Link>
-            <h2>{t('blog.latest')}</h2>
-            <div className="cards-2">{(more.data?.items || []).filter((x) => x.slug !== p.slug).slice(0, 2).map((x) => <PostCard key={x.slug} p={x} />)}</div>
-          </article>
-        )}
-      </Data>
-    </section>
+    <>
+      <div className="read-progress" aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+      <section className="section wrap narrow">
+        <Data q={res} skeleton="detail">
+          {(p) => {
+            const title = pick(p.titleBn, p.titleEn)
+            const others = (more.data?.items || []).filter((x) => x.slug !== p.slug)
+            const related = [...others.filter((x) => x.category === p.category), ...others.filter((x) => x.category !== p.category)].slice(0, 3)
+            return (
+              <article className="article blog-article">
+                <Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/blog`, label: t('nav.blog') }, { label: title }]} />
+                <Link className="bc-cat" to={`${base}/blog?category=${p.category}`}>{t(`cat.${p.category}`)}</Link>
+                <h1>{title}</h1>
+                {pick(p.excerptBn, p.excerptEn) && <p className="ba-lede">{pick(p.excerptBn, p.excerptEn)}</p>}
+                <div className="ba-meta">
+                  {p.author && <span className="bc-avatar" aria-hidden="true">{initials(p.author)}</span>}
+                  <span className="bc-by-text">{p.author && <b>{p.author}</b>}<small><time dateTime={p.date}>{nice(p.date)}</time> · {n(p.readMin || 1)} {t('blog.min')}</small></span>
+                  <button type="button" className="btn btn-outline btn-sm ba-share" onClick={() => share(title)}>{t('events.share')}</button>
+                </div>
+                {(p.image || p.imageUrl) && <MediaPhoto id={p.image} url={p.imageUrl} alt={p.imageAlt || title} className="ba-cover" eager sizes="(min-width: 900px) 800px, 95vw" />}
+                {!p.imageUrl && p.image && <Credit id={p.image} />}
+                <div className="prose"><Markdown text={pick(p.bodyBn, p.bodyEn).join('\n\n')} /></div>
+                {p.tags?.length > 0 && <div className="ba-tags">{p.tags.map((x) => <span key={x} className="chip">#{x}</span>)}</div>}
+                <div className="ba-end">
+                  <Link className="link-arrow" to={`${base}/blog`}>← {t('blog.back')}</Link>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => share(title)}>{t('events.share')}</button>
+                </div>
+                {related.length > 0 && (
+                  <>
+                    <h2 className="ba-more-h">{t('blog.latest')}</h2>
+                    <div className="blog-grid blog-grid-related">{related.map((x) => <BlogCard key={x.slug} p={x} />)}</div>
+                  </>
+                )}
+              </article>
+            )
+          }}
+        </Data>
+      </section>
+    </>
   )
 }
 

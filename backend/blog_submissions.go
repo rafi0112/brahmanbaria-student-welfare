@@ -35,6 +35,7 @@ type BlogSubmission struct {
 	Body       string `json:"body"`
 	Status     string `json:"status"` // new | read | accepted | declined
 	PostID     string `json:"postId,omitempty"`
+	PostSlug   string `json:"postSlug,omitempty"` // in a member's own list: the published post's address
 	Photos     int    `json:"photos"`
 	CreatedAt  string `json:"createdAt"`
 }
@@ -374,6 +375,12 @@ func (a *App) mySubmissions(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	for i := range items { // a member sees the state of what they sent, not the admins' working fields
+		if items[i].PostID != "" {
+			if e, err := a.Auth.Store.GetEntry(r.Context(), KindBlog, items[i].PostID, true); err == nil {
+				items[i].PostSlug = e.Slug // only once it is on the site
+				items[i].Status = "published"
+			}
+		}
 		items[i].Email, items[i].PostID, items[i].Body = "", "", ""
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
@@ -444,13 +451,38 @@ func (a *App) submissionDelete(w http.ResponseWriter, r *http.Request, u User) {
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
-// submissionToDraft makes a blog draft from a submission: its title and text, the member as author, and its pictures
-// stored in the site's media (the first is the cover; the others are added at the end of the text). The admin then edits
-// and publishes the draft as any other post.
+// submissionToDraft makes a blog post from a submission: its title and text, the member as author, and its pictures
+// stored in the site's media (the first is the cover; the others are added at the end of the text). With {"publish": true}
+// (the admin's "Approve and publish") the post goes on the site at once; otherwise it is a draft the admin edits and
+// publishes as any other post. Approving one that already has a draft publishes that draft.
 func (a *App) submissionToDraft(w http.ResponseWriter, r *http.Request, u User) {
+	var b struct {
+		Publish bool `json:"publish"`
+	}
+	if r.ContentLength != 0 {
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<10)).Decode(&b); err != nil && !errors.Is(err, io.EOF) {
+			apiError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+	}
 	s, err := a.Auth.Store.GetSubmission(r.Context(), r.PathValue("id"))
 	if err != nil {
 		a.submissionFail(w, err)
+		return
+	}
+	if s.PostID != "" { // already made into a post
+		if !b.Publish {
+			apiError(w, http.StatusConflict, "already_drafted")
+			return
+		}
+		e, err := a.Auth.Store.SetEntryStatus(r.Context(), u.ID, s.PostID, "publish")
+		if err != nil {
+			a.cmsFail(w, err)
+			return
+		}
+		_ = a.Auth.Store.SetSubmissionStatus(r.Context(), s.ID, "published", "")
+		_ = a.Auth.Store.Audit(r.Context(), u.ID, "blog_submission.publish", "blog_submission", s.ID, map[string]any{"post": e.ID})
+		writeJSON(w, http.StatusOK, map[string]any{"post": e, "published": true})
 		return
 	}
 	images := []string{}
@@ -482,7 +514,8 @@ func (a *App) submissionToDraft(w http.ResponseWriter, r *http.Request, u User) 
 	if len(images) > 0 {
 		cover = images[0]
 	}
-	data, _ := json.Marshal(map[string]any{"titleBn": s.Title, "titleEn": "", "bodyBn": body, "author": s.AuthorName, "category": "community", "image": cover})
+	data, _ := json.Marshal(map[string]any{"titleBn": s.Title, "titleEn": "", "bodyBn": body, "excerptBn": excerptOf(s.Body, 180), "author": s.AuthorName,
+		"category": "community", "image": cover, "imageAlt": s.Title})
 	slug := slugify(s.Title)
 	if !validSlug(slug) {
 		slug = "member-post"
@@ -503,7 +536,31 @@ func (a *App) submissionToDraft(w http.ResponseWriter, r *http.Request, u User) 
 		a.cmsFail(w, err)
 		return
 	}
-	_ = a.Auth.Store.SetSubmissionStatus(r.Context(), s.ID, "accepted", e.ID)
-	_ = a.Auth.Store.Audit(r.Context(), u.ID, "blog_submission.draft", "blog_submission", s.ID, map[string]any{"post": e.ID, "pictures": len(images)})
-	writeJSON(w, http.StatusCreated, map[string]any{"post": e, "pictures": len(images)})
+	state := "accepted"
+	if b.Publish {
+		pub, err := a.Auth.Store.SetEntryStatus(r.Context(), u.ID, e.ID, "publish")
+		if err != nil {
+			_ = a.Auth.Store.SetSubmissionStatus(r.Context(), s.ID, "accepted", e.ID) // the draft exists; publishing can be retried
+			a.cmsFail(w, err)
+			return
+		}
+		e = pub
+		state = "published"
+	}
+	_ = a.Auth.Store.SetSubmissionStatus(r.Context(), s.ID, state, e.ID)
+	_ = a.Auth.Store.Audit(r.Context(), u.ID, "blog_submission."+map[bool]string{true: "publish", false: "draft"}[b.Publish], "blog_submission", s.ID, map[string]any{"post": e.ID, "pictures": len(images)})
+	writeJSON(w, http.StatusCreated, map[string]any{"post": e, "pictures": len(images), "published": b.Publish})
+}
+
+// excerptOf is the first words of a text, on one line, cut at a word boundary.
+func excerptOf(text string, max int) string {
+	t := strings.Join(strings.Fields(text), " ")
+	if utf8.RuneCountInString(t) <= max {
+		return t
+	}
+	r := []rune(t)[:max]
+	if i := strings.LastIndex(string(r), " "); i > max/2 {
+		return string(r)[:i] + "…"
+	}
+	return string(r) + "…"
 }

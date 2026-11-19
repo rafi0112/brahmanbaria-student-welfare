@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
+import { api } from '../lib/api.js'
 import { useAuth } from '../lib/auth.jsx'
 import Markdown from '../components/Markdown.jsx'
 import { MediaPhoto } from '../components/ui.jsx'
@@ -28,7 +29,8 @@ export function BlogList() {
           label: t('ad.blog.col.post'), render: (r) => (
             <span className="dt-person">
               <MediaPhoto id={r.data.image} url={r.data.imageUrl} alt="" className="dt-thumb" sizes="64px" />
-              <span className="dt-twoline"><strong className="dt-clamp">{pick(r.data.titleBn, r.data.titleEn) || r.title}</strong><small className="dt-sub">/{r.slug}</small></span>
+              <span className="dt-twoline"><strong className="dt-clamp">{pick(r.data.titleBn, r.data.titleEn) || r.title}</strong><small className="dt-sub">/{r.slug}</small>
+                {r.data.sample && <SampleTag entry={r} onShown={() => setReload((x) => x + 1)} />}</span>
             </span>
           ),
         },
@@ -42,6 +44,26 @@ export function BlogList() {
     {edit && <BlogEditor key={edit === 'new' || edit === created.current ? 'new' : edit} entryId={edit === 'new' ? undefined : edit} onCreated={(saved) => { created.current = saved.id; swap(saved.id) }}
       onClose={() => { created.current = ''; close(); setReload((x) => x + 1) }} />}
     </>
+  )
+}
+
+// A starter (sample) post: published but kept off the public site until an admin makes it real. One click does that
+// (saving the post in the editor does too); it then shows on the Blog page like any published post.
+function SampleTag({ entry, onShown }) {
+  const { t } = useApp()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const show = async () => {
+    setBusy(true); setErr('')
+    try { await api('/admin/content/blog/' + entry.id, { method: 'PATCH', body: JSON.stringify({ slug: entry.slug, featured: entry.featured, data: { ...entry.data, sample: false }, expectedUpdatedAt: entry.updatedAt }) }); onShown() }
+    catch { setErr(t('ad.blog.sampleFail')); setBusy(false) }
+  }
+  return (
+    <span className="blog-sample">
+      <span className="blog-sample-tag" title={t('ad.blog.sampleWhy')}>{t('ad.blog.sampleTag')}</span>
+      <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={show}>{t('ad.blog.sampleShow')}</button>
+      {err && <small className="err">{err}</small>}
+    </span>
   )
 }
 

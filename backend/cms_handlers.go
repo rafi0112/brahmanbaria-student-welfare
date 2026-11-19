@@ -173,6 +173,8 @@ func parseBlog(raw json.RawMessage, b *entryBody) (EntryInput, map[string]string
 		errs["slug"] = "Use 3-80 lowercase letters, digits and dashes (for a Bangla-only title, type the URL name)."
 	}
 	d.ReadMin = readMinutes(d.BodyEn, d.BodyBn)
+	// Only the starter content is a sample (hidden on the public site); a post an admin saves is real and shows once published.
+	d.Sample = false
 	title := d.TitleEn
 	if title == "" {
 		title = d.TitleBn

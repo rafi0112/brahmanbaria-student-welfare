@@ -9,8 +9,8 @@ import { MonoAvatar } from './ProfileModal.jsx'
 // Writing that members sent from the Blog page: title, text and up to six pictures, kept in the database. Admins read
 // them, save the pictures, mark them, turn one into a blog draft (then edit and publish it as usual) or delete them.
 // Nothing here is shown on the site by itself. Everything is plain text (React escapes it).
-const VIEWS = ['new', 'read', 'accepted', 'declined', 'all']
-const LABEL = { new: 'ad.bs.st.new', read: 'ad.bs.st.read', accepted: 'ad.bs.st.accepted', declined: 'ad.bs.st.declined', all: 'ad.status.allShort' }
+const VIEWS = ['new', 'read', 'accepted', 'published', 'declined', 'all']
+const LABEL = { new: 'ad.bs.st.new', read: 'ad.bs.st.read', accepted: 'ad.bs.st.accepted', published: 'ad.bs.st.published', declined: 'ad.bs.st.declined', all: 'ad.status.allShort' }
 
 export default function BlogSubmissions() {
   const { t, n, lang } = useApp()
@@ -91,12 +91,14 @@ function SubmissionDrawer({ id, onClose, onChanged, notify }) {
     try { await api(`/admin/blog-submissions/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }); await load(); onChanged(); notify.ok(t('ad.bs.saved')) }
     catch (e) { setErr(errText(e)) } finally { setBusy(false) }
   }
-  const toDraft = async () => {
+  // publish: true is "Approve and publish" (on the site at once); false makes a draft to edit first
+  const toPost = async (publish) => {
     setBusy(true); setErr('')
     try {
-      const d = await api(`/admin/blog-submissions/${id}/draft`, { method: 'POST', body: '{}' })
-      onChanged(); notify.ok(t('ad.bs.drafted'))
-      go(`/admin/blog?edit=${d.post.id}`)
+      const d = await api(`/admin/blog-submissions/${id}/draft`, { method: 'POST', body: JSON.stringify({ publish }) })
+      onChanged()
+      if (publish) { notify.ok(t('ad.bs.published')); await load(); setBusy(false); setConfirm('') }
+      else { notify.ok(t('ad.bs.drafted')); go(`/admin/blog?edit=${d.post.id}`) }
     } catch (e) { setErr(errText(e)); setBusy(false); setConfirm('') }
   }
   const remove = async () => {
@@ -129,17 +131,19 @@ function SubmissionDrawer({ id, onClose, onChanged, notify }) {
             <p className="muted small">{t('ad.bs.untrusted')}</p>
             {err && <p className="notice bad" role="alert">{err}</p>}
             <div className="bs-actions">
+              {m.status !== 'published' && <button type="button" className="btn btn-dark" disabled={busy} onClick={() => setConfirm('publish')}>{t('ad.bs.approve')}</button>}
               {m.postId
-                ? <button type="button" className="btn btn-dark" onClick={() => go(`/admin/blog?edit=${m.postId}`)}>{t('ad.bs.openDraft')}</button>
-                : <button type="button" className="btn btn-dark" disabled={busy} onClick={() => setConfirm('draft')}>{t('ad.bs.toDraft')}</button>}
-              {m.status !== 'declined' && <button type="button" className="btn btn-outline" disabled={busy} onClick={() => setStatus('declined')}>{t('ad.bs.decline')}</button>}
-              {m.status !== 'new' && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('new')}>{t('ad.bs.markNew')}</button>}
+                ? <button type="button" className="btn btn-outline" onClick={() => go(`/admin/blog?edit=${m.postId}`)}>{t(m.status === 'published' ? 'ad.bs.openPost' : 'ad.bs.openDraft')}</button>
+                : <button type="button" className="btn btn-outline" disabled={busy} onClick={() => setConfirm('draft')}>{t('ad.bs.toDraft')}</button>}
+              {m.status !== 'declined' && m.status !== 'published' && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('declined')}>{t('ad.bs.decline')}</button>}
+              {m.status !== 'new' && m.status !== 'published' && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('new')}>{t('ad.bs.markNew')}</button>}
               <button type="button" className="btn btn-ghost danger" disabled={busy} onClick={() => setConfirm('delete')}>{t('ad.bs.delete')}</button>
             </div>
           </div>
         )}
       </Modal>
-      {confirm === 'draft' && <Confirm title={t('ad.bs.toDraft')} text={t('ad.bs.toDraftText')} label={t('ad.bs.toDraft')} busy={busy} onYes={toDraft} onNo={() => setConfirm('')} />}
+      {confirm === 'publish' && <Confirm title={t('ad.bs.approve')} text={t('ad.bs.approveText')} label={t('ad.bs.approve')} busy={busy} onYes={() => toPost(true)} onNo={() => setConfirm('')} />}
+      {confirm === 'draft' && <Confirm title={t('ad.bs.toDraft')} text={t('ad.bs.toDraftText')} label={t('ad.bs.toDraft')} busy={busy} onYes={() => toPost(false)} onNo={() => setConfirm('')} />}
       {confirm === 'delete' && <Confirm tone="danger" title={t('ad.bs.delete')} text={t('ad.bs.deleteText')} label={t('ad.bs.delete')} busy={busy} onYes={remove} onNo={() => setConfirm('')} />}
     </>
   )

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"image"
 	"mime/multipart"
 	"net/http"
@@ -189,5 +190,71 @@ func blogSubmissionSuite(t *testing.T, s AuthStore) {
 	}
 	if _, err := s.GetSubmission(ctx, b.ID); err != ErrNotFound {
 		t.Fatalf("deleted: %v", err)
+	}
+}
+
+// "Approve and publish": the member's writing goes on the public Blog page at once, and the member gets its link.
+func TestBlogSubmissionApproveAndPublish(t *testing.T) {
+	e := authApp(t)
+	member := e.member(t, "pub@example.com")
+	rec := submitBlogForm(e, member, "তিতাসের সন্ধ্যা", goodBlogBody)
+	var made struct{ Item BlogSubmission }
+	decodeBody(t, rec, &made)
+	admin := e.admin(t)
+	rec = e.do("POST", "/api/v1/admin/blog-submissions/"+made.Item.ID+"/draft", map[string]bool{"publish": true}, admin)
+	if rec.Code != 201 {
+		t.Fatalf("approve: %d %s", rec.Code, rec.Body)
+	}
+	pub := e.do("GET", "/api/v1/blog", nil, nil)
+	if !strings.Contains(pub.Body.String(), "তিতাসের সন্ধ্যা") || !strings.Contains(pub.Body.String(), `"excerptBn"`) {
+		t.Fatalf("public blog: %s", pub.Body)
+	}
+	mine := e.do("GET", "/api/v1/me/blog-submissions", nil, member)
+	if !strings.Contains(mine.Body.String(), `"status":"published"`) || !strings.Contains(mine.Body.String(), `"postSlug"`) {
+		t.Fatalf("mine: %s", mine.Body)
+	}
+	// a second approval of the same piece is answered, not duplicated
+	if rec := e.do("POST", "/api/v1/admin/blog-submissions/"+made.Item.ID+"/draft", map[string]bool{}, admin); rec.Code != 409 {
+		t.Fatalf("again as draft: %d", rec.Code)
+	}
+
+	// draft first, approve later: the same post is published
+	rec = submitBlogForm(e, member, "Second story here", goodBlogBody)
+	decodeBody(t, rec, &made)
+	if rec := e.do("POST", "/api/v1/admin/blog-submissions/"+made.Item.ID+"/draft", nil, admin); rec.Code != 201 {
+		t.Fatalf("draft: %d %s", rec.Code, rec.Body)
+	}
+	if strings.Contains(e.do("GET", "/api/v1/blog", nil, nil).Body.String(), "Second story here") {
+		t.Fatal("a draft must not be public")
+	}
+	if rec := e.do("POST", "/api/v1/admin/blog-submissions/"+made.Item.ID+"/draft", map[string]bool{"publish": true}, admin); rec.Code != 200 {
+		t.Fatalf("approve draft: %d %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(e.do("GET", "/api/v1/blog", nil, nil).Body.String(), "Second story here") {
+		t.Fatal("approved draft not public")
+	}
+}
+
+// A starter (sample) post is hidden on the public site until an admin saves it; then it shows.
+func TestSamplePostShowsOnceAnAdminSavesIt(t *testing.T) {
+	e := authApp(t)
+	admin := e.admin(t)
+	data, _ := json.Marshal(BlogData{TitleEn: "Starter post", BodyEn: "Some starter text.", Category: "community", Sample: true})
+	ent, err := e.mem.CreateEntry(context.Background(), "", EntryInput{Kind: KindBlog, Slug: "starter-post", Title: "Starter post", Data: data})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.mem.SetEntryStatus(context.Background(), "", ent.ID, "publish"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(e.do("GET", "/api/v1/blog", nil, nil).Body.String(), "Starter post") {
+		t.Fatal("a sample post must stay off the public site")
+	}
+	rec := e.do("PATCH", "/api/v1/admin/content/blog/"+ent.ID, map[string]any{"slug": "starter-post", "data": map[string]any{"titleEn": "Starter post", "bodyEn": "Some starter text.", "category": "community", "sample": true}}, admin)
+	if rec.Code != 200 {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(e.do("GET", "/api/v1/blog", nil, nil).Body.String(), "Starter post") {
+		t.Fatal("once an admin saves it, the post shows")
 	}
 }
