@@ -141,7 +141,22 @@ export function PinButton({ label, to: toProp }) {
   )
 }
 
+// which part of the manual explains the page in view
+function manualPart(pathname, search) {
+  const q = new URLSearchParams(search)
+  const tab = q.get('tab')
+  if (pathname === '/admin') return tab === 'roles' ? 'roles' : tab === 'committee' ? 'committee' : 'dashboard'
+  if (pathname === '/admin/students') return tab === 'requests' ? 'requests' : 'directory'
+  const map = { '/admin/alumni': 'alumni', '/admin/gallery': 'gallery', '/admin/events': 'events', '/admin/blog': 'blog', '/admin/blog-submissions': 'blog-submissions', '/admin/heritage': 'blog',
+    '/admin/contact': 'contact', '/admin/faq': 'faq', '/admin/places-data': 'faq', '/admin/site-images': 'site-images', '/admin/site-texts': 'site-texts', '/admin/activity': 'start' }
+  if (pathname.startsWith('/admin/profile')) return 'directory'
+  return map[pathname] || ''
+}
+
 export function PageHeader({ title, desc, action, crumbs, pin = true }) {
+  const { t } = useApp()
+  const loc = useLocation()
+  const part = manualPart(loc.pathname, loc.search)
   return (
     <header className="ad-head">
       {crumbs && (
@@ -152,7 +167,7 @@ export function PageHeader({ title, desc, action, crumbs, pin = true }) {
         </nav>
       )}
       <div className="ad-head-row">
-        <div><div className="ad-title"><h2>{title}</h2>{pin && <PinButton label={typeof title === 'string' ? title : undefined} />}</div>{desc && <p className="muted">{desc}</p>}</div>
+        <div><div className="ad-title"><h2>{title}</h2>{pin && <PinButton label={typeof title === 'string' ? title : undefined} />}{part && <Link className="ad-help-link" to={`/admin/manual#m-${part}`}><Icon name="book" size={14} /> {t('ad.help')}</Link>}</div>{desc && <p className="muted">{desc}</p>}</div>
         {action && <div className="ad-head-action">{action}</div>}
       </div>
     </header>

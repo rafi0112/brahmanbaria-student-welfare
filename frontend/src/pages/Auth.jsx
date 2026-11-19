@@ -37,6 +37,8 @@ export default function Auth({ mode }) {
   const auth = useAuth()
   const [sp] = useSearchParams()
   const token = sp.get('token') || ''
+  // where to go after signing in: only a page of this site ("/blog#write"), never another address
+  const next = /^\/(?![/\\])/.test(sp.get('next') || '') ? sp.get('next') : '/'
   const depts = useApi(mode === 'register' ? '/departments' : null)
   const ups = useApi(mode === 'register' ? '/upazilas' : null)
   const [v, setV] = useState({ name: '', phone: '', photoLink: '', batch: '', department: '', session: '', gender: '', bloodGroup: '', upazila: '', union: '', occupation: '', workplace: '', email: '', password: '', confirm: '', terms: false, remember: false })
@@ -54,7 +56,7 @@ export default function Auth({ mode }) {
   const [recovery, setRecovery] = useState(mode === 'reset' && supabaseConfigured ? (urlAuthError ? 'expired' : 'checking') : 'ready')
 
   // someone who is already signed in has no use for the login page
-  useEffect(() => { if (mode === 'login' && auth.user) nav('/', { replace: true }) }, [mode, auth.user, nav])
+  useEffect(() => { if (mode === 'login' && auth.user) nav(next, { replace: true }) }, [mode, auth.user, nav, next])
 
   useEffect(() => {
     if (mode !== 'reset' || !supabaseConfigured || urlAuthError) return undefined
@@ -115,7 +117,7 @@ export default function Auth({ mode }) {
         } else {
           auth.set(await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: v.password }) }))
         }
-        nav('/', { replace: true })
+        nav(next, { replace: true })
       } else if (mode === 'forgot') {
         if (supabaseConfigured) {
           // Unknown addresses get the same answer, so the form cannot be used to find registered emails.

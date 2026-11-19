@@ -9,6 +9,7 @@ import { useBase } from '../lib/base.js'
 import { youtubeEmbed, youtubeThumb } from '../lib/video.js'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import Markdown from '../components/Markdown.jsx'
+import BlogWrite from '../components/BlogWrite.jsx'
 import { PostCard } from '../components/cards.jsx'
 import Icon from '../components/Icon.jsx'
 import { toast } from '../components/Motion.jsx'
@@ -47,6 +48,7 @@ export function Blog() {
           )}
         </Data>
       </section>
+      <BlogWrite />
     </>
   )
 }

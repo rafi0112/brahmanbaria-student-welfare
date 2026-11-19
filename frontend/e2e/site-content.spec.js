@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { E2E } from '../playwright.config.js'
+import { login } from './session.js'
 
 // Home order, the hero line, About wording, plain sign-in pages, the Bangla font, and the admin tools for texts,
 // gallery years and importing many records. Runs against the isolated in-memory API (see playwright.config.js).
@@ -7,20 +8,6 @@ const as = (lang) => async ({ page }) => {
   await page.addInitScript((l) => { try { localStorage.setItem('jk-lang', l); localStorage.setItem('jk-theme', 'light'); localStorage.removeItem('jk-texts') } catch { /* ignore */ } }, lang)
 }
 
-let session = null
-async function login(page) {
-  if (session) { await page.context().addCookies(session); return }
-  await page.goto('/login')
-  await page.locator('input[type=email]').fill(E2E.email)
-  await page.locator('input[type=password]').fill(E2E.password)
-  const [res] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes('/auth/login') && r.request().method() === 'POST'),
-    page.locator('form button[type=submit]').click(),
-  ])
-  expect(res.status()).toBe(200)
-  await page.waitForLoadState('networkidle')
-  session = await page.context().cookies()
-}
 
 test.describe('in English', () => {
   test.beforeEach(as('en'))

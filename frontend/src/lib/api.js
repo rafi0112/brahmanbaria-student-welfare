@@ -11,7 +11,19 @@ const BASE = import.meta.env.VITE_API_BASE || ''
 // HTTP errors keep err.status and the server's error code as the message.
 const fail = (code, status, message) => Object.assign(new Error(message || code), { code, status })
 
+// Requests still waiting for the server. On a free plan the server sleeps when nobody visits and its first answer can take
+// 30-60 s; the site uses this to tell the visitor it is waking up instead of looking broken.
+let waiting = 0
+const waitListeners = new Set()
+const tellWaiting = () => waitListeners.forEach((f) => f(waiting))
+export function onWaiting(f) { waitListeners.add(f); return () => waitListeners.delete(f) }
+
 export async function api(path, opts) {
+  waiting++; tellWaiting()
+  try { return await apiOnce(path, opts) } finally { waiting--; tellWaiting() }
+}
+
+async function apiOnce(path, opts) {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   const headers = { ...(opts?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(opts?.headers || {}) }
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`

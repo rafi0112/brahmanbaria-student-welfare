@@ -1,0 +1,24 @@
+{
+  "name": "ব্রাহ্মণবাড়িয়া জেলা ছাত্রকল্যাণ পরিষদ, জগন্নাথ বিশ্ববিদ্যালয়",
+  "short_name": "BSWA",
+  "description": "জগন্নাথ বিশ্ববিদ্যালয়ে অধ্যয়নরত ব্রাহ্মণবাড়িয়ার শিক্ষার্থী ও অ্যালামনাইদের সংগঠন।",
+  "lang": "bn",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf3e8",
+  "theme_color": "#0b4d3c",
+  "icons": [
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

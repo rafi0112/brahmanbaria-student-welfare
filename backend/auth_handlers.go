@@ -101,6 +101,7 @@ func (a *App) authRoutes(m *http.ServeMux) {
 	a.videoRoutes(m, h)
 	a.bulkImportRoutes(m, h)
 	a.contactRoutes(m, h)
+	a.blogSubmissionRoutes(m, h)
 	a.importedRoutes(m, h)
 	a.manualRoutes(m, h)
 	a.memberViewRoutes(m, h)

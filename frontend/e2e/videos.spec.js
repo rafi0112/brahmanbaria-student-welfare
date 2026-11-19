@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { E2E } from '../playwright.config.js'
+import { login } from './session.js'
 
 // Videos on the home slides and in the gallery: a YouTube link or an uploaded file. Runs against the isolated in-memory
 // API (see playwright.config.js), which has no file storage, so the one upload answer is stubbed in the browser.
@@ -7,17 +8,6 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en'); localStorage.setItem('jk-theme', 'light') } catch { /* */ } })
 })
 
-let session = null
-async function login(page) {
-  if (session) { await page.context().addCookies(session); return }
-  await page.goto('/login')
-  await page.locator('input[type=email]').fill(E2E.email)
-  await page.locator('input[type=password]').fill(E2E.password)
-  const [res] = await Promise.all([page.waitForResponse((r) => r.url().includes('/auth/login') && r.request().method() === 'POST'), page.locator('form button[type=submit]').click()])
-  expect(res.status()).toBe(200)
-  await page.waitForLoadState('networkidle')
-  session = await page.context().cookies()
-}
 
 const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypmp42'), Buffer.alloc(2000, 7)])
 

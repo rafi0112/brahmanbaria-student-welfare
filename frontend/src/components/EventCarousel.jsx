@@ -103,7 +103,7 @@ export default function EventCarousel({ items, loading }) {
               </p>
               <h3 className="evx-title">{pick(e.titleBn, e.titleEn)}</h3>
               <p className="evx-meta">
-                {d && <span><Icon name="calendar" size={16} /> {d.long}{e.time ? ` · ${e.time}` : ''}</span>}
+                {d && <span><Icon name="calendar" size={16} /> {d.long}{e.time ? ` · ${n(e.time)}` : ''}</span>}
                 {e.venue && <span><Icon name="pin" size={16} /> {e.venue}</span>}
               </p>
               {(e.summaryBn || e.summaryEn || e.summary) && <p className="evx-sum">{pick(e.summaryBn, e.summaryEn) || e.summary}</p>}

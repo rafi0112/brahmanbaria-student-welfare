@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { PageHeader } from './kit.jsx'
 
@@ -13,16 +13,22 @@ export default function AdminManual() {
   const [lang, setLang] = useState(app.lang === 'en' ? 'en' : 'bn')
   const T = (bn, en) => (lang === 'en' ? en : bn)
   const open = T('খুলুন', 'Open')
+  const { hash } = useLocation()
+  useEffect(() => { // a help link opens the manual at its part
+    if (!hash) return undefined
+    const id = setTimeout(() => { const el = document.getElementById(hash.slice(1)); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.add('man-flash'); setTimeout(() => el.classList.remove('man-flash'), 1800) } }, 80)
+    return () => clearTimeout(id)
+  }, [hash])
 
   const SECTIONS = [
     ['start', T('শুরু করার আগে', 'Before you start')], ['dashboard', T('ড্যাশবোর্ড', 'Dashboard')],
     ['requests', T('সদস্যপদের আবেদন', 'Membership requests')], ['directory', T('সদস্য ডিরেক্টরি', 'Member directory')],
     ['alumni', T('অ্যালামনাই', 'Alumni')], ['photos', T('মানুষের ছবি যোগ করা', 'Adding people’s photos')],
     ['site-images', T('সাইটের ছবি ও হোম স্লাইড', 'Site pictures and home slides')], ['site-texts', T('ওয়েবসাইটের লেখা', 'Website texts')], ['gallery', T('গ্যালারি', 'Gallery')],
-    ['events', T('ইভেন্ট', 'Events')], ['blog', T('ব্লগ ও ঐতিহ্য', 'Blog and heritage')],
+    ['events', T('ইভেন্ট', 'Events')], ['blog', T('ব্লগ ও ঐতিহ্য', 'Blog and heritage')], ['blog-submissions', T('সদস্যদের লেখা', 'Members’ writing')],
     ['committee', T('কার্যনির্বাহী কমিটি', 'Executive committee')], ['contact', T('যোগাযোগ বার্তা', 'Contact messages')],
     ['roles', T('অ্যাডমিন ও ভূমিকা', 'Admins and roles')], ['faq', T('প্রশ্নোত্তর ও রেফারেন্স তথ্য', 'FAQ and reference data')],
-    ['editable', T('কী কী বদলানো যায়', 'What can be changed')], ['rules', T('নিয়ম ও সতর্কতা', 'Rules and cautions')], ['handover', T('হস্তান্তর ও রক্ষণাবেক্ষণ', 'Handover and upkeep')],
+    ['editable', T('কী কী বদলানো যায়', 'What can be changed')], ['visitors', T('দর্শকদের জন্য সুবিধা', 'What visitors get')], ['rules', T('নিয়ম ও সতর্কতা', 'Rules and cautions')], ['handover', T('হস্তান্তর ও রক্ষণাবেক্ষণ', 'Handover and upkeep')],
   ]
 
   return (
@@ -50,6 +56,7 @@ export default function AdminManual() {
             <ul>
               <li>{T('প্রায় সব তালিকায় সার্চ, ফিল্টার ও পাতা বদলের ব্যবস্থা আছে।', 'Almost every list has search, filters and paging.')}</li>
               <li>{T('কোনো কিছু যোগ বা সম্পাদনা করলে একটি ফর্ম খোলে; Save / সংরক্ষণ না চাপা পর্যন্ত কিছু বদলায় না।', 'Adding or editing opens a form; nothing changes until you press Save.')}</li>
+              <li>{T('প্রতিটি পাতার শিরোনামের পাশে “এই পাতার সাহায্য” লিংক আছে; চাপলে এই নির্দেশিকার সেই অংশটি খোলে। পুরো নির্দেশিকা বাঁ পাশের মেনুর একদম নিচে “ব্যবহার নির্দেশিকা”-তে।', 'Beside every page title there is a “Help for this page” link; it opens the part of this manual about that page. The whole manual is at the very bottom of the left menu, “User manual”.')}</li>
               <li>{T('আপনার প্রতিটি কাজ', 'Every action of yours is written, with name and time, on the')} <Go to="/admin/activity">{T('কার্যক্রম', 'Activity')}</Go> {T('পাতায় নাম ও সময়সহ লেখা থাকে।', 'page.')}</li>
             </ul>
           </section>
@@ -205,9 +212,10 @@ export default function AdminManual() {
             <h2>{T('ইভেন্ট', 'Events')} <Go to="/admin/events">{open}</Go></h2>
             <ol>
               <li>{T('যোগ করুন চেপে শিরোনাম, তারিখ, সময়, স্থান ও বিবরণ লিখুন।', 'Press Add and write title, date, time, place and description.')}</li>
-              <li>{T('একটি প্রধান ছবি দিন; অনুষ্ঠানের পর আরও ছবি (সর্বোচ্চ ২৪টি) যোগ করা যায়।', 'Give one main picture; after the event more pictures (up to 24) can be added.')}</li>
+              <li>{T('একটি প্রধান ছবি দিন; অনুষ্ঠানের পর আরও ছবি (সর্বোচ্চ ২৪টি) যোগ করা যায়। “একসাথে অনেক ছবি যোগ করুন” চাপলে একবারে অনেক ছবি বেছে আপলোড করা যায়; তারপর সংরক্ষণ করুন।', 'Give one main picture; after the event more pictures (up to 24) can be added. “Add many photos at once” lets you choose and upload many in one go; then save.')}</li>
               <li>{T('প্রকাশ করলে ইভেন্টটি হোম পেজ ও ইভেন্ট পাতায় তারিখ অনুযায়ী দেখাবে।', 'Once published, the event shows on the home page and the Events page by date.')}</li>
             </ol>
+            <p>{T('দর্শকেরা ইভেন্টের পাতা থেকে “শেয়ার করুন” চেপে ফেসবুক/মেসেঞ্জারে লিংক পাঠাতে পারেন, আর “ক্যালেন্ডারে যোগ করুন” চেপে নিজের ফোনের ক্যালেন্ডারে তারিখ-সময় রাখতে পারেন। তাই সময় ও স্থান ঠিকমতো লিখুন।', 'Visitors can press “Share” on an event page to send its link (Facebook, Messenger…) and “Add to calendar” to keep its date and time in their phone’s calendar. So write the time and place carefully.')}</p>
           </section>
 
           <section id="m-blog">
@@ -217,6 +225,7 @@ export default function AdminManual() {
               <li>{T('নতুন লেখা প্রথমে খসড়া হিসেবে থাকে; প্রস্তুত হলে প্রকাশ করুন।', 'A new article starts as a draft; publish it when it is ready.')}</li>
               <li>{T('পুরোনো লেখা মুছে না ফেলে আর্কাইভ করা ভালো; প্রয়োজনে ফিরিয়ে আনা যায়।', 'Archive old articles instead of deleting them; they can be brought back.')}</li>
               <li>{T('ঐতিহাসিক তথ্য লিখলে উৎস উল্লেখ করুন।', 'Cite the source when writing historical facts.')}</li>
+              <li>{T('ঐতিহাসিক স্থানের ছবিও “একসাথে অনেক ছবি যোগ করুন” দিয়ে একবারে দেওয়া যায় (সর্বোচ্চ ১২টি); প্রথম ছবিটি কভার।', 'A place’s photos can also be added many at once with “Add many photos at once” (up to 12); the first is the cover.')}</li>
             </ul>
           </section>
 
@@ -229,6 +238,21 @@ export default function AdminManual() {
             </ol>
             <p>{T('সাইটের কমিটি পাতায় কার্ডে পরিচিতির (Bio) প্রথম কয়েক লাইন দেখায়। দর্শক কোনো সদস্যের কার্ডে ক্লিক করলে একটি পপ-আপে বড় ছবি (ক্লিক করে আরও বড় করা যায়), নাম, পদবি, গ্রুপ, কমিটির নাম ও মেয়াদ এবং পুরো পরিচিতি দেখায়। তাই প্রতিটি সদস্যের পরিচিতি লিখে রাখা ভালো।',
               'On the site’s Committee page the cards show the first lines of the introduction (Bio). When a visitor clicks a member’s card, a pop-up shows a large photo (a click enlarges it further), the name, post, group, the committee and its term, and the whole introduction. So it is worth writing an introduction for every member.')}</p>
+          </section>
+
+          <section id="m-blog-submissions">
+            <h2>{T('সদস্যদের পাঠানো লেখা', 'Writing sent by members')} <Go to="/admin/blog-submissions">{open}</Go></h2>
+            <p>{T('ব্লগ পাতার নিচে “ব্লগে লেখা পাঠান” ফর্ম আছে। নিবন্ধিত সদস্যরা প্রবেশ করে শিরোনাম, লেখা ও একসাথে সর্বোচ্চ ৬টি ছবি পাঠাতে পারেন। সব কিছু ডাটাবেসে জমা হয় এবং বাঁ পাশের মেনুর “সদস্যদের লেখা” পাতায় দেখায়। প্রকাশ না করা পর্যন্ত কিছুই সাইটে দেখায় না।',
+              'At the bottom of the Blog page there is a “Write for the blog” form. Registered members sign in and send a title, the text and up to 6 pictures at once. Everything is saved in the database and shows on the “Members’ writing” page in the left menu. Nothing shows on the site until you publish it.')}</p>
+            <ol>
+              <li>{T('“নতুন” ট্যাবে নতুন লেখাগুলো থাকে। একটিতে চাপলে পুরো লেখা ও ছবি খোলে (খুললেই “পড়া হয়েছে” হয়ে যায়)।', 'The “New” tab holds new pieces. Press one to open the whole text and its pictures (opening marks it “Read”).')}</li>
+              <li>{T('ছবিতে চাপলে বড় করে দেখা যায়; “ডাউনলোড” চাপলে কম্পিউটারে রাখা যায়।', 'Press a picture to see it larger; “Download” keeps it on your computer.')}</li>
+              <li>{T('লেখাটি প্রকাশযোগ্য হলে “ব্লগের খসড়া বানান” চাপুন। লেখকের নাম, লেখা ও ছবি দিয়ে ব্লগে একটি অপ্রকাশিত খসড়া তৈরি হয় এবং সেটি খুলে যায়; প্রথম ছবিটি প্রচ্ছদ, বাকি ছবি লেখার শেষে থাকে।', 'If the piece can be published, press “Make a blog draft”. An unpublished blog draft is made with the writer’s name, the text and the pictures, and it opens; the first picture is the cover, the others go at the end of the text.')}</li>
+              <li>{T('খসড়ায় বানান, শিরোনাম, বিভাগ ও ইংরেজি অংশ ঠিক করে “প্রকাশ” চাপুন (ব্লগ অংশ দেখুন)।', 'In the draft, fix spelling, the title, the category and the English part, then press “Publish” (see the Blog part).')}</li>
+              <li>{T('প্রকাশ না করার হলে “প্রকাশ হবে না” চাপুন; সদস্য তাঁর পাতায় সেটি দেখবেন। স্প্যাম বা অপ্রয়োজনীয় হলে “মুছে ফেলুন”।', 'If it is not to be published, press “Not to publish”; the member sees that on their side. Delete spam or pieces that are not needed.')}</li>
+            </ol>
+            <p className="man-note">{T('সদস্য ব্লগ পাতায় “আমার পাঠানো লেখা”-তে নিজের লেখার অবস্থা দেখেন (পাঠানো হয়েছে / পড়া হয়েছে / প্রকাশের জন্য নেওয়া হয়েছে / এবার প্রকাশ হচ্ছে না)। একজন সদস্য দিনে সর্বোচ্চ ৫টি লেখা পাঠাতে পারেন। লেখা আসলে কোনো ইমেইল আসে না; নিয়মিত এই পাতা দেখুন।',
+              'Members see the state of their pieces under “My sent writing” on the Blog page (Sent / Read / Taken for publishing / Not published this time). A member can send at most 5 pieces a day. No email arrives for a new piece; check this page regularly.')}</p>
           </section>
 
           <section id="m-contact">
@@ -273,6 +297,16 @@ export default function AdminManual() {
               <li><b>{T('বিষয়বস্তু', 'Content')}</b> — {T('ইভেন্ট, ব্লগ, ঐতিহ্য, গ্যালারি, কমিটি, প্রশ্নোত্তর, শিক্ষার্থী, অ্যালামনাই, উপজেলা ও বিভাগ: প্রতিটির নিজের পাতা থেকে।', 'events, blog, heritage, gallery, committee, FAQ, students, alumni, upazilas and departments: each from its own page.')}</li>
             </ul>
             <p className="muted small">{T('ডিজাইনের অংশ হিসেবে যা বদলায় না: পাতার উপরের ছবির চারপাশের ছোট পাতা ও ফুলের নকশা, রং ও ফন্ট, ব্রাউজার ট্যাবের আইকন এবং ইমেইলের নকশা।', 'Fixed as part of the design: the small leaf and flower ornaments around page-top pictures, colours and fonts, the browser-tab icon and the email designs.')}</p>
+          </section>
+
+          <section id="m-visitors">
+            <h2>{T('দর্শকদের জন্য সুবিধা', 'What visitors get')}</h2>
+            <ul>
+              <li>{T('সার্ভার ঘুম থেকে জাগতে দেরি হলে পাতার উপরে “সার্ভার চালু হচ্ছে, একটু অপেক্ষা করুন…” লেখা দেখায়, যাতে দর্শক ভাবেন না সাইট নষ্ট।', 'When the server is slow to wake up, “The server is waking up, please wait…” shows at the top, so visitors do not think the site is broken.')}</li>
+              <li>{T('লম্বা পাতায় নিচে নামলে ডান কোণে “উপরে যান” বোতাম আসে।', 'On long pages a “Back to top” button appears in the bottom corner.')}</li>
+              <li>{T('ফোনে ব্রাউজারের মেনু থেকে “Add to Home screen / Install” চাপলে সাইটটি অ্যাপের মতো হোম স্ক্রিনে বসে যায় (BSWA নামে, লোগোসহ)।', 'On a phone, “Add to Home screen / Install” in the browser menu puts the site on the home screen like an app (named BSWA, with the logo).')}</li>
+              <li>{T('বাংলা/English, আলো/অন্ধকার মোড, সার্চ (শিক্ষার্থী, অ্যালামনাই, স্থান, ইভেন্ট), প্রোফাইল পপ-আপ, ছবি বড় করে দেখা, ইভেন্ট শেয়ার ও ক্যালেন্ডার।', 'Bangla/English, light/dark mode, search (students, alumni, places, events), profile pop-ups, enlarging photos, sharing events and adding them to a calendar.')}</li>
+            </ul>
           </section>
 
           <section id="m-handover">

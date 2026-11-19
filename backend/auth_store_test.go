@@ -188,4 +188,5 @@ func TestPostgresStoreSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 	storeSuite(t, pg)
+	blogSubmissionSuite(t, pg)
 }

@@ -293,6 +293,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
       <nav className="adm-nav" aria-label={t('admin.title')} onClick={(e) => { if (e.target.closest('a')) onNavigate?.() }}>
         {GROUPS.map((g) => <Group key={g.id} group={g} current={current} collapsed={collapsed} />)}
         <Favorites current={current} collapsed={collapsed} onExpand={onToggleCollapse} />
+        <div className="adm-help">{NAV.filter((n) => n.group === 'help').map((i) => <NavItem key={i.id} item={i} current={current} collapsed={collapsed} />)}</div>
       </nav>
 
       <div className="adm-side-foot">

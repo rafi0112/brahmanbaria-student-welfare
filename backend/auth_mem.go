@@ -24,26 +24,27 @@ type memSession struct {
 
 // memStore keeps everything in RAM. Used by tests and by AUTH_DEV_MEMORY=true; data is lost on restart.
 type memStore struct {
-	dir       memDirectory
-	settings  memSettings
-	mu        sync.Mutex
-	seq       int
-	users     map[string]*User
-	byEmail   map[string]string
-	profiles  map[string]*Profile
-	tokens    map[string]*memToken
-	sessions  map[string]*memSession
-	roleLog   []RoleChange
-	cm        committeeMem
-	cms       cmsMem
-	contacts  []*memContact
-	reviews   map[string]memReview
-	manual    []*ManualImported
-	invites   map[string]*memInvite
-	inviteLog []time.Time
-	changes   map[string]*ProfileChange
-	edits     map[string]ManualImportedInput
-	photos    map[string]memPhoto
+	dir         memDirectory
+	settings    memSettings
+	mu          sync.Mutex
+	seq         int
+	users       map[string]*User
+	byEmail     map[string]string
+	profiles    map[string]*Profile
+	tokens      map[string]*memToken
+	sessions    map[string]*memSession
+	roleLog     []RoleChange
+	cm          committeeMem
+	cms         cmsMem
+	contacts    []*memContact
+	submissions []*memSubmission
+	reviews     map[string]memReview
+	manual      []*ManualImported
+	invites     map[string]*memInvite
+	inviteLog   []time.Time
+	changes     map[string]*ProfileChange
+	edits       map[string]ManualImportedInput
+	photos      map[string]memPhoto
 }
 
 // RoleChange mirrors a row of role_changes (kept in memory for tests).

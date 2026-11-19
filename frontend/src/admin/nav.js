@@ -33,6 +33,8 @@ export const NAV = [
     { id: 'published', label: 'ad.status.published', query: { status: 'published' } },
     { id: 'archived', label: 'ad.status.archived', query: { status: 'archived' } },
   ] },
+  // Writing members sent from the Blog page (title, text, pictures); an admin may turn one into a blog draft.
+  { id: 'blogSubs', to: '/admin/blog-submissions', icon: 'pencil', label: 'ad.nav.blogSubs', group: 'content' },
   { id: 'heritage', to: '/admin/heritage', icon: 'landmark', label: 'admin.nav.places', group: 'content', watch: ['status'], children: [
     { id: 'all', label: 'ad.status.allShort', query: { status: 'all' } },
     { id: 'active', label: 'ad.status.activeShort', query: {} },
@@ -52,7 +54,7 @@ export const NAV = [
   ] },
   { id: 'siteImages', to: '/admin/site-images', icon: 'image', label: 'ad.nav.siteImages', group: 'content' },
   { id: 'siteTexts', to: '/admin/site-texts', icon: 'pencil', label: 'ad.nav.siteTexts', group: 'content' },
-  { id: 'manual', to: '/admin/manual', icon: 'book', label: 'ad.nav.manual', group: 'overview' },
+  { id: 'manual', to: '/admin/manual', icon: 'book', label: 'ad.nav.manual', group: 'help' }, // shown last in the sidebar, on its own
 ]
 
 export const GROUPS = [

@@ -6,6 +6,8 @@ import { Crumbs, Data, Empty, PageHero, Pagination } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { eventDate, eventImage } from '../components/EventCarousel.jsx'
+import { eventICS } from '../lib/calendar.js'
+import { toast } from '../components/Motion.jsx'
 
 const PER_PAGE = 9
 const today = () => new Date().toISOString().slice(0, 10)
@@ -168,12 +170,26 @@ export function EventDetail() {
                   <h1>{pick(e.titleBn, e.titleEn)}</h1>
                   <dl className="evd-facts">
                     <div><dt><Icon name="calendar" size={18} /></dt><dd>{d?.long || e.date}{end ? ` – ${end.long}` : ''}</dd></div>
-                    {e.time && <div><dt><Icon name="clock" size={18} /></dt><dd>{e.time}</dd></div>}
+                    {e.time && <div><dt><Icon name="clock" size={18} /></dt><dd className="num">{n(e.time)}</dd></div>}
                     {e.venue && <div><dt><Icon name="pin" size={18} /></dt><dd>{e.venue}</dd></div>}
                   </dl>
                   <div className="evd-actions">
                     {e.link && <a className="btn btn-dark" href={e.link} rel="noreferrer noopener">{t('events.details')} <Icon name="arrow" size={16} className="arr" /></a>}
                     <Link className="btn btn-outline" to="/events">{t('events.allEvents')}</Link>
+                  </div>
+                  <div className="evd-share">
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={async () => {
+                      const url = window.location.href
+                      const title = pick(e.titleBn, e.titleEn)
+                      try { if (navigator.share) { await navigator.share({ title, url }); return } } catch (err) { if (err?.name === 'AbortError') return } // closed by the visitor; any other failure copies the link instead
+                      try { await navigator.clipboard.writeText(url); toast({ text: t('events.linkCopied') }) } catch { window.prompt(t('events.share'), url) }
+                    }}><Icon name="arrow" size={15} /> {t('events.share')}</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+                      const ics = eventICS({ uid: e.slug, title: pick(e.titleBn, e.titleEn), date: e.date, endDate: e.endDate, time: e.time, venue: e.venue, description: pick(e.summaryBn, e.summaryEn), url: window.location.href })
+                      const href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+                      const a = Object.assign(document.createElement('a'), { href, download: `${e.slug}.ics` })
+                      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(href), 1000)
+                    }}><Icon name="calendar" size={15} /> {t('events.addToCalendar')}</button>
                   </div>
                 </div>
               </div>

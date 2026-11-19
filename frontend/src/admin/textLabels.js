@@ -25,7 +25,7 @@ const PLACES = [
   [/^gallery\./, 'গ্যালারি পাতা', 'Gallery page', '/gallery'],
   [/^(heritage|place|cat)\./, 'ঐতিহ্য পাতা', 'Heritage page', '/heritage'],
   [/^dir\./, 'উপজেলা ডিরেক্টরি পাতা', 'Upazila directory page', '/directory'],
-  [/^blog\./, 'ব্লগ পাতা', 'Blog page', '/blog'],
+  [/^blogw?\./, 'ব্লগ পাতা', 'Blog page', '/blog'],
   [/^(help|faq|contact)\./, 'যোগাযোগ ও প্রশ্নোত্তর পাতা', 'Contact and FAQ page', '/help'],
   [/^pw\./, 'পাসওয়ার্ড দেওয়ার ঘর (নিবন্ধন ও পাসওয়ার্ড বদল)', 'Password box (registration and password change)', '/register'],
   [/^auth\./, 'লগইন ও নিবন্ধন পাতা', 'Sign-in and registration pages', '/login'],
