@@ -5,6 +5,7 @@ import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { optimizeImage } from '../lib/imageOptimize.js'
 import Icon from './Icon.jsx'
+import WriteBox from './WriteBox.jsx'
 import { toast } from './Motion.jsx'
 
 // On the Blog page: a signed-in member sends a title, the text and up to six pictures. It is saved for the admins (like
@@ -52,7 +53,7 @@ export default function BlogWrite() {
 }
 
 function WriteForm() {
-  const { t, n } = useApp()
+  const { t, n, lang } = useApp()
   const [v, setV] = useState(() => ({ title: '', body: '', ...readDraft() }))
   const [photos, setPhotos] = useState([]) // { id, file, url }
   const [st, setSt] = useState({ status: 'idle', fields: {}, msg: '' })
@@ -122,7 +123,6 @@ function WriteForm() {
     )
   }
   const busy = st.status === 'preparing' || st.status === 'sending'
-  const chars = v.body.trim().length
   return (
     <form className="bw-card bw-form" onSubmit={submit} noValidate aria-busy={busy || undefined}>
       <label className="field">
@@ -130,12 +130,12 @@ function WriteForm() {
         <input value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} maxLength={160} aria-invalid={!!st.fields.title} placeholder={t('blogw.titleP')} />
         {st.fields.title && <small className="err">{st.fields.title}</small>}
       </label>
-      <label className="field">
-        <span>{t('blogw.bodyL')}</span>
-        <textarea rows="10" value={v.body} onChange={(e) => setV({ ...v, body: e.target.value })} maxLength={20000} aria-invalid={!!st.fields.body} aria-describedby="bw-body-h" />
-        <small id="bw-body-h" className="muted bw-hint"><span>{t('blogw.bodyH')}</span><span aria-live="off">{n(chars)} / {n(20000)}</span></small>
+      <div className="field">
+        <label htmlFor="bw-body">{t('blogw.bodyL')}</label>
+        <WriteBox id="bw-body" value={v.body} onChange={(x) => setV((s) => ({ ...s, body: x }))} maxLength={20000} rows={12} invalid={!!st.fields.body} describedBy="bw-body-h" lang={lang} />
+        <small id="bw-body-h" className="muted">{t('blogw.bodyH')}</small>
         {st.fields.body && <small className="err">{st.fields.body}</small>}
-      </label>
+      </div>
 
       <div className="field">
         <span id="bw-ph-l">{t('blogw.photosL')} <small className="muted">({n(photos.length)}/{n(MAX_PHOTOS)})</small></span>

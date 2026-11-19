@@ -38,3 +38,4 @@ frontend/playwright-report/
 
 # Local video production workspace (voice model, raw captures, renders); the published film lives in docs/media
 /promo/
+wordpress/build/

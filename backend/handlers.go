@@ -82,7 +82,7 @@ func logging(next http.Handler) http.Handler {
 
 func (a *App) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", a.Origin)
+		w.Header().Set("Access-Control-Allow-Origin", a.allowedOrigin(r.Header.Get("Origin")))
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -406,4 +406,39 @@ func (l *Limiter) Allow(key string) bool {
 	}
 	l.hits[key] = append(recent, now)
 	return true
+}
+
+// CORS_ORIGIN may name several sites, separated by commas (for example the Cloudflare site and a WordPress copy of it).
+// The answer names the one the request came from when it is listed, otherwise the first; "*" allows any.
+func (a *App) originList() []string {
+	out := []string{}
+	for _, o := range strings.Split(a.Origin, ",") {
+		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+func (a *App) originOK(o string) bool {
+	for _, x := range a.originList() {
+		if x == "*" || x == o {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *App) allowedOrigin(o string) string {
+	list := a.originList()
+	if len(list) == 0 {
+		return ""
+	}
+	if o != "" && a.originOK(o) {
+		if list[0] == "*" {
+			return "*"
+		}
+		return o
+	}
+	return list[0]
 }

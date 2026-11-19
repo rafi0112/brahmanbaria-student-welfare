@@ -626,7 +626,7 @@ func (a *App) review(status string) func(http.ResponseWriter, *http.Request, Use
 func (a *App) originGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
-			if o := r.Header.Get("Origin"); o != "" && o != a.Origin && a.Origin != "*" {
+			if o := r.Header.Get("Origin"); o != "" && !a.originOK(o) {
 				apiError(w, http.StatusForbidden, "cross-site request blocked")
 				return
 			}

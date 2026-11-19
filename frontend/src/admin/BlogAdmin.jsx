@@ -4,6 +4,8 @@ import { useApp } from '../lib/app.jsx'
 import { api } from '../lib/api.js'
 import { useAuth } from '../lib/auth.jsx'
 import Markdown from '../components/Markdown.jsx'
+import WriteBox from '../components/WriteBox.jsx'
+import { storeImageFile } from '../lib/mediaUpload.js'
 import { MediaPhoto } from '../components/ui.jsx'
 import { ContentList, EditorGate, EditorModal, StatusPanel, useEditParam, useEntryEditor } from './content.jsx'
 import { Field, ImagePicker, Modal, Notice, PageHeader, slugFrom, useUnsavedGuard } from './kit.jsx'
@@ -88,29 +90,6 @@ const toBody = (v) => ({
   },
 })
 
-// Markdown helper buttons: wrap the selection (or insert a template) at the cursor.
-function Toolbar({ area, value, onChange }) {
-  const { t } = useApp()
-  const apply = (before, after = '', sample = '') => {
-    const el = area.current
-    if (!el) return
-    const [a, b] = [el.selectionStart, el.selectionEnd]
-    const chosen = value.slice(a, b) || sample
-    onChange(`${value.slice(0, a)}${before}${chosen}${after}${value.slice(b)}`)
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + before.length, a + before.length + chosen.length) })
-  }
-  const items = [
-    ['B', t('ad.md.bold'), () => apply('**', '**', t('ad.md.sampleBold'))], ['I', t('ad.md.italic'), () => apply('*', '*', t('ad.md.sampleItalic'))],
-    ['H', t('ad.md.heading'), () => apply('\n\n## ', '\n\n', t('ad.md.sampleHeading'))], ['•', t('ad.md.list'), () => apply('\n\n- ', '\n\n', t('ad.md.sampleItem'))],
-    ['”', t('ad.md.quote'), () => apply('\n\n> ', '\n\n', t('ad.md.sampleQuote'))], ['🔗', t('ad.md.link'), () => apply('[', '](https://)', t('ad.md.sampleLink'))],
-  ]
-  return (
-    <div className="ad-toolbar-md" role="toolbar" aria-label={t('ad.md.toolbar')}>
-      {items.map(([sym, label, fn]) => <button key={label} type="button" className="btn btn-ghost btn-sm" onClick={fn} aria-label={label} title={label}>{sym}</button>)}
-    </div>
-  )
-}
-
 function Preview({ v, imageUrl, onClose }) {
   const { t, lang } = useApp()
   const [pl, setPl] = useState(lang)
@@ -138,7 +117,7 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
   const params = useParams()
   const modal = !!onClose
   const id = modal ? entryId : params.id
-  const { t, n } = useApp()
+  const { t } = useApp()
   const { user, profile } = useAuth()
   const nav = useNavigate()
   const ed = useEntryEditor('blog', id, '/admin/blog')
@@ -149,7 +128,8 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
   const [slugTouched, setSlugTouched] = useState(false)
   const [seo, setSeo] = useState(false)
   const [preview, setPreview] = useState(false)
-  const bodyArea = useRef(null)
+  // a picture put inside the text: made smaller, stored in the site's media, its address goes into the text
+  const picture = async (file) => (await storeImageFile(file, 'gallery')).url
   useEffect(() => {
     if (ed.entry) { const f = fromEntry(ed.entry); setV(f); setBase(f); setSlugTouched(true) }
   }, [ed.entry])
@@ -157,7 +137,6 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
   const dirty = useMemo(() => (base ? JSON.stringify(base) !== JSON.stringify(v) : (v.titleEn || v.titleBn || v.bodyEn || v.bodyBn) !== ''), [base, v])
   useUnsavedGuard(dirty)
   const set = (k) => (e) => setV({ ...v, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
-  const words = (v[lang === 'en' ? 'bodyEn' : 'bodyBn'].trim().match(/\S+/g) || []).length
   const e = ed.fields
 
   const submit = async (ev) => {
@@ -188,23 +167,16 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
               {lang === 'en' ? (
                 <>
                   <Field label={t('ad.excerpt')} error={e.excerptEn} max={400} count={v.excerptEn.length}>{(fid, bad) => <textarea id={fid} rows={2} value={v.excerptEn} onChange={set('excerptEn')} maxLength={400} aria-invalid={bad} />}</Field>
-                  <Field label={t('ad.body')} error={e.bodyEn} hint={t('ad.md.hint')}>{(fid, bad) => (
-                    <>
-                      <Toolbar area={bodyArea} value={v.bodyEn} onChange={(x) => setV({ ...v, bodyEn: x })} />
-                      <textarea id={fid} ref={bodyArea} rows={14} value={v.bodyEn} onChange={set('bodyEn')} aria-invalid={bad} maxLength={60000} />
-                    </>)}</Field>
+                  <Field label={t('ad.body')} error={e.bodyEn}>{(fid, bad) => (
+                    <WriteBox id={fid} value={v.bodyEn} onChange={(x) => setV((s) => ({ ...s, bodyEn: x }))} invalid={bad} maxLength={60000} lang="en" onPicture={picture} rows={16} />)}</Field>
                 </>
               ) : (
                 <>
                   <Field label={t('ad.excerpt')} error={e.excerptBn} max={400} count={v.excerptBn.length}>{(fid, bad) => <textarea id={fid} rows={2} value={v.excerptBn} onChange={set('excerptBn')} maxLength={400} aria-invalid={bad} lang="bn" />}</Field>
-                  <Field label={t('ad.body')} error={e.bodyBn} hint={t('ad.md.hint')}>{(fid, bad) => (
-                    <>
-                      <Toolbar area={bodyArea} value={v.bodyBn} onChange={(x) => setV({ ...v, bodyBn: x })} />
-                      <textarea id={fid} ref={bodyArea} rows={14} value={v.bodyBn} onChange={set('bodyBn')} aria-invalid={bad} maxLength={60000} lang="bn" />
-                    </>)}</Field>
+                  <Field label={t('ad.body')} error={e.bodyBn}>{(fid, bad) => (
+                    <WriteBox id={fid} value={v.bodyBn} onChange={(x) => setV((s) => ({ ...s, bodyBn: x }))} invalid={bad} maxLength={60000} lang="bn" onPicture={picture} rows={16} />)}</Field>
                 </>
               )}
-              <p className="muted small">{n(words)} {t('ad.words')} · ≈ {n(Math.max(1, Math.ceil(words / 200)))} {t('blog.min')}</p>
             </fieldset>
 
             <fieldset className="ad-section"><legend>{t('ad.blog.sec.details')}</legend>
