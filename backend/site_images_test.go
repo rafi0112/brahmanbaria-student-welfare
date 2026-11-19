@@ -132,3 +132,25 @@ func manySlides(img string, n int) []map[string]any {
 	}
 	return out
 }
+
+// The logo, the sketches and the student profile cover are places an admin may give a picture of their own.
+func TestLogoSketchesAndProfileCoverAcceptAPicture(t *testing.T) {
+	e := cmsApp(t)
+	rec := uploadReqTo(e, "/api/v1/admin/media", "admin-token", nil, solidPNG(300, 300, 120))
+	var up struct{ Path string }
+	decodeBody(t, rec, &up)
+	pages := map[string]string{}
+	for _, k := range []string{"logo", "profile-cover", "sketch-river", "sketch-heritage", "sketch-students", "sketch-vine-tl"} {
+		pages[k] = up.Path
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images", map[string]any{"pages": pages}); rec.Code != 200 {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	var pub struct{ Pages map[string]string }
+	decodeBody(t, jreq(e, "GET", "/api/v1/site-images", "", nil), &pub)
+	for k := range pages {
+		if !strings.HasSuffix(pub.Pages[k], up.Path) {
+			t.Errorf("%s not shown: %v", k, pub.Pages)
+		}
+	}
+}

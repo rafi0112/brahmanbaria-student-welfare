@@ -112,8 +112,8 @@ export function Events() {
                   <input type="search" value={q} onChange={(e) => set({ q: e.target.value })} placeholder={t('events.searchEventsVenuesOr')} aria-label={t('events.searchEvents')} />
                 </label>
                 <div className="evp-tabs" role="group" aria-label={t('events.byTime')}>
-                  {[['all', 'সব', 'All'], ['upcoming', 'আসন্ন', 'Upcoming'], ['past', 'সম্পন্ন', 'Past']].map(([k, bn, en]) => (
-                    <button key={k} type="button" className={`chip ${when === k ? 'on' : ''}`} aria-pressed={when === k} onClick={() => set({ when: k })}>{pick(bn, en)} <span className="num">{n(counts[k])}</span></button>
+                  {[['all', t('events.tabAll')], ['upcoming', t('events.upcoming2')], ['past', t('events.past2')]].map(([k, label]) => (
+                    <button key={k} type="button" className={`chip ${when === k ? 'on' : ''}`} aria-pressed={when === k} onClick={() => set({ when: k })}>{label} <span className="num">{n(counts[k])}</span></button>
                   ))}
                 </div>
                 <label className="evp-sort">

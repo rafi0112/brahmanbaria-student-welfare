@@ -221,6 +221,30 @@ test.describe('in English', () => {
     for (const [text, bg] of cols) expect(lum(text) - lum(bg), 'light text on a dark list').toBeGreaterThan(120)
   })
 
+  test('admin: the hero name and the numbers band are editable; the logo and sketches have their own picture places', async ({ page }) => {
+    await login(page)
+    await page.goto('/admin/site-texts')
+    const box = page.getByPlaceholder('Search the texts (Bangla or English)…')
+    await box.fill('Union parishads')
+    await page.locator('.stx-row[data-text="home.statUnions"] textarea[lang=en]').fill('Unions')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The site shows the new wording now.')).toBeVisible()
+    await page.goto('/')
+    await expect(page.locator('.stat-grid')).toContainText('Unions')
+    await expect(page.locator('.stat-grid')).not.toContainText('Union parishads')
+    await page.goto('/admin/site-texts')
+    await box.fill('Union')
+    await page.locator('.stx-row[data-text="home.statUnions"]').getByRole('button', { name: 'Use the original' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The site shows the new wording now.')).toBeVisible()
+    await box.fill('জেলা ছাত্রকল্যাণ পরিষদ, জগন্নাথ')
+    await expect(page.locator('.stx-row[data-text="hero.org"]')).toBeVisible()
+    await page.goto('/admin/site-images')
+    const look = page.locator('.si-card').filter({ has: page.getByRole('heading', { name: 'Logo and sketches' }) })
+    for (const l of ['Logo (top menu, footer, sign-in pages)', 'River sketch (Home “Explore” section and footer)']) await expect(look.getByText(l)).toBeVisible()
+    await expect(page.getByText('Picture at the top of a student’s profile page')).toBeVisible()
+  })
+
   test('sign-in and registration pages show the form only, no picture', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path)

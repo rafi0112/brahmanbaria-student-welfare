@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useBase } from '../lib/base.js'
+import { useSiteImages } from '../lib/site.jsx'
 import { Badge, Credit, Crumbs, Data, Empty, MediaPhoto, PageHero } from '../components/ui.jsx'
 import { PlaceCard } from '../components/cards.jsx'
 import UpazilaMap from '../components/UpazilaMap.jsx'
@@ -14,6 +15,7 @@ const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'pal
 
 export default function Heritage() {
   const base = useBase()
+  const site = useSiteImages()
   const { t, n, pick } = useApp()
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
@@ -53,8 +55,8 @@ export default function Heritage() {
           {DISCOVER.map((c, i) => (
             <Reveal key={c.to} delay={i * 70}>
               <Link to={c.to} className="ex-card">
-                <span className="ex-thumb blob-c"><img src={c.img} alt="" loading="lazy" decoding="async" /></span>
-                <span className="ex-card-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.dbn, c.den)}</small></span>
+                <span className="ex-thumb blob-c"><img src={site.pages[c.pic] || c.img} alt="" loading="lazy" decoding="async" /></span>
+                <span className="ex-card-copy"><b>{t(c.tk)}</b><small>{t(c.dk)}</small></span>
                 <span className="ex-arr" aria-hidden="true"><Icon name="arrow" size={14} /></span>
               </Link>
             </Reveal>
@@ -64,8 +66,8 @@ export default function Heritage() {
           {CULTURE.map((c) => (
             <li key={c.img}>
               <Link to={c.to} className="culture-card">
-                <img src={`/images/bswa/${c.img}.webp`} alt="" loading="lazy" decoding="async" width={c.w} height={c.h} />
-                <span className="culture-copy"><b>{pick(c.bn, c.en)}</b><small>{pick(c.sbn, c.sen)}</small></span>
+                <img src={site.pages[c.pic] || `/images/bswa/${c.img}.webp`} alt="" loading="lazy" decoding="async" width={c.w} height={c.h} style={site.pages[c.pic] ? { objectFit: 'cover' } : undefined} />
+                <span className="culture-copy"><b>{t(c.tk)}</b><small>{t(c.sk)}</small></span>
                 <Icon name="arrow" size={16} className="arr culture-arr" />
               </Link>
             </li>

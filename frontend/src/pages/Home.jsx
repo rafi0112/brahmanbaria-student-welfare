@@ -71,11 +71,11 @@ function StatsBand({ items }) {
           <h2 id="stat-h">{t('home.ourDistrictAndCommunity')}</h2>
         </div>
         <dl className="stat-grid">
-          {items.map(([k, v, ic, bn, en, subBn, subEn], i) => (
+          {items.map(([k, v, ic, label, sub], i) => (
             <div key={k} className="stat" style={{ '--i': i }}>
               <span className="stat-ico" aria-hidden="true"><Icon name={ic} size={20} /></span>
               <dd className="num"><CountUp value={v} go={seen} delay={i * 120} /></dd>
-              <dt>{pick(bn, en)}<small>{pick(subBn, subEn)}</small></dt>
+              <dt>{label}<small>{sub}</small></dt>
               <span className="stat-line" aria-hidden="true"><i /></span>
             </div>
           ))}
@@ -201,11 +201,11 @@ export default function Home() {
 
       {/* ---------- the district and the community in numbers: counts rise as the band comes into view ---------- */}
       <StatsBand items={[
-        ['students', s ? (s.students || 0) + (s.alumni || 0) : undefined, 'users', 'শিক্ষার্থী ও অ্যালামনাই', 'Students and alumni',
-          s ? `বর্তমান ${n(s.students || 0)} · অ্যালামনাই ${n(s.alumni || 0)}` : '', s ? `${s.students || 0} current · ${s.alumni || 0} alumni` : ''],
-        ['upazilas', s?.upazilas, 'pin', 'উপজেলা', 'Upazilas', 'ব্রাহ্মণবাড়িয়া জেলায়', 'in Brahmanbaria'],
-        ['unions', unionCount || undefined, 'landmark', 'ইউনিয়ন পরিষদ', 'Union parishads', 'নয়টি উপজেলা জুড়ে', 'across the nine upazilas'],
-        ['places', s?.places, 'book', 'ঐতিহাসিক স্থান', 'Historical places', 'সূত্রসহ সংরক্ষিত', 'documented with sources'],
+        ['students', s ? (s.students || 0) + (s.alumni || 0) : undefined, 'users', t('home.statStudents'),
+          s ? t('home.statStudentsSub').replace('{current}', n(s.students || 0)).replace('{alumni}', n(s.alumni || 0)) : ''],
+        ['upazilas', s?.upazilas, 'pin', t('home.statUpazilas'), t('home.statUpazilasSub')],
+        ['unions', unionCount || undefined, 'landmark', t('home.statUnions'), t('home.statUnionsSub')],
+        ['places', s?.places, 'book', t('home.statPlaces'), t('home.statPlacesSub')],
       ]} />
 
       {/* ---------- student community: real community photograph beside an evergreen panel ---------- */}

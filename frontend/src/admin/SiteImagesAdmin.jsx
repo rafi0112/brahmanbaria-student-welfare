@@ -24,6 +24,23 @@ const INNER = [
   ['about-art-1', 'আমাদের সম্পর্কে: লেখার পাশের প্রথম ছবি', 'About: first picture beside the text'],
   ['about-art-2', 'আমাদের সম্পর্কে: লেখার পাশের দ্বিতীয় ছবি', 'About: second picture beside the text'],
   ['home-community', 'হোম: “যারা গড়ছে আগামী” অংশের ছবি', 'Home: “The people shaping tomorrow” picture'],
+  ['profile-cover', 'শিক্ষার্থীর প্রোফাইল পাতার উপরের ছবি', 'Picture at the top of a student’s profile page'],
+  ['heritage-discover-1', 'ঐতিহ্য পাতা: “ঐতিহ্য ও নিদর্শন” কার্ড', 'Heritage page: “Heritage & Landmarks” card'],
+  ['heritage-discover-2', 'ঐতিহ্য পাতা: “ইসলামী সংস্কৃতি ও ঐতিহ্য” কার্ড', 'Heritage page: “Islamic Culture & Traditions” card'],
+  ['heritage-discover-3', 'ঐতিহ্য পাতা: “নদী ও প্রকৃতি” কার্ড', 'Heritage page: “Rivers & Nature” card'],
+  ['heritage-culture-1', 'ঐতিহ্য পাতা: “ইসলামী ঐতিহ্য” ছবি', 'Heritage page: “Islamic Heritage” picture'],
+  ['heritage-culture-2', 'ঐতিহ্য পাতা: “বাউল ও লোকসংস্কৃতি” ছবি', 'Heritage page: “Baul & Folk Culture” picture'],
+  ['heritage-culture-3', 'ঐতিহ্য পাতা: “পুতুল নাচ” ছবি', 'Heritage page: “Putul Nach” picture'],
+  ['heritage-culture-4', 'ঐতিহ্য পাতা: “নদী ও প্রকৃতি” ছবি', 'Heritage page: “Rivers & Nature” picture'],
+]
+
+// the logo and the pencil sketches drawn behind some sections (each sketch may appear in more than one place)
+const LOOK = [
+  ['logo', 'লোগো (উপরের মেনু, ফুটার, লগইন পাতা)', 'Logo (top menu, footer, sign-in pages)', 'বর্গাকার ও স্বচ্ছ পটভূমির PNG সবচেয়ে ভালো।', 'A square PNG with a transparent background works best.'],
+  ['sketch-river', 'নদীর স্কেচ (হোম “ঘুরে দেখুন” অংশ ও ফুটার)', 'River sketch (Home “Explore” section and footer)', 'হালকা পেনসিল-স্কেচ, স্বচ্ছ বা সাদা পটভূমি।', 'A light pencil sketch on a transparent or white background.'],
+  ['sketch-heritage', 'স্থাপনার স্কেচ (হোম “যারা গড়ছে আগামী” ও ফুটার)', 'Building sketch (Home “The people shaping tomorrow” and footer)', '', ''],
+  ['sketch-students', 'শিক্ষার্থীদের স্কেচ (হোম “যারা গড়ছে আগামী”)', 'Students sketch (Home “The people shaping tomorrow”)', '', ''],
+  ['sketch-vine-tl', 'লতার স্কেচ (ফুটারের কোণে)', 'Vine sketch (footer corner)', '', ''],
 ]
 
 const legacyUrl = (ref) => (ref && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
@@ -231,6 +248,16 @@ export default function SiteImagesAdmin() {
               <div className="si-grid">
                 {INNER.map(([key, bn, en]) => (
                   <Slot key={key} label={pick(bn, en)} value={v.pages[key]} onChange={(x) => commit({ ...v, pages: { ...v.pages, [key]: x } })} />
+                ))}
+              </div>
+            </section>
+
+            <section className="si-card" aria-labelledby="si-look">
+              <h2 id="si-look">{pick('লোগো ও স্কেচ', 'Logo and sketches')}</h2>
+              <p className="muted small">{pick('খালি থাকলে সাইটের নিজের লোগো ও স্কেচ দেখায়। ব্রাউজারের ট্যাবের ছোট আইকন ও ইমেইলের লোগো এখান থেকে বদলায় না।', 'Empty means the site’s own logo and sketches. The small browser-tab icon and the logo in emails do not change from here.')}</p>
+              <div className="si-grid">
+                {LOOK.map(([key, bn, en, hb, he]) => (
+                  <Slot key={key} label={pick(bn, en)} hint={hb ? pick(hb, he) : undefined} value={v.pages[key]} onChange={(x) => commit({ ...v, pages: { ...v.pages, [key]: x } })} />
                 ))}
               </div>
             </section>

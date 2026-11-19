@@ -112,9 +112,9 @@ export default function HeroStage() {
       <div className="hs-ui">
         <div className="hs-id">
           <h1 id="hero-title" className="hs-title" lang="bn">
-            <span className="hs-t1"><span className="hs-w">ব্রাহ্মণবাড়িয়া</span></span>
+            <span className="hs-t1"><span className="hs-w">{t('hero.name')}</span></span>
             <span className="hs-lock">
-              <span className="hs-org">{['জেলা', 'ছাত্রকল্যাণ', 'পরিষদ,', 'জগন্নাথ', 'বিশ্ববিদ্যালয়'].map((w, k) => <span key={w}>{k > 0 && ' '}<span className="hs-w" style={{ animationDelay: `${0.12 + k * 0.08}s` }}>{w}</span></span>)}</span>
+              <span className="hs-org">{t('hero.org').split(/\s+/).filter(Boolean).map((w, k) => <span key={`${k}-${w}`}>{k > 0 && ' '}<span className="hs-w" style={{ animationDelay: `${0.12 + k * 0.08}s` }}>{w}</span></span>)}</span>
             </span>
           </h1>
           <p className="hs-tagbn hs-e2" lang="bn">{t('hero.tagline')}</p>

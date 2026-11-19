@@ -142,7 +142,7 @@ export function Gallery() {
               {items.length === 0 && <Empty>{t('gallery.empty')}</Empty>}
               {groups.map(([y, list]) => (
                 <section key={y || 'none'} className="gal-year" aria-label={yearName(y)}>
-                  {(groups.length > 1 || y) && <h2 className="gal-year-h">{yearName(y)} <small>{pick(`${n(list.length)}টি ছবি`, `${list.length} ${list.length === 1 ? 'picture' : 'pictures'}`)}</small></h2>}
+                  {(groups.length > 1 || y) && <h2 className="gal-year-h">{yearName(y)} <small>{t('gallery.countPictures').replace('{n}', n(list.length))}</small></h2>}
                   <div className="masonry">
                     {list.map((it) => {
                       const i = items.indexOf(it)

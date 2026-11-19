@@ -4,6 +4,7 @@ import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useBase } from '../lib/base.js'
+import { useSiteImages } from '../lib/site.jsx'
 import { Badge, BatchGroups, Crumbs, Data, Empty, Pagination, PageHero, VerifiedMark } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import SpAvatar from '../components/SpAvatar.jsx'
@@ -105,6 +106,7 @@ export default function Students() {
 
 export function StudentDetail({ id: idProp, modal = false }) {
   const base = useBase()
+  const site = useSiteImages()
   const params = useParams()
   const id = idProp || params.id
   const { t, n, pick } = useApp()
@@ -132,7 +134,8 @@ export function StudentDetail({ id: idProp, modal = false }) {
             {!modal && <div className="wrap sp-crumbs"><Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/students`, label: t('nav.students') }, { label: s.name }]} /></div>}
             {!modal && (
               <div className="sp-cover" aria-hidden="true">
-                <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />
+                {site.pages['profile-cover'] ? <img src={site.pages['profile-cover']} alt="" width="1672" height="941" />
+                  : <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />}
               </div>
             )}
             {modal && <div className="pm-cover" aria-hidden="true" />}

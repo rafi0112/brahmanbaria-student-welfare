@@ -165,7 +165,7 @@ export default function SearchDialog({ onClose, onProfile }) {
                 <li className="sd-empty" role="presentation">
                   <p>{looksBlood(q) && !canPrivate
                     ? t('search.signInAsAn2')
-                    : pick(`"${q.trim()}" — কিছু পাওয়া যায়নি।`, `No match for "${q.trim()}".`)}</p>
+                    : t('search.noMatchFor').replace('{q}', q.trim())}</p>
                   <button type="button" className="btn btn-sm btn-outline" onClick={() => open(`/students${qs({ q: q.trim() })}`)}>{t('search.searchTheStudentDirectory')} <Icon name="arrow" size={14} /></button>
                 </li>
               )}

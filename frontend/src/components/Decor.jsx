@@ -1,9 +1,14 @@
+import { useSiteImages } from '../lib/site.jsx'
+
 // Decorative pieces of the BSWA look: the round seal, botanical sprigs that overlap image edges, and sketch line-art behind
 // sections. Everything here is presentational and hidden from assistive technology.
 
 // The association's round seal, used wherever the mark appears (header, footer, sign-in pages). The file is cut to the
 // circle, so it sits cleanly on light and dark surfaces.
+// An admin can replace it in Site pictures (the browser tab icon and the emails keep the built-in one).
 export function LeafMark({ size = 38, className = '' }) {
+  const own = useSiteImages().pages?.logo
+  if (own) return <img className={`leafmark ${className}`} src={own} width={size} height={size} alt="" decoding="async" />
   return <img className={`leafmark ${className}`} src="/logo-96.webp" srcSet="/logo-96.webp 96w, /logo-256.webp 256w" sizes={`${size}px`} width={size} height={size} alt="" decoding="async" />
 }
 
@@ -13,8 +18,10 @@ export function Sprig({ src = 'sprig', className = '' }) {
 }
 
 // A pencil sketch from /public/art used as quiet background line-art.
+// An admin can replace each sketch in Site pictures ("sketch-river", "sketch-heritage", "sketch-students", "sketch-vine-tl").
 export function SketchArt({ src, className = '' }) {
-  return <img className={`sketch-art ${className}`} src={`/art/${src}.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+  const own = useSiteImages().pages?.[`sketch-${src}`]
+  return <img className={`sketch-art ${className}`} src={own || `/art/${src}.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async" />
 }
 
 // The thin sage vine with small leaves that edges the mockup's photographs.

@@ -136,7 +136,7 @@ export function UpazilaDetail() {
                 <aside className="up-students">
                   <span className="up-students-ico" aria-hidden="true"><Icon name="users" size={26} /></span>
                   <p className="up-students-n num">{n(u.members)}</p>
-                  <p>{pick(`${u.nameBn} থেকে আসা শিক্ষার্থী`, `Students from ${u.nameEn}`)}</p>
+                  <p>{t('dir.studentsFromPlace').replace('{place}', pick(u.nameBn, u.nameEn))}</p>
                   <Link className="btn btn-dark" to={`/students?upazila=${u.slug}`}>{t('dir.studentsFrom')} <Icon name="arrow" size={16} className="arr" /></Link>
                 </aside>
               </div>

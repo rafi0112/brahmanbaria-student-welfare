@@ -24,7 +24,12 @@ const maxHeroSlides = 12
 var sitePageKeys = map[string]bool{"students": true, "alumni": true, "committee": true, "events": true, "gallery": true, "heritage": true,
 	"blog": true, "about": true, "help": true, "directory": true, "member": true,
 	// pictures inside pages (not at their top): the two beside the About text, the small one and the community photo on Home
-	"about-art-1": true, "about-art-2": true, "home-inset": true, "home-community": true}
+	"about-art-1": true, "about-art-2": true, "home-inset": true, "home-community": true,
+	// the logo, the student profile cover and the pencil sketches
+	"logo": true, "profile-cover": true, "sketch-river": true, "sketch-heritage": true, "sketch-students": true, "sketch-vine-tl": true,
+	// the heritage page's discovery cards and culture pictures
+	"heritage-discover-1": true, "heritage-discover-2": true, "heritage-discover-3": true,
+	"heritage-culture-1": true, "heritage-culture-2": true, "heritage-culture-3": true, "heritage-culture-4": true}
 
 type HeroSlide struct {
 	ID        string `json:"id"`
