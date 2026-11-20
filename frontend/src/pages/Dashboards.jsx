@@ -9,7 +9,6 @@ import { toast } from '../components/Motion.jsx'
 import { batchNumbers } from '../lib/batches.js'
 
 const LEVELS = ['members', 'hidden'] // the public site shows four fields only, so "public" no longer exists as a choice
-const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const BLOODS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 export function Gate({ role, children }) {
@@ -128,7 +127,7 @@ function EditDetails({ p }) {
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
   const start = () => ({ name: p.name, batch: String(p.batch), department: p.department, session: p.session || '', upazila: p.upazila, union: p.union || '', gender: p.gender || '', phone: p.phone || '', bloodGroup: p.bloodGroup || '', occupation: p.occupation || '', workplace: p.workplace || '' })
-  const [v, setV] = useState(null)
+  const [v, setV] = useState(start) // the form is open straight away: everything but the email in one place
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -141,7 +140,7 @@ function EditDetails({ p }) {
     setBusy(true)
     try {
       auth.set(await api('/me/profile', { method: 'PATCH', body: JSON.stringify({ ...v, phone: v.phone.trim(), batch: Number(v.batch) }) }))
-      setV(null); setMsg({ tone: 'ok', text: t('dash.saved') })
+      setMsg({ tone: 'ok', text: t('dash.saved') }); toast('dash.saved')
     } catch (err) {
       if (err.fields) setErrs(err.fields)
       else setMsg({ tone: 'bad', text: t(errorKey(err) || 'admin.failed') })
@@ -194,7 +193,7 @@ function EditDetails({ p }) {
           <p className="muted small">{t('dash.change.emailNote')}</p>
           <div className="row-actions">
             <button className="btn btn-dark" disabled={busy} aria-busy={busy || undefined}>{t('dash.change.save')}</button>
-            <button type="button" className="btn btn-ghost" onClick={() => setV(null)}>{t('dash.change.cancel')}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { setV(start()); setErrs({}); setMsg(null) }}>{t('dash.change.cancel')}</button>
           </div>
         </form>
       )}
@@ -217,7 +216,7 @@ export function ProfileManager({ user, view = 'all' }) {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (p) setForm({ phone: p.phone || '', bloodGroup: p.bloodGroup || '', gender: p.gender || '', showInDirectory: p.showInDirectory, showPhone: p.showPhone === 'hidden' ? 'hidden' : 'members', showEmail: p.showEmail === 'hidden' ? 'hidden' : 'members', showBlood: p.showBlood === 'hidden' ? 'hidden' : 'members' })
+    if (p) setForm({ showInDirectory: p.showInDirectory, showPhone: p.showPhone === 'hidden' ? 'hidden' : 'members', showEmail: p.showEmail === 'hidden' ? 'hidden' : 'members', showBlood: p.showBlood === 'hidden' ? 'hidden' : 'members' })
   }, [p])
 
   const save = async (e) => {
@@ -267,6 +266,8 @@ export function ProfileManager({ user, view = 'all' }) {
             <div><dt>{t('dash.gender')}</dt><dd>{p.gender ? t(`ad.mem.${p.gender}`) : t('dash.notSet')}</dd></div>
             <div><dt>{t('dash.phone')}</dt><dd>{p.phone || t('dash.notSet')}</dd></div>
             <div><dt>{t('dash.bloodGroup')}</dt><dd>{p.bloodGroup || t('dash.notSet')}</dd></div>
+            {p.occupation && <div><dt>{t('auth.occupation')}</dt><dd>{p.occupation}</dd></div>}
+            {p.workplace && <div><dt>{t('auth.workplace')}</dt><dd>{p.workplace}</dd></div>}
             <div><dt>{t('dash.email')}</dt><dd>{user.email}</dd></div>
             <div><dt>{t('dash.listed')}</dt><dd>{p.showInDirectory ? t('ad.me.yes') : t('ad.me.no')}</dd></div>
           </dl>
@@ -274,28 +275,6 @@ export function ProfileManager({ user, view = 'all' }) {
           {showEdit && <EditDetails p={p} />}
           {showEdit && form && (
             <form onSubmit={save} className="card-form" noValidate>
-              <h2>{t('dash.contact')}</h2>
-              <label className="field">
-                <span>{t('dash.phone')}</span>
-                <input inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="01XXXXXXXXX" aria-invalid={!!errs.phone} />
-                {errs.phone && <small className="err">{errs.phone}</small>}
-              </label>
-              <label className="field">
-                <span>{t('auth.gender')}</span>
-                <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                  <option value="">{t('auth.genderNone')}</option>
-                  {[['female', 'ad.mem.female'], ['male', 'ad.mem.male'], ['other', 'ad.mem.other']].map(([val, k]) => <option key={val} value={val}>{t(k)}</option>)}
-                </select>
-                {errs.gender && <small className="err">{errs.gender}</small>}
-              </label>
-              <label className="field">
-                <span>{t('dash.bloodGroup')}</span>
-                <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })}>
-                  <option value="">{t('dash.notSet')}</option>
-                  {BLOOD.map((b) => <option key={b} value={b}>{b}</option>)}
-                </select>
-                {errs.bloodGroup && <small className="err">{errs.bloodGroup}</small>}
-              </label>
               <h2>{t('dash.visibility')}</h2>
               <label className="check" style={{ marginBottom: 14 }}>
                 <input type="checkbox" checked={form.showInDirectory} onChange={(e) => setForm({ ...form, showInDirectory: e.target.checked })} />{t('dash.listed')}

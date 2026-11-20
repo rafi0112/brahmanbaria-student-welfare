@@ -2057,6 +2057,10 @@ select option:disabled { color: var(--muted); }
 .blog-article .ba-cover { aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; margin: 0 0 8px; } .blog-article .ba-cover img { width: 100%; height: 100%; object-fit: cover; }
 .blog-article .prose { max-width: 68ch; line-height: 1.85; } .blog-article .prose p { margin: 0 0 1.15em; }
 .ba-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+.ba-author { display: flex; align-items: center; gap: 14px; margin: 8px 0 22px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card, var(--bg)); }
+.ba-author .bc-avatar { width: 48px; height: 48px; font-size: 1.05rem; flex: none; }
+.ba-author div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ba-author b { font-size: 1.05rem; overflow-wrap: anywhere; }
 .ba-end { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0; border-top: 1px solid var(--line); margin-top: 10px; }
 .ba-more-h { margin: 34px 0 16px; }
 .blog-grid-related { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
@@ -2189,10 +2193,14 @@ select option:disabled { color: var(--muted); }
 .cm-who { margin: 2px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
 
 /* admin-only: open this page's texts in the panel */
-.edit-texts { position: fixed; z-index: 59; left: 18px; bottom: 22px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+.edit-texts-wrap { position: fixed; z-index: 59; left: 18px; bottom: 22px; }
+.edit-texts-x { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--line-2); background: var(--card); color: var(--ink); font-size: 15px; line-height: 1; cursor: pointer; box-shadow: var(--shadow-pop); }
+.edit-texts-x:hover, .edit-texts-x:focus-visible { background: var(--accent-btn); color: #fff; border-color: transparent; }
+.edit-texts { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
   background: var(--ink); color: var(--paper); font-size: .85rem; font-weight: 600; text-decoration: none; box-shadow: var(--shadow-pop); opacity: .92; }
 .edit-texts:hover, .edit-texts:focus-visible { opacity: 1; background: var(--accent-btn); color: #fff; }
-@media (max-width: 560px) { .edit-texts { left: 12px; bottom: 16px; padding: 9px 13px; font-size: .8rem; } }
+@media (max-width: 560px) { .edit-texts-wrap { left: 12px; bottom: 16px; } .edit-texts { padding: 9px 13px; font-size: .8rem; } }
 
 /* Alumni heading: the gold gradient on the letters only (on the word's mask box too it showed as slivers above it) */
 .phero-v-stack .st-title .hl, .phero-v-stack .st-title .hl .st-w { background: none !important; -webkit-text-fill-color: currentColor; padding: 0; margin: 0; }

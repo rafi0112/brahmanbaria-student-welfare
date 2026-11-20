@@ -8,6 +8,8 @@ import { Notice, PageHeader, SearchBox, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
 import { describe, marksIn } from './textLabels.js'
 import { UNUSED_TEXTS } from './unusedTexts.js'
+import { useAuth } from '../lib/auth.jsx'
+import { editTextsHidden, setEditTextsHidden } from '../components/SiteHelpers.jsx'
 import AboutStats, { ABOUT_STAT_KEYS } from './AboutStats.jsx'
 
 // Every text of the public site and the member pages, in Bangla and English, changed from here without touching code.
@@ -122,6 +124,7 @@ export default function SiteTextsAdmin() {
     <>
       <PageHeader title={pick('ওয়েবসাইটের লেখা', 'Website texts')}
         desc={pick('সাইটে যা লেখা আছে, তা এখান থেকে বদলান। কোনো কোড লাগবে না।', 'Change the wording of the site here. No code needed.')} />
+      <ShowEditButtonAgain />
       <ol className="stx-how">
         <li>{pick('উপরের বোতাম থেকে সাইটের অংশ বাছুন (যেমন “হোম পেজ”), অথবা যে লেখা বদলাতে চান তার কয়েকটি শব্দ খোঁজার ঘরে লিখুন।', 'Pick a part of the site from the buttons (such as “Home page”), or type a few words of the text you want to change into the search box.')}</li>
         <li>{pick('প্রতিটি কার্ডে লেখা আছে লেখাটি সাইটের কোথায় দেখায় এবং সেটি কী (শিরোনাম, বোতাম, বার্তা…)। ঘরে এখনকার লেখাই আছে; সেখানেই বদলান।', 'Each card says where the text appears and what it is (a heading, a button, a message…). The box holds the current wording; change it right there.')}</li>
@@ -178,5 +181,19 @@ export default function SiteTextsAdmin() {
         )}
       </Data>
     </>
+  )
+}
+
+// An admin who closed the "Edit this page's texts" button (the small ×) can bring it back here.
+function ShowEditButtonAgain() {
+  const { pick } = useApp()
+  const { user } = useAuth()
+  const [hidden, setHidden] = useState(() => !!user && editTextsHidden(user.id))
+  if (!user || !hidden) return null
+  return (
+    <p className="notice stx-showbtn">
+      {pick('আপনি পাবলিক পাতার “এই পাতার লেখা বদলান” বোতামটি নিজের জন্য সরিয়ে রেখেছেন।', 'You hid the “Edit this page’s texts” button on the public pages for yourself.')}{' '}
+      <button type="button" className="btn btn-outline btn-sm" onClick={() => { setEditTextsHidden(user.id, false); setHidden(false) }}>{pick('বোতামটি আবার দেখান', 'Show the button again')}</button>
+    </p>
   )
 }

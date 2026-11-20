@@ -371,6 +371,26 @@ test('admin: each public page has a button to its own texts; visitors do not see
   await expect(page.locator('.stx-row[data-text="about.district1"]')).toBeVisible()
   await page.goto('/events')
   await expect(page.locator('.edit-texts')).toHaveAttribute('href', '/admin/site-texts?part=events')
+
+  // the small × hides it for this admin (on every page, after a reload too); "Website texts" brings it back
+  await page.getByRole('button', { name: 'এই বোতাম আমার জন্য সরিয়ে দিন' }).click()
+  await expect(page.locator('.edit-texts')).toHaveCount(0)
+  await page.goto('/about')
+  await expect(page.locator('.edit-texts')).toHaveCount(0)
+  await page.goto('/admin/site-texts')
+  await page.getByRole('button', { name: 'বোতামটি আবার দেখান' }).click()
+  await page.goto('/about')
+  await expect(page.locator('.edit-texts')).toBeVisible()
+})
+
+test('a signed-in member who is not an admin never sees the edit-texts button', async ({ page }) => {
+  // a member account (role "member") gets no button on any public page
+  await page.route('**/api/v1/auth/me', (r) => r.fulfill({ json: { user: { id: 'm-1', email: 'member@example.com', role: 'member' }, profile: null } }))
+  for (const path of ['/', '/about', '/events']) {
+    await page.goto(path)
+    await expect(page.locator('.acct-btn')).toBeVisible() // signed in as the member
+    await expect(page.locator('.edit-texts')).toHaveCount(0)
+  }
 })
 
 test('admin: the About numbers are set in their own panel, and go back to being counted', async ({ page }) => {

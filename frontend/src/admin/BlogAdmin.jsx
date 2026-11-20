@@ -178,13 +178,13 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
                     <WriteBox id={fid} value={v.bodyBn} onChange={(x) => setV((s) => ({ ...s, bodyBn: x }))} invalid={bad} maxLength={60000} lang="bn" onPicture={picture} GalleryModal={GalleryChooser} rows={16} />)}</Field>
                 </>
               )}
+              <Field label={t('ad.blog.author')} error={e.author} max={80} count={v.author.length} hint={t('ad.blog.authorHint')}>{(fid, bad) => <input id={fid} value={v.author} onChange={set('author')} maxLength={80} aria-invalid={bad} placeholder={author} />}</Field>
             </fieldset>
 
             <fieldset className="ad-section"><legend>{t('ad.blog.sec.details')}</legend>
               <div className="ad-grid">
                 <Field label={t('ad.blog.category')} error={e.category}>{(fid, bad) => (
                   <select id={fid} value={v.category} onChange={set('category')} aria-invalid={bad}>{CATS.map((c) => <option key={c} value={c}>{t(`cat.${c}`)}</option>)}</select>)}</Field>
-                <Field label={t('ad.blog.author')} error={e.author} max={80} count={v.author.length}>{(fid, bad) => <input id={fid} value={v.author} onChange={set('author')} maxLength={80} aria-invalid={bad} />}</Field>
                 <Field label={t('ad.blog.tags')} error={e.tags} hint={t('ad.blog.tagsHint')}>{(fid, bad) => <input id={fid} value={v.tagsText} onChange={set('tagsText')} aria-invalid={bad} />}</Field>
                 <Field label={t('ad.blog.date')} error={e.date} hint={t('ad.blog.dateHint')}>{(fid, bad) => <input id={fid} type="date" value={v.date} onChange={set('date')} aria-invalid={bad} />}</Field>
               </div>

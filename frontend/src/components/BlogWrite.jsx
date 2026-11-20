@@ -54,7 +54,8 @@ export default function BlogWrite() {
 
 function WriteForm() {
   const { t, n, lang } = useApp()
-  const [v, setV] = useState(() => ({ title: '', body: '', ...readDraft() }))
+  const { profile } = useAuth()
+  const [v, setV] = useState(() => ({ title: '', body: '', author: '', ...readDraft() }))
   const [photos, setPhotos] = useState([]) // { id, file, url }
   const [st, setSt] = useState({ status: 'idle', fields: {}, msg: '' })
   const [over, setOver] = useState(false)
@@ -85,6 +86,7 @@ function WriteForm() {
     const form = new FormData()
     form.append('title', v.title)
     form.append('body', v.body)
+    form.append('author', (v.author || '').trim())
     try {
       for (const [i, p] of photos.entries()) {
         let blob = p.file
@@ -97,7 +99,7 @@ function WriteForm() {
       setSt({ status: 'sending', fields: {}, msg: '' })
       await api('/me/blog-submissions', { method: 'POST', body: form })
       photos.forEach((p) => URL.revokeObjectURL(p.url))
-      setPhotos([]); setV({ title: '', body: '' })
+      setPhotos([]); setV({ title: '', body: '', author: v.author || '' })
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* */ }
       setSt({ status: 'ok', fields: {}, msg: '' })
       toast('blogw.toast')
@@ -136,6 +138,11 @@ function WriteForm() {
         <small id="bw-body-h" className="muted">{t('blogw.bodyH')}</small>
         {st.fields.body && <small className="err">{st.fields.body}</small>}
       </div>
+      <label className="field">
+        <span>{t('blogw.authorL')}</span>
+        <input value={v.author || ''} onChange={(e) => setV({ ...v, author: e.target.value })} maxLength={80} placeholder={profile?.name || ''} autoComplete="name" />
+        <small className="muted">{t('blogw.authorH')}</small>
+      </label>
 
       <div className="field">
         <span id="bw-ph-l">{t('blogw.photosL')} <small className="muted">({n(photos.length)}/{n(MAX_PHOTOS)})</small></span>

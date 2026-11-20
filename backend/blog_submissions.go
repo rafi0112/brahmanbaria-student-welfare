@@ -356,9 +356,13 @@ func (a *App) submitBlog(w http.ResponseWriter, r *http.Request, u User) {
 		}
 		photos = append(photos, SubmissionPhoto{ContentType: ct, Data: out})
 	}
-	name := u.Email
-	if p, err := a.Auth.Store.ProfileByUser(r.Context(), u.ID); err == nil && p != nil && p.Name != "" {
-		name = p.Name
+	// the writer's name shown under the post: the one the member typed, else the name on their profile
+	name := oneLine(r.FormValue("author"), 80)
+	if name == "" {
+		name = u.Email
+		if p, err := a.Auth.Store.ProfileByUser(r.Context(), u.ID); err == nil && p != nil && p.Name != "" {
+			name = p.Name
+		}
 	}
 	s, err := a.Auth.Store.CreateSubmission(r.Context(), BlogSubmission{UserID: u.ID, AuthorName: oneLine(name, 120), Email: u.Email, Title: title, Body: body}, photos)
 	if err != nil {

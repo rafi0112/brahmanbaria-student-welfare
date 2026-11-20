@@ -26,6 +26,7 @@ test('blog: a member sends writing with several pictures; an admin reads it and 
   await expect(form.getByText('Give a title of at least 3 characters.')).toBeVisible()
 
   await form.getByLabel('Title').fill(TITLE)
+  await form.getByLabel("Writer's name").fill('Rahim Writer')
   await form.getByLabel('Your writing').fill('We took a boat on the Titas with friends from the district.\n\nThe river was calm and the sky turned gold.')
   await page.evaluate(async () => {
     const dt = new DataTransfer()
@@ -74,6 +75,8 @@ test('blog: a member sends writing with several pictures; an admin reads it and 
   await card.click()
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible()
   await expect(page.locator('.prose').getByText('The river was calm')).toBeVisible()
+  await expect(page.locator('.ba-author')).toContainText('Written by')
+  await expect(page.locator('.ba-author')).toContainText('Rahim Writer')
 
   // the member sees it is published, with a link to it
   await page.goto('/blog#write')

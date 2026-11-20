@@ -60,9 +60,9 @@ test('account menu, profile dialog with every detail, editing and a profile phot
 
   // update: contact details save directly
   await dlg.getByRole('tab', { name: 'Update' }).click()
-  const phone = dlg.getByLabel('Mobile number').first()
-  await phone.fill('01898765432')
-  await dlg.getByRole('button', { name: 'Save' }).click()
+  const details = dlg.locator('section[aria-labelledby="chg-h"] form')
+  await details.getByLabel('Mobile number').fill('01898765432')
+  await details.getByRole('button', { name: /Save/ }).click()
   await expect(dlg.getByText('Saved.')).toBeVisible()
 
   // photo: the chosen picture opens in the editor first (square for a profile photo); turn it, use it, it is uploaded,
@@ -135,11 +135,13 @@ test('an approved member corrects their own details (not the email) from My prof
   await page.getByRole('menuitem', { name: 'My profile' }).click()
   const dlg = page.locator('dialog.pdialog')
   await dlg.getByRole('tab', { name: 'Update' }).click()
-  await dlg.getByRole('button', { name: 'Edit your details' }).click()
+  // the form is open at once, with every detail but the email
   const form = dlg.locator('section[aria-labelledby="chg-h"] form')
   await form.getByLabel('Full name').or(form.getByLabel(/^Name/)).first().fill('Corrected Person')
   await form.locator('select').first().selectOption('17')
   await form.getByLabel(/Profession/).fill('Researcher')
+  await form.getByLabel(/workplace/i).fill('BSWA Lab')
+  await form.getByLabel(/Mobile number/).fill('01812345678')
   await expect(form.getByText(/You sign in with your email/)).toBeVisible()
   await form.getByRole('button', { name: /Save/ }).click()
   await expect(dlg.getByText('Saved.').first()).toBeVisible()
@@ -147,6 +149,8 @@ test('an approved member corrects their own details (not the email) from My prof
   expect(after.profile.name).toBe('Corrected Person')
   expect(after.profile.batch).toBe(17)
   expect(after.profile.occupation).toBe('Researcher')
+  expect(after.profile.workplace).toBe('BSWA Lab')
+  expect(after.profile.phone).toBe('01812345678')
   expect(after.profile.status).toBe('approved')
   expect(after.user.email).toBe(E2E.email)
 })

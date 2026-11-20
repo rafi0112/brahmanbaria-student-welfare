@@ -115,6 +115,12 @@ export function BlogPost() {
                 {!p.imageUrl && p.image && <Credit id={p.image} />}
                 <div className="prose"><Markdown text={pick(p.bodyBn, p.bodyEn).join('\n\n')} /></div>
                 {p.tags?.length > 0 && <div className="ba-tags">{p.tags.map((x) => <span key={x} className="chip">#{x}</span>)}</div>}
+                {p.author && (
+                  <aside className="ba-author" aria-label={t('blog.writtenBy')}>
+                    <span className="bc-avatar" aria-hidden="true">{initials(p.author)}</span>
+                    <div><small className="muted">{t('blog.writtenBy')}</small><b>{p.author}</b></div>
+                  </aside>
+                )}
                 <div className="ba-end">
                   <Link className="link-arrow" to={`${base}/blog`}>← {t('blog.back')}</Link>
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => share(title)}>{t('events.share')}</button>
