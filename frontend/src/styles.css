@@ -1541,6 +1541,12 @@ html[lang='bn'] .sd-suggest h3, html[lang='bn'] .sd-group { font-size: .82rem; l
 .sd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .sd-chips button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 500 .88rem/1 var(--font-body); cursor: pointer; transition: border-color .2s, background-color .2s, color .2s; }
 .sd-chips button svg { color: var(--accent-ink); }
+.sd-recent-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sd-clear { font-size: .82rem; }
+.sd-recent-chip { display: inline-flex; align-items: center; }
+.sd-chips .sd-recent-chip > button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; padding-right: 8px; }
+.sd-chips .sd-recent-chip > .sd-recent-x { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0 11px 0 7px; font-size: 1.05rem; color: var(--muted); }
+.sd-chips .sd-recent-chip > .sd-recent-x:hover, .sd-chips .sd-recent-chip > .sd-recent-x:focus-visible { color: var(--accent-ink); }
 .sd-chips button:hover { border-color: var(--teal); color: var(--teal); background: color-mix(in srgb, var(--teal) 6%, var(--paper)); }
 .sd-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .sd-pages button { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 12px; border-radius: 12px; border: 0; background: var(--paper-2); color: var(--ink); font: 500 .9rem/1.2 var(--font-body); cursor: pointer; text-align: left; transition: background-color .2s; }
@@ -1746,11 +1752,18 @@ button.sp-avatar:focus-visible { outline: 3px solid var(--accent); outline-offse
   background: color-mix(in srgb, var(--card) 80%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 18px 40px -20px rgba(0, 0, 0, .45); }
 
 /* glass (Events): a deeply rounded photo with a dark fade at the foot, a thin accent ring, a soft glow and the line written on the photo */
-.phero-v-glass .phero-media { border-radius: 32px; margin: 12px 12px 12px 0; outline: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 10px;
-  box-shadow: 0 40px 70px -35px rgba(0, 0, 0, .5); }
-.phero-v-glass .phero-media::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, transparent 42%, rgba(8, 28, 22, .66)); }
-.phero-v-glass .phero-deco-a { display: block; width: clamp(90px, 8vw, 130px); aspect-ratio: 1; right: -22px; top: -26px; border-radius: 50%; mix-blend-mode: normal;
-  border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); background: none; }
+/* the Events picture sits in the same kind of card as the rest of the Events page: a soft surface, a thin line,
+   rounded corners and a small calendar badge in the corner */
+/* the frame is drawn with rings around the picture (a card-coloured band and a thin line), so the picture keeps its size */
+.phero-v-glass .phero-media { --frame: color-mix(in srgb, var(--card) 86%, var(--accent) 14%); border-radius: 20px; margin: 22px 22px 22px 10px; overflow: visible; outline: 0;
+  box-shadow: 0 0 0 10px var(--frame), 0 0 0 11px var(--line-2), 0 40px 70px -40px rgba(0, 0, 0, .6); }
+.phero-v-glass .phero-media img, .phero-v-glass .phero-media .photo { border-radius: 20px; }
+.phero-v-glass .phero-media::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 20px; pointer-events: none;
+  background: linear-gradient(180deg, transparent 60%, rgba(20, 14, 8, .28)); }
+.phero-v-glass .phero-media::before { content: ''; position: absolute; z-index: 2; left: -24px; top: -24px; width: 46px; height: 46px; border-radius: 14px;
+  background: var(--accent-btn) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='3'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") center / 22px no-repeat;
+  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .45); }
+.phero-v-glass .phero-deco-a { display: none; }
 .phero-v-glass .phero-deco-b { display: block; z-index: 0; width: clamp(180px, 18vw, 280px); aspect-ratio: 1; left: calc(52% - 90px); bottom: -70px; border-radius: 50%; mix-blend-mode: normal;
   background: radial-gradient(closest-side, color-mix(in srgb, var(--peach) 85%, transparent), transparent); filter: blur(6px); }
 .phero-v-glass .phero-script { top: auto; right: auto; left: calc(52% + 58px); bottom: 42px; max-width: 16ch; text-align: left; font-size: clamp(1.25rem, 2vw, 1.8rem); }
@@ -1761,7 +1774,9 @@ html[data-theme='dark'] .phero-v-stack .phero-script { color: var(--ink); }
   .phero-v-stack .phero-media { border-radius: 20px; margin: 0 16px 16px 0; box-shadow: 8px 8px 0 0 color-mix(in srgb, var(--teal) 34%, var(--paper)), 16px 16px 0 0 color-mix(in srgb, var(--peach) 75%, var(--paper)); }
   .phero-v-stack .phero-deco-b { display: none; }
   .phero-v-stack .phero-script { display: block; left: 12px; bottom: 30px; font-size: .95rem; padding: 9px 12px; }
-  .phero-v-glass .phero-media { border-radius: 24px; margin: 0; outline: 0; box-shadow: 0 24px 40px -26px rgba(0, 0, 0, .5); }
+  .phero-v-glass .phero-media { border-radius: 16px; margin: 14px 7px 7px; outline: 0; box-shadow: 0 0 0 7px var(--frame), 0 0 0 8px var(--line-2), 0 24px 40px -26px rgba(0, 0, 0, .5); }
+  .phero-v-glass .phero-media img, .phero-v-glass .phero-media .photo, .phero-v-glass .phero-media::after { border-radius: 16px; }
+  .phero-v-glass .phero-media::before { left: -6px; top: -16px; width: 36px; height: 36px; border-radius: 11px; background-size: 18px; }
   .phero-v-glass .phero-deco-a, .phero-v-glass .phero-deco-b { display: none; }
   .phero-v-glass .phero-script { display: block; left: 24px; bottom: 26px; font-size: 1.1rem; }
 }
@@ -2147,7 +2162,7 @@ select option:disabled { color: var(--muted); }
 .hab.section { padding-bottom: clamp(20px, 3vw, 36px); } .hab.section + .section { padding-top: clamp(24px, 3.4vw, 44px); }
 /* Events page: a calmer, wider picture, so the heading beside it need not be oversized */
 .phero-v-glass .phero { min-height: 0; padding-block: clamp(10px, 2vw, 24px); }
-.phero-v-glass .phero-media { align-self: center; min-height: 0; aspect-ratio: 16 / 8.2; max-height: 300px; width: 100%; }
+.phero-v-glass .phero-media { align-self: center; min-height: 0; aspect-ratio: 16 / 8.2; max-height: 300px; width: auto; justify-self: stretch; }
 .phero-v-glass .phero-media img, .phero-v-glass .phero-media .photo { width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 860px) { .phero-v-glass .phero-media { aspect-ratio: 16 / 9; max-height: 240px; } }
 

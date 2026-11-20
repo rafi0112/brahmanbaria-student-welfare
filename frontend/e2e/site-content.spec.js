@@ -37,7 +37,7 @@ test.describe('in English', () => {
       await page.goto(path)
       await expect(page.locator(`.phero-wrap.phero-v-${variant}`)).toBeVisible()
       await expect(page.locator('.phero-v-bleed')).toHaveCount(0)
-      await expect(page.locator('.phero-script')).toHaveCount(path === '/alumni' ? 0 : 1) // no line written on the Alumni picture
+      await expect(page.locator('.phero-script')).toHaveCount(0) // no line written on the Alumni or the Events picture
     }
     await page.goto('/students')
     await expect(page.locator('.phero-v-bleed')).toBeVisible()

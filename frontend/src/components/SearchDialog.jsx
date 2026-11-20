@@ -7,6 +7,8 @@ import Icon from './Icon.jsx'
 const RECENT_KEY = 'jk-recent-search'
 const readRecent = () => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').slice(0, 5) } catch { return [] } }
 const saveRecent = (q) => { try { localStorage.setItem(RECENT_KEY, JSON.stringify([q, ...readRecent().filter((x) => x !== q)].slice(0, 5))) } catch { /* private mode */ } }
+// recent searches stay only in this browser; the person can remove one, or all of them
+const writeRecent = (list) => { try { if (list.length) localStorage.setItem(RECENT_KEY, JSON.stringify(list)); else localStorage.removeItem(RECENT_KEY) } catch { /* private mode */ } }
 
 const norm = (v) => (v || '').toString().toLowerCase()
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -117,9 +119,18 @@ export default function SearchDialog({ onClose, onProfile }) {
           {!needle && (
             <div className="sd-suggest">
               {recent.length > 0 && (
-                <section>
-                  <h3>{t('search.recentSearches')}</h3>
-                  <div className="sd-chips">{recent.map((r) => <button key={r} type="button" onClick={() => { setQ(r); input.current?.focus() }}><Icon name="clock" size={13} />{r}</button>)}</div>
+                <section className="sd-recent">
+                  <div className="sd-recent-h">
+                    <h3>{t('search.recentSearches')}</h3>
+                    <button type="button" className="btn-link sd-clear" onClick={() => { writeRecent([]); setRecent([]); input.current?.focus() }}>{t('search.clearRecent')}</button>
+                  </div>
+                  <div className="sd-chips">{recent.map((r) => (
+                    <span key={r} className="sd-recent-chip">
+                      <button type="button" onClick={() => { setQ(r); input.current?.focus() }}><Icon name="clock" size={13} />{r}</button>
+                      <button type="button" className="sd-recent-x" aria-label={`${t('search.removeRecent')}: ${r}`} title={t('search.removeRecent')}
+                        onClick={() => { const next = recent.filter((x) => x !== r); writeRecent(next); setRecent(next); input.current?.focus() }}>×</button>
+                    </span>
+                  ))}</div>
                 </section>
               )}
               <section>
