@@ -154,3 +154,43 @@ func TestLogoSketchesAndProfileCoverAcceptAPicture(t *testing.T) {
 		}
 	}
 }
+
+// An admin changes one picture from the page itself (the student profile pictures): only that picture changes,
+// a member cannot do it, unknown places are refused, and an empty picture goes back to the built-in one.
+func TestOnePagePictureIsChangedFromThePage(t *testing.T) {
+	e := cmsApp(t)
+	rec := uploadReqTo(e, "/api/v1/admin/media", "admin-token", nil, solidPNG(220, 120, 255))
+	var up struct{ Path string }
+	decodeBody(t, rec, &up)
+	other := uploadReqTo(e, "/api/v1/admin/media", "admin-token", nil, solidPNG(230, 120, 255))
+	var up2 struct{ Path string }
+	decodeBody(t, other, &up2)
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images", map[string]any{"hero": []any{}, "pages": map[string]string{"students": up2.Path}}); rec.Code != 200 {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images/page/profile-side", map[string]string{"image": up.Path}); rec.Code != 200 {
+		t.Fatalf("one picture: %d %s", rec.Code, rec.Body)
+	}
+	var pub siteImgOut
+	decodeBody(t, jreq(e, "GET", "/api/v1/site-images", "", nil), &pub)
+	if !strings.HasSuffix(fmt.Sprint(pub.Pages["profile-side"]), up.Path) || !strings.HasSuffix(fmt.Sprint(pub.Pages["students"]), up2.Path) {
+		t.Fatalf("the side picture is set and the others stay: %v", pub.Pages)
+	}
+	if rec := jreq(e, "PUT", "/api/v1/admin/settings/site-images/page/profile-side", "", map[string]string{"image": up.Path}); rec.Code != 401 && rec.Code != 403 {
+		t.Fatalf("signed out: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images/page/nope", map[string]string{"image": up.Path}); rec.Code != 404 {
+		t.Fatalf("unknown place: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images/page/profile-side", map[string]string{"image": "../../etc/passwd"}); rec.Code != 422 {
+		t.Fatalf("bad path: %d", rec.Code)
+	}
+	if rec := adminJSON(e, "PUT", "/api/v1/admin/settings/site-images/page/profile-side", map[string]string{"image": ""}); rec.Code != 200 {
+		t.Fatalf("back to built-in: %d", rec.Code)
+	}
+	pub = siteImgOut{} // a fresh value: decoding into the old map would keep the old keys
+	decodeBody(t, jreq(e, "GET", "/api/v1/site-images", "", nil), &pub)
+	if _, still := pub.Pages["profile-side"]; still {
+		t.Fatalf("the built-in picture is back: %v", pub.Pages)
+	}
+}

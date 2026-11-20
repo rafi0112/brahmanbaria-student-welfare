@@ -26,6 +26,7 @@ const INNER = [
   ['about-art-2', 'আমাদের সম্পর্কে: লেখার পাশের দ্বিতীয় ছবি', 'About: second picture beside the text'],
   ['home-community', 'হোম: “যারা গড়ছে আগামী” অংশের ছবি', 'Home: “The people shaping tomorrow” picture'],
   ['profile-cover', 'শিক্ষার্থীর প্রোফাইল পাতার উপরের ছবি', 'Picture at the top of a student’s profile page'],
+  ['profile-side', 'শিক্ষার্থীর প্রোফাইল পাতা: তথ্যের পাশের ছবি', 'Student profile page: picture beside the details'],
   ['heritage-discover-1', 'ঐতিহ্য পাতা: “ঐতিহ্য ও নিদর্শন” কার্ড', 'Heritage page: “Heritage & Landmarks” card'],
   ['heritage-discover-2', 'ঐতিহ্য পাতা: “ইসলামী সংস্কৃতি ও ঐতিহ্য” কার্ড', 'Heritage page: “Islamic Culture & Traditions” card'],
   ['heritage-discover-3', 'ঐতিহ্য পাতা: “নদী ও প্রকৃতি” কার্ড', 'Heritage page: “Rivers & Nature” card'],

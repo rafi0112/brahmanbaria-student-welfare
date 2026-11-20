@@ -470,7 +470,7 @@ function Imported() {
 
 // Add or edit a hand-added directory record. This never creates an account or confirms an email address.
 // The photo of a record that came from the form: its saved public link, which the admin can replace or remove.
-function RecordPhotoLink({ row }) {
+export function RecordPhotoLink({ row, onSaved }) {
   const { pick } = useApp()
   const errText = useErrText()
   const [link, setLink] = useState(row.private?.photoLink || '')
@@ -482,7 +482,7 @@ function RecordPhotoLink({ row }) {
     setBusy(true); setMsg('')
     try {
       await api(`/admin/directory/${row.id}/photo-link`, { method: 'PUT', body: JSON.stringify({ photoLink: value }) })
-      setSaved(value); setLink(value); setVer((x) => x + 1)
+      setSaved(value); setLink(value); setVer((x) => x + 1); onSaved?.()
       setMsg(value ? pick('ছবির লিংক সংরক্ষণ হয়েছে।', 'Photo link saved.') : pick('ছবি সরানো হয়েছে।', 'Photo removed.'))
     } catch (e) { setMsg(e.fields?.photoLink || errText(e)) } finally { setBusy(false) }
   }

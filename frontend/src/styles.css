@@ -2208,3 +2208,17 @@ select option:disabled { color: var(--muted); }
 .phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #e7a33e 0%, #c98a2b 45%, #915907 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding: 0 .06em; margin: 0 -.06em; }
 :root[data-theme='dark'] .phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; } }
+
+/* admins: change the pictures of a profile page right there (cover, the person's photo, the picture beside the details) */
+.sp-avatar-wrap { position: relative; margin-top: calc(-1 * clamp(44px, 6vw, 80px)); align-self: start; justify-self: start; }
+.sp-avatar-wrap > .sp-avatar { margin-top: 0; }
+.is-modal .sp-avatar-wrap { margin-top: 0; }
+@media (max-width: 640px) { .sp-avatar-wrap { margin-top: -48px; } }
+.sp-cover { position: relative; }
+.pic-edit { position: absolute; z-index: 3; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35);
+  background: rgba(20, 18, 16, .72); color: #fff; font: 600 .8rem/1 var(--font-body); cursor: pointer; backdrop-filter: blur(6px); }
+.pic-edit:hover, .pic-edit:focus-visible { background: var(--accent-btn); border-color: transparent; }
+.pic-edit-cover { right: 16px; top: 14px; }
+.pic-edit-side { right: 10px; bottom: 10px; }
+.pic-edit-avatar { right: -6px; bottom: -6px; padding: 7px; }
+.pic-edit-avatar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -22,9 +22,9 @@ function load() {
 export function useSiteImages() {
   const [v, setV] = useState(cache || EMPTY)
   useEffect(() => {
-    if (cache) { setV(cache); return undefined }
-    listeners.add(setV)
-    load()
+    listeners.add(setV) // also told when an admin changes a picture from the page itself
+    if (cache) setV(cache)
+    else load()
     return () => listeners.delete(setV)
   }, [])
   return v
@@ -32,6 +32,9 @@ export function useSiteImages() {
 
 // After an admin saves new pictures, the next public page picks them up without a reload.
 export function forgetSiteImages() { cache = null; pending = null }
+
+// Fetch the pictures again now, so the page that is open shows a picture an admin just changed.
+export function reloadSiteImages() { cache = null; pending = null; return load() }
 
 const SITE = {
   bn: 'ব্রাহ্মণবাড়িয়া জেলা ছাত্রকল্যাণ পরিষদ, জগন্নাথ বিশ্ববিদ্যালয়',

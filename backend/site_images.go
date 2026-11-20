@@ -26,7 +26,7 @@ var sitePageKeys = map[string]bool{"students": true, "alumni": true, "committee"
 	// pictures inside pages (not at their top): the two beside the About text, the small one and the community photo on Home
 	"about-art-1": true, "about-art-2": true, "home-inset": true, "home-community": true,
 	// the logo, the student profile cover and the pencil sketches
-	"logo": true, "profile-cover": true, "sketch-river": true, "sketch-heritage": true, "sketch-students": true, "sketch-vine-tl": true,
+	"logo": true, "profile-cover": true, "profile-side": true, "sketch-river": true, "sketch-heritage": true, "sketch-students": true, "sketch-vine-tl": true,
 	// the heritage page's discovery cards and culture pictures
 	"heritage-discover-1": true, "heritage-discover-2": true, "heritage-discover-3": true,
 	"heritage-culture-1": true, "heritage-culture-2": true, "heritage-culture-3": true, "heritage-culture-4": true}
@@ -191,6 +191,47 @@ func (a *App) siteImagesRoutes(m *http.ServeMux, h func(func(http.ResponseWriter
 	m.HandleFunc("GET /api/v1/site-images", h(a.siteImagesPublic))
 	m.HandleFunc("GET /api/v1/admin/settings/site-images", adm(a.siteImagesGet))
 	m.HandleFunc("PUT /api/v1/admin/settings/site-images", adm(a.siteImagesPut))
+	m.HandleFunc("PUT /api/v1/admin/settings/site-images/page/{key}", adm(a.siteImagePagePut))
+}
+
+// siteImagePagePut changes one page picture (from the page itself, by an admin) and leaves every other choice as it is.
+// An empty image goes back to the built-in picture.
+func (a *App) siteImagePagePut(w http.ResponseWriter, r *http.Request, u User) {
+	key := r.PathValue("key")
+	if !sitePageKeys[key] {
+		apiError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	var b struct {
+		Image string `json:"image"`
+	}
+	if !decode(w, r, &b) {
+		return
+	}
+	si, err := siteImages(r.Context(), a.Auth.Store)
+	if err != nil {
+		log.Printf("site images: %v", err)
+		apiError(w, 500, "could not load")
+		return
+	}
+	if si.Pages == nil {
+		si.Pages = map[string]string{}
+	}
+	if img := strings.TrimSpace(b.Image); img == "" {
+		delete(si.Pages, key)
+	} else {
+		si.Pages[key] = img
+	}
+	if errs := checkSiteImages(&si); len(errs) > 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "validation failed", "fields": errs})
+		return
+	}
+	if err := a.Auth.Store.SetSetting(r.Context(), u.ID, settingSiteImages, si); err != nil {
+		log.Printf("site images: %v", err)
+		apiError(w, 500, "could not save")
+		return
+	}
+	writeJSON(w, 200, a.siteImagesOut(si, false))
 }
 
 func (a *App) siteImagesPublic(w http.ResponseWriter, r *http.Request) {

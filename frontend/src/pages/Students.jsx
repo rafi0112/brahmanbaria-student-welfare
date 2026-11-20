@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useApi, qs } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
@@ -12,6 +12,10 @@ import ProfileDialog from '../components/ProfileDialog.jsx'
 import { useProfileParam } from '../lib/profileParam.js'
 import Reveal from '../components/Reveal.jsx'
 import { StudentCard } from '../components/cards.jsx'
+
+// admins change the pictures of a profile page right there; the editors load only for them
+const SitePictureEdit = lazy(() => import('../admin/ProfilePictureEdit.jsx').then((m) => ({ default: m.SitePictureEdit })))
+const PersonPhotoEdit = lazy(() => import('../admin/ProfilePictureEdit.jsx').then((m) => ({ default: m.PersonPhotoEdit })))
 
 function useDebounced(v, ms = 250) {
   const [d, setD] = useState(v)
@@ -113,6 +117,8 @@ export function StudentDetail({ id: idProp, modal = false }) {
   const res = useApi(`/students/${id}`)
   const ups = useApi('/upazilas')
   const note = useViewNote(res.data?.view)
+  const { user } = useAuth()
+  const admin = user?.role === 'admin'
   return (
     <Data q={res} skeleton="detail">
       {(s) => {
@@ -133,14 +139,18 @@ export function StudentDetail({ id: idProp, modal = false }) {
           <article className={`sprofile${modal ? ' is-modal' : ''}`}>
             {!modal && <div className="wrap sp-crumbs"><Crumbs items={[{ to: '/', label: t('nav.home') }, { to: `${base}/students`, label: t('nav.students') }, { label: s.name }]} /></div>}
             {!modal && (
-              <div className="sp-cover" aria-hidden="true">
+              <div className="sp-cover">
                 {site.pages['profile-cover'] ? <img src={site.pages['profile-cover']} alt="" width="1672" height="941" />
                   : <img src="/images/bswa/hero-1672.webp" srcSet="/images/bswa/hero-1000.webp 1000w, /images/bswa/hero-1672.webp 1672w" sizes="100vw" alt="" width="1672" height="941" />}
+                {admin && <Suspense fallback={null}><SitePictureEdit slot="profile-cover" current={site.pages['profile-cover']} className="pic-edit-cover" /></Suspense>}
               </div>
             )}
             {modal && <div className="pm-cover" aria-hidden="true" />}
             <div className={modal ? 'sp-head' : 'wrap sp-head'}>
-              <SpAvatar name={s.name} photo={s.photo || d?.photoUrl} />
+              <div className="sp-avatar-wrap">
+                <SpAvatar name={s.name} photo={s.photo || d?.photoUrl} />
+                {admin && <Suspense fallback={null}><PersonPhotoEdit person={{ id: s.id, name: s.name, photo: s.photo || d?.photoUrl, photoLink: d?.record?.photoLink }} onSaved={res.retry} /></Suspense>}
+              </div>
               <div className="sp-id">
                 <h1>{s.name}{s.verified && <VerifiedMark size={22} />}</h1>
                 <ul className="sp-chips">
@@ -203,7 +213,10 @@ export function StudentDetail({ id: idProp, modal = false }) {
               </div>
               {!modal && <aside className="sp-side">
                 <div className="sp-place">
-                  <div className="sp-place-img"><img src="/images/bswa/river.webp" alt="" width="740" height="421" loading="lazy" decoding="async" /></div>
+                  <div className="sp-place-img">
+                    <img src={site.pages['profile-side'] || '/images/bswa/river.webp'} alt="" width="740" height="421" loading="lazy" decoding="async" />
+                    {admin && <Suspense fallback={null}><SitePictureEdit slot="profile-side" current={site.pages['profile-side']} className="pic-edit-side" /></Suspense>}
+                  </div>
                   <p className="kicker">{t('students.from')}</p>
                   <h3>{upName || '—'}</h3>
                   {up && <Link className="link-arrow" to={`/directory/${up.slug}`}>{t('dir.view')} <Icon name="arrow" size={15} className="arr" /></Link>}
