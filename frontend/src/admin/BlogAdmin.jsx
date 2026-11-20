@@ -5,6 +5,7 @@ import { api } from '../lib/api.js'
 import { useAuth } from '../lib/auth.jsx'
 import Markdown from '../components/Markdown.jsx'
 import WriteBox from '../components/WriteBox.jsx'
+import GalleryChooser from './GalleryChooser.jsx'
 import { storeImageFile } from '../lib/mediaUpload.js'
 import { MediaPhoto } from '../components/ui.jsx'
 import { ContentList, EditorGate, EditorModal, StatusPanel, useEditParam, useEntryEditor } from './content.jsx'
@@ -168,13 +169,13 @@ export function BlogEditor({ entryId, onClose, onCreated }) {
                 <>
                   <Field label={t('ad.excerpt')} error={e.excerptEn} max={400} count={v.excerptEn.length}>{(fid, bad) => <textarea id={fid} rows={2} value={v.excerptEn} onChange={set('excerptEn')} maxLength={400} aria-invalid={bad} />}</Field>
                   <Field label={t('ad.body')} error={e.bodyEn}>{(fid, bad) => (
-                    <WriteBox id={fid} value={v.bodyEn} onChange={(x) => setV((s) => ({ ...s, bodyEn: x }))} invalid={bad} maxLength={60000} lang="en" onPicture={picture} rows={16} />)}</Field>
+                    <WriteBox id={fid} value={v.bodyEn} onChange={(x) => setV((s) => ({ ...s, bodyEn: x }))} invalid={bad} maxLength={60000} lang="en" onPicture={picture} GalleryModal={GalleryChooser} rows={16} />)}</Field>
                 </>
               ) : (
                 <>
                   <Field label={t('ad.excerpt')} error={e.excerptBn} max={400} count={v.excerptBn.length}>{(fid, bad) => <textarea id={fid} rows={2} value={v.excerptBn} onChange={set('excerptBn')} maxLength={400} aria-invalid={bad} lang="bn" />}</Field>
                   <Field label={t('ad.body')} error={e.bodyBn}>{(fid, bad) => (
-                    <WriteBox id={fid} value={v.bodyBn} onChange={(x) => setV((s) => ({ ...s, bodyBn: x }))} invalid={bad} maxLength={60000} lang="bn" onPicture={picture} rows={16} />)}</Field>
+                    <WriteBox id={fid} value={v.bodyBn} onChange={(x) => setV((s) => ({ ...s, bodyBn: x }))} invalid={bad} maxLength={60000} lang="bn" onPicture={picture} GalleryModal={GalleryChooser} rows={16} />)}</Field>
                 </>
               )}
             </fieldset>

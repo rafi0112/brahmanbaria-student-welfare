@@ -244,7 +244,7 @@ function MemberModal({ row, me, depts, pick, onClose, onSaved, onRemoved }) {
     <Modal title={row.name} onClose={onClose} drawer busy={busy} guard={() => dirty && !window.confirm(t('ad.leaveConfirm'))}>
       <p className="muted small">{row.email} · <StatusBadge status={row.status} /> · {row.role === 'admin' ? t('admin.roles.admin') : t('admin.roles.member')}
         {row.role === 'admin' && <> — <Link to="/admin?tab=roles">{t('ad.stu.manageRole')}</Link></>}</p>
-      <PhotoPicker name={row.name} photo={row.photoUrl} uploadPath={`/admin/students/${row.id}/photo`} deletePath={`/admin/students/${row.id}/photo`} size={72}
+      <PhotoPicker gallery name={row.name} photo={row.photoUrl} uploadPath={`/admin/students/${row.id}/photo`} deletePath={`/admin/students/${row.id}/photo`} size={72}
         onDone={(r, what) => onSaved(r, t(what === 'set' ? 'ad.photoSaved' : 'ad.photoRemoved'))} />
       <form onSubmit={save} noValidate className="ad-form">
         <div className="ad-grid">

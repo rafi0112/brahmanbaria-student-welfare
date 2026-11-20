@@ -12,6 +12,7 @@ export { slugFrom } from '../lib/slug.js'
 import { useApp } from '../lib/app.jsx'
 import { Pagination } from '../components/ui.jsx'
 import { useImageEditor } from '../components/ImageEditor.jsx'
+import GalleryChooser from './GalleryChooser.jsx'
 
 /* ---------------------------------------------------------------- state helpers */
 
@@ -375,8 +376,9 @@ const ACCEPT = INPUT_TYPES
 
 // One picture: paste a public link (recommended) or choose a file (preview first, upload with progress).
 // onChange gets { path, url } once the server has stored the file, or null when it is removed.
-export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, profile = 'heritage', aspect = 'original' }) {
+export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, profile = 'heritage', aspect = 'original', gallery = true }) {
   const { t } = useApp()
+  const [choose, setChoose] = useState(false)
   const errText = useErrText()
   const input = useRef(null)
   const [edit, editor] = useImageEditor({ aspect })
@@ -431,6 +433,7 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, prof
           <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
           <div className="row">
             <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => input.current?.click()}><Icon name="upload" size={15} /> {t('photo.upload')}</button>
+            {gallery && <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setChoose(true)}><Icon name="gallery" size={15} /> {t('gc.button')}</button>}
             {(value || local) && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal(''); setErr('') }}>{t('ad.removePhoto')}</button>}
           </div>
           <small className="muted">{hint || t('ad.photoHelp')}</small>
@@ -444,6 +447,7 @@ export function ImagePicker({ label, value, url, onChange, hint, legacyUrl, prof
           {err && <small className="err" role="alert">{err}</small>}
         </div>
       </div>
+      {choose && <GalleryChooser onClose={() => setChoose(false)} onPick={([g]) => { setChoose(false); setErr(''); setBroken(false); setLocal(''); onChange({ path: g.image, url: g.imageUrl }) }} />}
     </fieldset>
   )
 }
@@ -458,6 +462,7 @@ export function UploadAsLink({ onUrl, disabled }) {
   const [err, setErr] = useState('')
   const busy = progress !== null
   const [edit, editor] = useImageEditor({ aspect: '1:1', maxSide: 1600 })
+  const [choose, setChoose] = useState(false)
   const pick = async (e) => {
     const chosen = e.target.files?.[0]
     e.target.value = ''
@@ -476,6 +481,8 @@ export function UploadAsLink({ onUrl, disabled }) {
       {editor}
       <input ref={input} type="file" accept={ACCEPT.join(',')} onChange={pick} hidden />
       <button type="button" className="btn btn-outline btn-sm" disabled={busy || disabled} onClick={() => input.current?.click()}><Icon name="upload" size={15} /> {busy ? `${t('ad.uploading')} ${progress}%` : t('photo.upload')}</button>
+      <button type="button" className="btn btn-outline btn-sm" disabled={busy || disabled} onClick={() => setChoose(true)}><Icon name="gallery" size={15} /> {t('gc.button')}</button>
+      {choose && <GalleryChooser onClose={() => setChoose(false)} onPick={async ([g]) => { setChoose(false); setErr(''); try { await onUrl(g.absolute) } catch (ex) { setErr(errText(ex)) } }} />}
       {err && <small className="err" role="alert">{err}</small>}
     </span>
   )

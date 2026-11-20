@@ -6,6 +6,7 @@ import { Badge, MediaPhoto } from '../components/ui.jsx'
 import { ContentList, EditorGate, EditorModal, StatusPanel, useEditParam, useEntryEditor } from './content.jsx'
 import { Field, ImagePicker, Modal, Notice, PageHeader, slugFrom, useUnsavedGuard } from './kit.jsx'
 import MultiUpload from './MultiUpload.jsx'
+import GalleryChooser from './GalleryChooser.jsx'
 
 const CATS = ['mosque', 'bridge', 'memorial', 'temple', 'railway', 'river', 'palace', 'shrine', 'lake', 'park', 'market', 'port', 'heritage-site']
 
@@ -104,6 +105,7 @@ export function HeritageEditor({ entryId, onClose, onCreated }) {
   const ups = useApi('/upazilas')
   const [v, setV] = useState(blank)
   const [many, setMany] = useState(false) // choosing several photos at once
+  const [fromGallery, setFromGallery] = useState(false) // several pictures already in the gallery
   const [base, setBase] = useState(null)
   const [slugTouched, setSlugTouched] = useState(false)
   const [preview, setPreview] = useState(false)
@@ -205,8 +207,11 @@ export function HeritageEditor({ entryId, onClose, onCreated }) {
               ))}
               <div className="row">
                 {v.images.length < 12 && <button type="button" className="btn btn-outline btn-sm" onClick={() => setMany(true)}>+ {t('ad.ev.addMany')}</button>}
+                {v.images.length < 12 && <button type="button" className="btn btn-outline btn-sm" onClick={() => setFromGallery(true)}>+ {t('gc.buttonMany')}</button>}
                 {v.images.length < 12 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setV({ ...v, images: [...v.images, { ref: '', url: '' }] })}>+ {t('ad.her.addImage')}</button>}
               </div>
+              {fromGallery && <GalleryChooser multiple max={12 - v.images.filter((x) => x.ref).length} onClose={() => setFromGallery(false)}
+                onPick={(list) => { setV((cur) => ({ ...cur, images: [...cur.images.filter((x) => x.ref), ...list.map((x) => ({ ref: x.image, url: x.imageUrl }))].slice(0, 12) })); setFromGallery(false) }} />}
               {many && <MultiUpload profile="heritage" title={t('ad.ev.addMany')} onStored={async ({ path, url }) => setV((cur) => (cur.images.length < 12 ? { ...cur, images: [...cur.images.filter((x) => x.ref), { ref: path, url }] } : cur))} onClose={() => setMany(false)} />}
             </fieldset>
 

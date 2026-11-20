@@ -802,3 +802,18 @@
 .adm .st-bs-published { background: var(--a-ok-bg); color: var(--a-ok); }
 .blog-sample { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .blog-sample-tag { font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--a-warn-bg); color: var(--a-warn); }
+
+/* Choose from the gallery */
+.gc { display: grid; gap: 12px; }
+.gc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; } .gc-bar input { flex: 1 1 240px; max-width: 420px; }
+.gc-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; max-height: min(60vh, 560px); overflow: auto; padding: 2px; }
+.gc-item { position: relative; display: block; width: 100%; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: var(--a-surface-2); cursor: pointer; aspect-ratio: 4 / 3; }
+.gc-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s; }
+.gc-item:hover img, .gc-item:focus-visible img { transform: scale(1.04); }
+.gc-item.is-on { border-color: var(--a-accent); box-shadow: 0 0 0 3px var(--a-accent-soft); }
+.gc-tick { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: .78rem; font-weight: 700;
+  background: rgba(255, 255, 255, .85); border: 2px solid rgba(0, 0, 0, .25); color: transparent; }
+.gc-item.is-on .gc-tick { background: var(--a-accent); border-color: #fff; color: #fff; }
+.gc-cap { position: absolute; inset: auto 0 0 0; padding: 14px 8px 6px; font-size: .74rem; color: #fff; text-align: left; background: linear-gradient(transparent, rgba(0, 0, 0, .65)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-more { display: flex; justify-content: center; }
+.gc-foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--a-line); position: sticky; bottom: 0; background: var(--a-surface); }

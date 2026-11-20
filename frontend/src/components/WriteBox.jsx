@@ -10,8 +10,9 @@ import Markdown from './Markdown.jsx'
 //
 // onPicture(file) → Promise<url>: when given, a "Picture" button uploads one and puts it in the text where the
 // cursor is, with its caption. Without it (members send pictures separately) the button is not shown.
+// GalleryModal: when given (the admin's gallery chooser), "From the gallery" puts one or more gallery pictures in the text.
 
-export default function WriteBox({ id, value, onChange, rows = 14, maxLength, lang, invalid, describedBy, onPicture, placeholder }) {
+export default function WriteBox({ id, value, onChange, rows = 14, maxLength, lang, invalid, describedBy, onPicture, GalleryModal, placeholder }) {
   const { t, n } = useApp()
   const area = useRef(null)
   const file = useRef(null)
@@ -21,6 +22,14 @@ export default function WriteBox({ id, value, onChange, rows = 14, maxLength, la
   const [linkBox, setLinkBox] = useState(null) // { url, words, a, b }
   const [picBusy, setPicBusy] = useState(false)
   const [picErr, setPicErr] = useState('')
+  const [gal, setGal] = useState(null) // the selection when the gallery chooser opened
+  const fromGallery = (list) => {
+    const [a, b] = gal || [value.length, value.length]
+    setGal(null)
+    if (!list.length) return
+    const block = list.map((x) => `![${(x.caption || '').replace(/[[\]\n]/g, ' ').trim()}](${x.large})`).join('\n\n')
+    requestAnimationFrame(() => apply(insertBlock(value, a, b, block)))
+  }
 
   // Applies an edit through the browser, so Undo (Ctrl+Z) still works; falls back to setting the text.
   const apply = (r) => {
@@ -95,6 +104,7 @@ export default function WriteBox({ id, value, onChange, rows = 14, maxLength, la
     { sep: true },
     { k: 'link', label: `${t('wb.link')} (Ctrl+K)`, show: <LinkIcon />, click: openLink },
     ...(onPicture ? [{ k: 'pic', label: t('wb.picture'), show: <PicIcon />, click: () => file.current?.click(), busy: picBusy }] : []),
+    ...(GalleryModal ? [{ k: 'gal', label: t('wb.fromGallery'), show: <GalIcon />, click: () => setGal(sel()) }] : []),
     { k: 'hr', label: t('wb.divider'), show: '—', fn: (a, b) => insertBlock(value, a, b, '---') },
   ]
 
@@ -147,6 +157,7 @@ export default function WriteBox({ id, value, onChange, rows = 14, maxLength, la
           {value.trim() ? <Markdown text={value} /> : <p className="muted">{t('wb.nothing')}</p>}
         </div>
       )}
+      {gal && GalleryModal && <GalleryModal multiple max={12} onClose={() => setGal(null)} onPick={fromGallery} />}
       {onPicture && <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { addPicture(e.target.files?.[0]); e.target.value = '' }} />}
 
       <div className="wb-foot">
@@ -163,4 +174,5 @@ const ListIcon = () => <Svg d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 
 const NumIcon = () => <Svg d="M10 6h10M10 12h10M10 18h10M4 5h1.5v4M4 9h3M4 14.5c.4-.6 1-.9 1.6-.9.8 0 1.4.5 1.4 1.2 0 1.3-3 2.1-3 3.2h3" />
 const QuoteIcon = () => <Svg d="M7 7h4v4c0 3-1.5 5-4 6M15 7h4v4c0 3-1.5 5-4 6" />
 const LinkIcon = () => <Svg d="M10 14a4.5 4.5 0 0 0 6.4 0l2.6-2.6a4.5 4.5 0 0 0-6.4-6.4L11.5 6M14 10a4.5 4.5 0 0 0-6.4 0L5 12.6A4.5 4.5 0 0 0 11.4 19l1.1-1" />
+const GalIcon = () => <Svg d="M7 4h13v13H7zM4 7v13h13M10.5 13.5l2.5-2.5 2.5 2.5 1-1 2 2M15.5 8.5h.01" />
 const PicIcon = () => <Svg d="M4 5h16v14H4zM4 16l4.5-4.5 4 4L15 13l5 5M15.5 9.5h.01" />

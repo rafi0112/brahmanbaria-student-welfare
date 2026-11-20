@@ -3,6 +3,7 @@ import { api, qs, useApi } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, Badge, Data, Empty, Loading } from '../components/ui.jsx'
 import { useImageEditor } from '../components/ImageEditor.jsx'
+import GalleryChooser from '../admin/GalleryChooser.jsx'
 
 const MAX_BYTES = 5 * 1024 * 1024
 
@@ -88,6 +89,13 @@ function PhotoPicker({ value, onChange }) {
     form.append('imageUrl', link.trim())
     send(form, '').then(() => setLink(''))
   }
+  const [choose, setChoose] = useState(false)
+  const fromGallery = ([g]) => {
+    setChoose(false)
+    const form = new FormData()
+    form.append('imageUrl', g.absolute)
+    send(form, g.imageUrl)
+  }
   const shown = local || value?.url
 
   return (
@@ -109,8 +117,10 @@ function PhotoPicker({ value, onChange }) {
           <input ref={input} type="file" accept="image/jpeg,image/png" onChange={pick} hidden />
           <div className="row">
             <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => input.current?.click()}>{t('photo.upload')}</button>
+            <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setChoose(true)}>{t('gc.button')}</button>
             {value && <button type="button" className="btn-link is-danger" disabled={busy} onClick={() => { onChange(null); setLocal('') }}>{t('cm.removePhoto')}</button>}
           </div>
+          {choose && <GalleryChooser onClose={() => setChoose(false)} onPick={fromGallery} />}
           <small className="muted">{t('cm.photoHelp')}</small>
           {busy && <small role="status">{t('cm.uploading')}</small>}
           {!busy && value && !err && !broken && <small className="ok-text" role="status">{t('cm.photoOk')}</small>}

@@ -256,7 +256,7 @@ function ImageModal({ row, albums, albumName, onClose, onChanged }) {
             <details><summary>{pick('ভিডিও বদলান', 'Replace the video')}</summary><VideoPicker compact onPick={(x) => setV({ ...v, video: x.video || '', videoUrl: x.videoUrl || '', youtube: x.youtube || '' })} /></details>
           </div>
         )}
-        <ImagePicker profile="gallery" label={v.video || v.youtube ? pick('কভার ছবি (ঐচ্ছিক)', 'Cover picture (optional)') : t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
+        <ImagePicker profile="gallery" gallery={false} label={v.video || v.youtube ? pick('কভার ছবি (ঐচ্ছিক)', 'Cover picture (optional)') : t('ad.gal.image')} value={v.image} url={v.imageUrl} legacyUrl={v.image && !v.imageUrl ? `/images/${v.image}-640.webp` : undefined}
           onChange={(m) => m && setV({ ...v, image: m.path, imageUrl: m.url })} hint={t('ad.gal.replaceHint')} />
         {errs.image && <small className="err" role="alert">{errs.image}</small>}
         <div className="ad-grid">

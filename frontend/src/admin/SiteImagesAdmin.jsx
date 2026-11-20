@@ -5,6 +5,7 @@ import { forgetSiteImages } from '../lib/site.jsx'
 import { Data } from '../components/ui.jsx'
 import { builtInSlides } from '../data/heroSlides.js'
 import { ImagePicker, Modal, Notice, PageHeader, useErrText, useNotice } from './kit.jsx'
+import GalleryChooser from './GalleryChooser.jsx'
 import Icon from './icons.jsx'
 import VideoPicker from './VideoPicker.jsx'
 import { youtubeThumb } from '../lib/video.js'
@@ -46,42 +47,12 @@ const LOOK = [
 const legacyUrl = (ref) => (ref && !/\.(jpg|png)$/.test(ref) ? `/images/${ref}-640.webp` : undefined)
 const thumbOf = (x) => x?.imageUrl || legacyUrl(x?.image) || (x?.youtube ? youtubeThumb(x.youtube, 'mqdefault') : '')
 
-// Choose one picture from the gallery (published and hidden pictures alike; archived ones are left out).
-function GalleryPick({ onPick, onClose }) {
-  const { pick } = useApp()
-  const list = useApi('/admin/content/image?limit=100&sort=order')
-  return (
-    <Modal title={pick('গ্যালারি থেকে ছবি বাছুন', 'Choose a picture from the gallery')} onClose={onClose} wide>
-      <Data q={list}>
-        {(d) => (d.items.length === 0
-          ? <p className="muted">{pick('গ্যালারিতে এখনো কোনো ছবি নেই। আগে গ্যালারিতে ছবি যোগ করুন, অথবা ডিভাইস থেকে আপলোড করুন।', 'The gallery has no pictures yet. Add pictures to the gallery first, or upload one from this device.')}</p>
-          : (
-            <ul className="si-pick">
-              {d.items.map((e) => (
-                <li key={e.id}>
-                  <button type="button" onClick={() => onPick({ image: e.data.image, imageUrl: thumbOf(e.data), captionBn: e.data.captionBn || '', captionEn: e.data.captionEn || '' })}>
-                    <img src={thumbOf(e.data)} alt="" loading="lazy" />
-                    <span>{pick(e.data.captionBn, e.data.captionEn) || e.title}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ))}
-      </Data>
-    </Modal>
-  )
-}
-
-// One picture slot: upload / link (ImagePicker) plus "choose from the gallery".
+// One picture slot: upload, link or "choose from the gallery" (all in ImagePicker).
 function Slot({ label, hint, value, onChange }) {
-  const { pick } = useApp()
-  const [open, setOpen] = useState(false)
   return (
     <div className="si-slot">
       <ImagePicker profile="hero" label={label} value={value?.image || ''} url={value?.imageUrl} legacyUrl={legacyUrl(value?.image)} hint={hint}
         onChange={(m) => onChange(m ? { image: m.path, imageUrl: m.url } : null)} />
-      <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setOpen(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
-      {open && <GalleryPick onClose={() => setOpen(false)} onPick={(g) => { onChange({ image: g.image, imageUrl: g.imageUrl }); setOpen(false) }} />}
     </div>
   )
 }
@@ -159,10 +130,13 @@ export default function SiteImagesAdmin() {
     hero.splice(pos - 1, 0, h)
     commit({ ...v, hero })
   }
-  const addSlide = (g) => {
-    if (v.hero.length >= 12) { bad(pick('সর্বোচ্চ ১২টি স্লাইড রাখা যায়।', 'At most 12 slides.')); return }
-    commit({ ...v, hero: [...v.hero, { id: '', image: g.image || '', imageUrl: g.imageUrl || '', video: g.video || '', videoUrl: g.videoUrl || '', youtube: g.youtube || '', captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true }] })
+  const slideOf = (g) => ({ id: '', image: g.image || '', imageUrl: g.imageUrl || '', video: g.video || '', videoUrl: g.videoUrl || '', youtube: g.youtube || '', captionBn: g.captionBn || '', captionEn: g.captionEn || '', published: true })
+  const addSlides = (list) => {
+    const room = 12 - v.hero.length
+    if (room <= 0 || list.length > room) bad(pick('সর্বোচ্চ ১২টি স্লাইড রাখা যায়।', 'At most 12 slides.'))
+    if (room > 0) commit({ ...v, hero: [...v.hero, ...list.slice(0, room).map(slideOf)] })
   }
+  const addSlide = (g) => addSlides([g])
   const live = v ? v.hero.filter((h) => h.published).length : 0
 
   return (
@@ -210,10 +184,10 @@ export default function SiteImagesAdmin() {
                 <p className="muted small">{pick('চওড়া (ল্যান্ডস্কেপ) ছবি সবচেয়ে ভালো দেখায়, অন্তত ১৬০০ পিক্সেল চওড়া।', 'A wide (landscape) picture looks best, at least 1600 pixels wide.')}</p>
                 <div className="si-slot">
                   <ImagePicker profile="hero" label={pick('ছবি', 'Picture')} value={fresh?.image || ''} url={fresh?.imageUrl}
-                    onChange={(m) => { if (m) { addSlide({ image: m.path, imageUrl: m.url }); setFresh(null) } }} />
-                  <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setAdding(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে বাছুন', 'Choose from the gallery')}</button>
+                    gallery={false} onChange={(m) => { if (m) { addSlide({ image: m.path, imageUrl: m.url }); setFresh(null) } }} />
+                  <button type="button" className="btn btn-outline btn-sm si-from" onClick={() => setAdding(true)}><Icon name="gallery" size={15} /> {pick('গ্যালারি থেকে এক বা একাধিক ছবি বাছুন', 'Choose one or more from the gallery')}</button>
                 </div>
-                {adding && <GalleryPick onClose={() => setAdding(false)} onPick={(g) => { addSlide(g); setAdding(false) }} />}
+                {adding && <GalleryChooser multiple max={Math.max(1, 12 - v.hero.length)} onClose={() => setAdding(false)} onPick={(list) => { addSlides(list); setAdding(false) }} />}
                 <div className="si-video">
                   <h3>{pick('অথবা একটি ভিডিও', 'Or a video')}</h3>
                   <p className="muted small">{pick('ভিডিও স্লাইড পুরো স্ক্রিন জুড়ে, ছবির মতো একই ফ্রেমে, শব্দ ছাড়া চলে। আপলোড করা ভিডিও শেষ পর্যন্ত (সর্বোচ্চ ১ মিনিট) আর YouTube ভিডিও ২০ সেকেন্ড দেখিয়ে পরের স্লাইডে যায়।', 'A video slide fills the same frame as a picture and plays without sound. An uploaded video plays to its end (at most a minute); a YouTube video shows for 20 seconds, then the next slide comes.')}</p>

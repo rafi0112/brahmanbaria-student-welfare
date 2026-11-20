@@ -49,12 +49,12 @@ test('admin: several event photos are added at once', async ({ page }) => {
   await expect(page.locator('.ad-gallery-grid fieldset, .ad-gallery-grid .photo-picker')).toHaveCount(3)
 })
 
-test('visitors: the server-waking notice, back to top, sharing and calendar on an event, the app manifest', async ({ page }) => {
-  // a slow answer shows the notice, and it goes once the answer arrives
+test('visitors: no server-waking notice, back to top, sharing and calendar on an event, the app manifest', async ({ page }) => {
+  // a slow answer shows the page's own loading skeleton only, never a "server is waking up" message
   await page.route('**/api/v1/events', async (r) => { await new Promise((ok) => setTimeout(ok, 6500)); await r.continue() })
   await page.goto('/events')
-  await expect(page.getByRole('status').filter({ hasText: 'The server is waking up' })).toBeVisible({ timeout: 9000 })
-  await expect(page.getByText('The server is waking up')).toHaveCount(0, { timeout: 10000 })
+  await page.waitForTimeout(6000)
+  await expect(page.getByText(/server is waking up/i)).toHaveCount(0)
   await page.unroute('**/api/v1/events')
 
   // back to top on a long page

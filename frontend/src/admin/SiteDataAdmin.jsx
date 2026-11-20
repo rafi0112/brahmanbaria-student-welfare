@@ -7,6 +7,7 @@ import { Confirm, EmptyState, Field, ImagePicker, Modal, Notice, PageHeader, Pag
 import ListToolbar from './toolbar.jsx'
 import DataTable from './DataTable.jsx'
 import MultiUpload from './MultiUpload.jsx'
+import GalleryChooser from './GalleryChooser.jsx'
 import Icon from './icons.jsx'
 import { EmailDialog, ImportedForm, InviteCell, VerifiedMark } from './StudentsAdmin.jsx'
 import { Link } from 'react-router-dom'
@@ -146,6 +147,7 @@ function EventEditor({ row, onClose, onSaved, kind }) {
   const [gallery, setGallery] = useState((d.gallery || []).map((ref, i) => ({ ref, url: d.galleryUrls?.[i] || '' })))
   const [featured, setFeatured] = useState(!!row?.featured)
   const [many, setMany] = useState(false) // choosing several event photos at once
+  const [fromGallery, setFromGallery] = useState(false) // several pictures already in the gallery
   const { errs, msg, busy, save } = useEntrySave(kind, row, onSaved)
   const { imageUrl, ...rest } = v
   const data = { ...rest, gallery: gallery.map((g) => g.ref).filter(Boolean) }
@@ -176,8 +178,11 @@ function EventEditor({ row, onClose, onSaved, kind }) {
         </div>
         <div className="row">
           {gallery.length < 24 && <button type="button" className="btn btn-outline btn-sm" onClick={() => setMany(true)}>+ {t('ad.ev.addMany')}</button>}
+          {gallery.length < 24 && <button type="button" className="btn btn-outline btn-sm" onClick={() => setFromGallery(true)}>+ {t('gc.buttonMany')}</button>}
           {gallery.length < 24 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setGallery([...gallery, { ref: '', url: '' }])}>+ {t('ad.her.addImage')}</button>}
         </div>
+        {fromGallery && <GalleryChooser multiple max={24 - gallery.filter((x) => x.ref).length} onClose={() => setFromGallery(false)}
+          onPick={(list) => { setGallery((g) => [...g.filter((x) => x.ref), ...list.map((x) => ({ ref: x.image, url: x.imageUrl }))].slice(0, 24)); setFromGallery(false) }} />}
         {many && <MultiUpload profile="gallery" title={t('ad.ev.addMany')} onStored={async ({ path, url }) => setGallery((g) => (g.length < 24 ? [...g.filter((x) => x.ref), { ref: path, url }] : g))} onClose={() => setMany(false)} />}
       </fieldset>
       <label className="check"><input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} /> {t('ad.ev.featured')}</label>
