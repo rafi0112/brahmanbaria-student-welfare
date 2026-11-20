@@ -94,7 +94,8 @@ export default function RolesAdmin() {
               { id: 'actions', srLabel: t('ad.actions'), width: '60px', className: 'dt-actions-cell', cell: (x) => (
                 <div className="dt-actions">
                   <RowMenu label={`${t('ad.actions')}: ${label(x)}`} items={[
-                    { label: t('ad.pm.viewProfile'), icon: 'users', onClick: () => go(x.memberStatus ? `/admin/profile/m-${x.id}` : `/admin/students?tab=members&q=${encodeURIComponent(x.email)}`) },
+                    // only an admin who is also a member has a member profile to open
+                    ...(x.memberStatus ? [{ label: t('ad.pm.viewProfile'), icon: 'users', onClick: () => go(`/admin/profile/m-${x.id}`) }] : []),
                     { label: t('ad.pm.viewHistory'), icon: 'clock', onClick: () => { setOnly(x.email); setShowHistory(true) } },
                     { label: t(x.id === me?.id ? 'admin.roles.leave' : 'admin.roles.makeMember'), icon: 'down', danger: true, sep: true, onClick: () => { if (soleAdmin && !x.disabled && x.emailVerified) bad(t('admin.err.lastAdmin')); else setDemote(x) } },
                   ]} />
