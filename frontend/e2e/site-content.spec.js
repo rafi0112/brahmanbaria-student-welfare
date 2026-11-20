@@ -189,8 +189,8 @@ test.describe('in English', () => {
       expect(b.x + b.width, 'space on the right').toBeLessThan(w - 4)
       expect(Math.abs(b.x + b.width / 2 - w / 2), 'centred').toBeLessThan(4)
       if (w > 800) {
-        await dlg.getByRole('button', { name: 'Edit' }).click()
-        await dlg.getByRole('textbox').first().fill('01811112222')
+        await dlg.getByRole('button', { name: 'Edit profile' }).click()
+        await dlg.locator('.me-form input[inputmode=numeric]').fill('01811112222')
         await dlg.getByRole('button', { name: 'Save' }).click()
         await expect(dlg).toContainText('01811112222')
       }

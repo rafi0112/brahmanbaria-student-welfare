@@ -45,7 +45,7 @@ export default function BlogSubmissions() {
           {rows.map((x) => (
             <li key={x.id} className={x.status === 'new' ? 'is-unread' : ''}>
               <button type="button" className="bs-row" onClick={() => setOpenId(x.id)}>
-                <MonoAvatar name={x.authorName} size={40} />
+                <MonoAvatar name={x.authorName} size={40} photo={x.photoUrl} />
                 <span className="bs-main">
                   <strong>{x.title}</strong>
                   <small className="muted">{x.authorName} · {when(x.createdAt)} · {n(x.photos)} {t('ad.bs.pictures')}</small>
@@ -114,7 +114,7 @@ function SubmissionDrawer({ id, onClose, onChanged, notify }) {
         {state.error && <p className="notice bad" role="alert">{state.error}</p>}
         {m && (
           <div className="ct-detail bs-detail">
-            <div className="me-head"><MonoAvatar name={m.authorName} size={48} /><div><strong>{m.authorName}</strong>{m.email && <a href={`mailto:${encodeURIComponent(m.email)}`}>{m.email}</a>}</div></div>
+            <div className="me-head"><MonoAvatar name={m.authorName} size={48} photo={m.photoUrl} /><div><strong>{m.authorName}</strong>{m.email && <a href={`mailto:${encodeURIComponent(m.email)}`}>{m.email}</a>}</div></div>
             <dl className="me-facts">
               <div><dt>{t('ad.bs.received')}</dt><dd>{when(m.createdAt)}</dd></div>
               <div><dt>{t('ad.bs.state')}</dt><dd>{t(LABEL[m.status])}</dd></div>

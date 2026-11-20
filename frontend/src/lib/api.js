@@ -126,6 +126,9 @@ export function loadPhoto(url) {
   return photoCache.get(url)
 }
 
+// An address to put straight into <img src>: API paths get the API's address in front, other links stay as they are.
+export const photoSrc = (url) => (url && url.startsWith('/api/') ? `${BASE}${url}` : url || '')
+
 export function usePhoto(url) {
   const [src, setSrc] = useState(null)
   useEffect(() => {

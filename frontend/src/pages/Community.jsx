@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useApi, usePhoto, qs } from '../lib/api.js'
+import { useApi, usePhoto, qs, photoSrc } from '../lib/api.js'
 import { initials } from '../lib/initials.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, BatchGroups, Data, Empty, PageHero, Pagination, VerifiedMark } from '../components/ui.jsx'
@@ -249,7 +249,7 @@ function firstLetter(name) {
 // A member's photo when one was given; otherwise one letter in a soft tint chosen from the name.
 function ExecPhoto({ m, size = 96 }) {
   const [bad, setBad] = useState(false)
-  if (m.photoUrl && !bad) return <img className="exec-photo" src={m.photoUrl} alt={m.name} width={size} height={size} style={{ width: size, height: size }} loading="lazy" decoding="async" onError={() => setBad(true)} />
+  if (m.photoUrl && !bad) return <img className="exec-photo" src={photoSrc(m.photoUrl)} alt={m.name} width={size} height={size} style={{ width: size, height: size }} loading="lazy" decoding="async" onError={() => setBad(true)} />
   let h = 0
   for (const c of m.name || '?') h = (h * 31 + c.charCodeAt(0)) % 997
   return <span className={`cm-mono tint-${['peach', 'teal', 'orange', 'sand'][h % 4]}`} style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden="true">{firstLetter(m.name)}</span>
@@ -265,9 +265,9 @@ function SeatPhoto({ m }) {
   return (
     <>
       <button type="button" className="sp-avatar sp-zoomable" onClick={() => setOpen(true)} aria-label={`${t('committee.viewThePhotoLarger')}: ${m.name}`}>
-        <img src={m.photoUrl} alt="" onError={() => setBad(true)} /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
+        <img src={photoSrc(m.photoUrl)} alt="" onError={() => setBad(true)} /><span className="sp-zoom-ic" aria-hidden="true">⤢</span>
       </button>
-      {open && <PhotoViewer src={m.photoUrl} alt={m.name} onClose={() => setOpen(false)} />}
+      {open && <PhotoViewer src={photoSrc(m.photoUrl)} alt={m.name} onClose={() => setOpen(false)} />}
     </>
   )
 }

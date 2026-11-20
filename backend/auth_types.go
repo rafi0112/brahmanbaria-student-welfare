@@ -74,6 +74,7 @@ type UserRow struct {
 	Disabled      bool   `json:"disabled"`
 	Department    string `json:"department,omitempty"` // from the member profile, to tell people with similar names apart
 	Batch         int    `json:"batch,omitempty"`
+	PhotoURL      string `json:"photoUrl,omitempty"` // filled by the API: the member photo, when there is one
 }
 
 // UserQuery filters and orders the admin user list; every field is optional.

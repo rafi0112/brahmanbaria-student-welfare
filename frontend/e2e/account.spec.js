@@ -154,3 +154,25 @@ test('an approved member corrects their own details (not the email) from My prof
   expect(after.profile.status).toBe('approved')
   expect(after.user.email).toBe(E2E.email)
 })
+
+test('an admin with a profile photo is shown with it everywhere: admin sidebar, My profile box and Admin management', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await login(page)
+  const made = await page.request.post('/api/v1/me/profile', { data: { name: 'Test Admin Person', batch: 16, department: 'Finance', session: '2019-20', occupation: 'Lecturer', workplace: 'Dhaka College', upazila: 'kasba', union: 'Kuti', phone: '01712345678' } })
+  expect([201, 409]).toContain(made.status())
+  const up = await page.request.post('/api/v1/me/photo', { multipart: { file: { name: 'me.png', mimeType: 'image/png', buffer: png(200, 200) } } })
+  expect(up.ok()).toBe(true)
+
+  await page.goto('/admin?tab=roles')
+  await expect(page.locator('.adm-me img.mono-avatar-img')).toBeVisible()
+  const mine = page.locator('.dt-person').filter({ hasText: E2E.email }).first() // this admin's row (the name may have been corrected by an earlier test)
+  await expect(mine.locator('img.avatar-img')).toBeVisible()
+  expect(await mine.locator('img.avatar-img').evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true)
+
+  await page.locator('.adm-me').click()
+  const box = page.getByRole('dialog')
+  await expect(box.locator('.me-head img.mono-avatar-img')).toBeVisible()
+  await expect(box.locator('.photo-pick img.avatar-img')).toBeVisible() // and the photo can be changed right there
+
+  await page.request.delete('/api/v1/me/photo')
+})

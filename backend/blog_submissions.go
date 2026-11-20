@@ -38,6 +38,17 @@ type BlogSubmission struct {
 	PostSlug   string `json:"postSlug,omitempty"` // in a member's own list: the published post's address
 	Photos     int    `json:"photos"`
 	CreatedAt  string `json:"createdAt"`
+	PhotoURL   string `json:"photoUrl,omitempty"` // filled by the API for admins: the writer's profile photo
+}
+
+// withWriterPhotos adds each writer's profile photo (when they have one) for the admin views.
+func (a *App) withWriterPhotos(ctx context.Context, items []BlogSubmission) {
+	vers := a.photoVersions(ctx)
+	for i := range items {
+		if items[i].UserID != "" {
+			items[i].PhotoURL = studentPhotoURL(items[i].UserID, vers[items[i].UserID])
+		}
+	}
 }
 
 type SubmissionPhoto struct {
@@ -396,6 +407,7 @@ func (a *App) listSubmissions(w http.ResponseWriter, r *http.Request, _ User) {
 		a.submissionFail(w, err)
 		return
 	}
+	a.withWriterPhotos(r.Context(), items)
 	writeJSON(w, 200, map[string]any{"items": items, "counts": counts})
 }
 
@@ -405,7 +417,9 @@ func (a *App) oneSubmission(w http.ResponseWriter, r *http.Request, _ User) {
 		a.submissionFail(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"item": s})
+	one := []BlogSubmission{s}
+	a.withWriterPhotos(r.Context(), one)
+	writeJSON(w, 200, map[string]any{"item": one[0]})
 }
 
 func (a *App) submissionPhoto(w http.ResponseWriter, r *http.Request, _ User) {

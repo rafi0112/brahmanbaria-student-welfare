@@ -304,7 +304,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, onSearch, onNavig
         </div>
         <div className="adm-account">
           <button type="button" className="adm-me" onClick={() => setProfile(true)} aria-haspopup="dialog" title={t('ad.me.open')} aria-label={`${t('ad.me.open')}: ${name}`}>
-            <MonoAvatar name={name || '?'} size={28} />
+            <MonoAvatar name={name || '?'} size={28} photo={profile?.photoUrl} />
             <span className="adm-fade adm-id"><strong>{name}</strong><small>{me?.email}</small></span>
           </button>
           <button type="button" className="adm-iconbtn" onClick={async () => { await logout(); go('/') }} aria-label={t('auth.logout')} title={t('auth.logout')}><Icon name="logout" size={16} /></button>

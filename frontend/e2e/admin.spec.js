@@ -195,7 +195,7 @@ test('my profile: opens from the account button, shows read-only role, closes wi
   await expect(dlg).toBeVisible()
   await expect(dlg).toContainText(E2E.email)
   await expect(dlg.getByText('Admin', { exact: true })).toBeVisible()
-  await expect(dlg.locator('input, select')).toHaveCount(0) // role is displayed, never an input
+  await expect(dlg.locator('input:not(.photo-pick *), select:not(.photo-pick *)')).toHaveCount(0) // role is displayed, never an input (only the photo can be chosen)
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
   await expect(me).toBeFocused()

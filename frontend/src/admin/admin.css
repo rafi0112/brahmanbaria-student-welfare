@@ -431,6 +431,8 @@
 
 /* ---------- fourth pass, part two: nested views, profile, menus ---------- */
 .adm .mono-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--a-primary); color: var(--a-on-primary); font-family: var(--font-body); font-weight: 600; letter-spacing: .02em; user-select: none; }
+.adm .mono-avatar-img { display: block; object-fit: cover; background: var(--a-surface-2, #ddd); }
+.adm .me-head + .photo-pick, .adm .me-head ~ .photo-pick { margin: 4px 0 14px; }
 .adm-me { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 4px; border: 0; background: transparent; border-radius: var(--a-r); color: inherit; cursor: pointer; text-align: left; font: inherit; transition: background var(--a-dur); }
 .adm-me:hover { background: var(--a-hover); }
 .adm[data-collapsed='true'] .adm-me { flex: none; padding: 2px; }

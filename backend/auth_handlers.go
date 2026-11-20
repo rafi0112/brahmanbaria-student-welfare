@@ -715,6 +715,10 @@ func (a *App) adminUsers(w http.ResponseWriter, r *http.Request, _ User) {
 	if pages == 0 {
 		pages = 1
 	}
+	vers := a.photoVersions(r.Context()) // admins and members show their own photo in the admin lists
+	for i := range rows {
+		rows[i].PhotoURL = studentPhotoURL(rows[i].ID, vers[rows[i].ID])
+	}
 	writeJSON(w, 200, map[string]any{"items": rows, "total": total, "page": pg, "pages": pages})
 }
 

@@ -36,8 +36,15 @@ func (a *App) photoURL(path string) string {
 }
 
 func (a *App) withPhotoURLs(xs []Executive) []Executive {
+	var vers map[string]string
 	for i := range xs {
 		xs[i].PhotoURL = a.photoURL(xs[i].Photo)
+		if xs[i].PhotoURL == "" && xs[i].UserID != "" { // no photo of its own: the linked member's profile photo
+			if vers == nil {
+				vers = a.photoVersions(context.Background())
+			}
+			xs[i].PhotoURL = studentPhotoURL(xs[i].UserID, vers[xs[i].UserID])
+		}
 	}
 	return xs
 }
@@ -203,9 +210,10 @@ func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]publicExecutive, 0, len(xs))
 	people := a.personIndex(r.Context())
+	xs = a.withPhotoURLs(xs) // the committee photo, else the linked member's own profile photo
 	for _, x := range xs {
 		d, upEn := a.executiveDetails(r.Context(), x, people)
-		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo), Verified: a.accountVerified(r.Context(), x.UserID),
+		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: x.PhotoURL, Verified: a.accountVerified(r.Context(), x.UserID),
 			Department: d.Department, Batch: d.Batch, Session: d.Session, Upazila: d.Upazila, UpazilaEn: upEn, Message: d.Message,
 			DesignationEn: d.DesignationEn, BioEn: d.BioEn, MessageEn: d.MessageEn})
 	}

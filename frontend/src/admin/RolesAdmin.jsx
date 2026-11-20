@@ -77,7 +77,7 @@ export default function RolesAdmin() {
           <DataTable caption={t('admin.roles.title')} rows={rows} rowKey={(x) => x.id} rowClass={(x) => (x.disabled ? 'is-off' : '')}
             columns={[
               { id: 'member', label: t('ad.pm.admin'), primary: true, cell: (x) => (
-                <span className="dt-person"><Avatar name={label(x)} size={34} />
+                <span className="dt-person"><Avatar name={label(x)} size={34} photo={x.photoUrl} />
                   <span className="dt-twoline"><strong className="dt-clamp">{x.name || x.email}{x.id === me?.id && <span className="st st-you">{t('admin.roles.you')}</span>}</strong>{x.name && <small className="dt-sub dt-trunc" title={x.email}>{x.email}</small>}</span></span>
               ) },
               { id: 'role', label: t('ad.pm.role'), width: '110px', cell: () => <span className="st st-role">{t('admin.roles.admin')}</span> },
@@ -163,7 +163,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
   if (picked && sure) {
     return (
       <Modal title={t('ad.pm.sureTitle')} onClose={() => { setSure(false); setPicked(null); setErr('') }} busy={busy}>
-        <p className="ad-role-change"><Avatar name={picked.name || picked.email} size={30} /> <strong>{picked.name || picked.email}</strong> <span className="muted">{picked.email}</span></p>
+        <p className="ad-role-change"><Avatar name={picked.name || picked.email} size={30} photo={picked.photoUrl} /> <strong>{picked.name || picked.email}</strong> <span className="muted">{picked.email}</span></p>
         <p>{t('ad.pm.sureText').replace('{who}', picked.name || picked.email)}</p>
         <ul className="ad-sure-list">
           <li>{t('ad.pm.sure1')}</li>
@@ -184,7 +184,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
         text={t('ad.pm.confirmText').replace('{who}', picked.name || picked.email)}
         detail={(
           <>
-            <p className="ad-role-change"><Avatar name={picked.name || picked.email} size={30} /> <strong>{picked.name || picked.email}</strong> <span className="muted">{picked.email}</span></p>
+            <p className="ad-role-change"><Avatar name={picked.name || picked.email} size={30} photo={picked.photoUrl} /> <strong>{picked.name || picked.email}</strong> <span className="muted">{picked.email}</span></p>
             <p className="muted small"><StatusBadge status={picked.memberStatus} /> · {t('admin.roles.verified')}</p>
             {err && <p className="notice bad" role="alert">{err}</p>}
           </>
@@ -208,7 +208,7 @@ function PromoteDialog({ onClose, onDone, explain }) {
               return (
                 <li key={u.id}>
                   <button type="button" className="pm-row" disabled={!!why} onClick={() => setPicked(u)}>
-                    <Avatar name={u.name || u.email} size={32} />
+                    <Avatar name={u.name || u.email} size={32} photo={u.photoUrl} />
                     <span className="pm-id"><strong>{u.name || u.email}</strong><small className="muted">{u.email}</small>{u.department || u.batch ? <small className="muted">{[u.department, u.batch ? `${t('auth.batch')} ${n(u.batch)}` : ''].filter(Boolean).join(' · ')}</small> : null}</span>
                     <span className="pm-state">{u.memberStatus ? <StatusBadge status={u.memberStatus} /> : <small className="muted">{t('ad.pm.noProfile')}</small>}
                       <small className={u.emailVerified ? 'muted' : 'is-warn'}>{u.emailVerified ? t('admin.roles.verified') : t('admin.roles.unverified')}</small></span>

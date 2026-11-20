@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, qs, useApi } from '../lib/api.js'
+import { api, qs, useApi, usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
 import { Avatar, Badge, Data, Empty, Loading } from '../components/ui.jsx'
 import { useImageEditor } from '../components/ImageEditor.jsx'
@@ -48,7 +48,9 @@ function Confirm({ text, label, busy, onYes, onNo }) {
 
 function Thumb({ x, size = 56 }) {
   const [bad, setBad] = useState(false)
-  if (x.photoUrl && !bad) return <img className="exec-thumb" src={x.photoUrl} alt="" width={size} height={size} onError={() => setBad(true)} />
+  const own = usePhoto(x.photoUrl?.startsWith('/api/') ? x.photoUrl : null) // the linked member's profile photo
+  if (own) return <img className="exec-thumb" src={own} alt="" width={size} height={size} />
+  if (x.photoUrl && !x.photoUrl.startsWith('/api/') && !bad) return <img className="exec-thumb" src={x.photoUrl} alt="" width={size} height={size} onError={() => setBad(true)} />
   return <Avatar name={x.name} size={size} />
 }
 

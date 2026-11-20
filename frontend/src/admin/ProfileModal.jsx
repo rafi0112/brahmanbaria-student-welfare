@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api.js'
+import { api, usePhoto } from '../lib/api.js'
+import PhotoPicker from '../components/PhotoPicker.jsx'
 import { useApp } from '../lib/app.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { initials } from '../lib/initials.js'
@@ -11,8 +12,10 @@ const PHONE = /^01\d{9}$/
 
 export { initials }
 
-// Black-and-white initials badge: no colour, so it works in both themes.
-export function MonoAvatar({ name, size = 28 }) {
+// The person's photo when they have one; otherwise a black-and-white initials badge (no colour, works in both themes).
+export function MonoAvatar({ name, size = 28, photo }) {
+  const src = usePhoto(photo)
+  if (src) return <img className="mono-avatar mono-avatar-img" src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
   return <span className="mono-avatar" style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }} aria-hidden="true">{initials(name)}</span>
 }
 
@@ -68,9 +71,10 @@ export default function ProfileModal({ onClose }) {
     <>
       <Modal title={t('ad.me.title')} onClose={onClose} busy={busy} guard={guard} wide>
         <div className="me-head">
-          <MonoAvatar name={name} size={56} />
+          <MonoAvatar name={name} size={56} photo={profile?.photoUrl} />
           <div><strong>{name}</strong><span className="muted">{user.email}</span></div>
         </div>
+        {profile && <PhotoPicker name={name} photo={profile.photoUrl} uploadPath="/me/photo" deletePath="/me/photo" onDone={(r) => set(r)} />}
         <div aria-live="polite">{msg && <p className={`notice ${msg.tone}`} role={msg.tone === 'bad' ? 'alert' : 'status'}>{msg.text}</p>}</div>
 
         <dl className="me-facts">
