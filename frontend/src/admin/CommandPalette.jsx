@@ -37,7 +37,7 @@ export default function CommandPalette({ onClose }) {
     ]).then(([students, posts, places, albums]) => {
       if (!live) return
       setFound([
-        ...students.map((s) => ({ key: `s${s.id}`, group: t('admin.nav.students'), label: s.name, hint: s.email, to: `/admin/students?q=${encodeURIComponent(s.email)}` })),
+        ...students.map((s) => ({ key: `s${s.id}`, group: t('admin.nav.students'), label: s.name, hint: s.email, to: `/admin/profile/m-${s.id}` })),
         ...posts.map((p) => ({ key: `b${p.id}`, group: t('admin.nav.blog'), label: pick(p.data.titleBn, p.data.titleEn) || p.title, hint: `/${p.slug}`, to: `/admin/blog?edit=${p.id}` })),
         ...places.map((p) => ({ key: `p${p.id}`, group: t('admin.nav.places'), label: pick(p.data.nameBn, p.data.nameEn) || p.title, hint: `/${p.slug}`, to: `/admin/heritage?edit=${p.id}` })),
         ...albums.map((a) => ({ key: `a${a.id}`, group: t('ad.kind.album'), label: pick(a.data.titleBn, a.data.titleEn) || a.title, hint: '', to: `/admin/gallery?album=${a.id}` })),

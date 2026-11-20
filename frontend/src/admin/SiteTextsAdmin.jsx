@@ -8,6 +8,7 @@ import { Notice, PageHeader, SearchBox, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
 import { describe, marksIn } from './textLabels.js'
 import { UNUSED_TEXTS } from './unusedTexts.js'
+import AboutStats, { ABOUT_STAT_KEYS } from './AboutStats.jsx'
 
 // Every text of the public site and the member pages, in Bangla and English, changed from here without touching code.
 // An admin's wording replaces the built-in one for everyone; emptying a box (or "Use the original") brings the built-in
@@ -96,6 +97,7 @@ export default function SiteTextsAdmin() {
         const hay = `${strings.bn[k] || ''} ${strings.en[k] || ''} ${draft[k]?.bn || ''} ${draft[k]?.en || ''} ${d.where.join(' ')} ${d.what.join(' ')}`.toLowerCase()
         return hay.includes(words)
       }
+      if (!onlyChanged && ABOUT_STAT_KEYS.has(k)) return false // edited in the numbers panel at the top of About
       return onlyChanged || groupOf(k) === group
     })
   }, [q, group, onlyChanged, draft])
@@ -140,6 +142,7 @@ export default function SiteTextsAdmin() {
                 ))}
               </div>
             )}
+            {group === 'about' && !q && !onlyChanged && <AboutStats draft={draft} set={set} reset={reset} original={strings} />}
             <p className="muted small">{pick(`${n(list.length)}টি লেখা`, `${list.length} texts`)}</p>
             <ul className="stx-list">
               {list.slice(0, shown).map((k) => {

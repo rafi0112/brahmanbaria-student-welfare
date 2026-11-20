@@ -143,7 +143,7 @@ export default function Dashboard() {
     d.blog.draft > 0 && { to: '/admin/blog?status=draft', text: `${n(d.blog.draft)} ${t('ad.dash.attDrafts')}` },
     d.places.draft > 0 && { to: '/admin/heritage?status=draft', text: `${n(d.places.draft)} ${t('ad.dash.attPlaces')}` },
     d.committees.published === 0 && { to: '/admin?tab=committee', text: t('ad.dash.attCommittee') },
-    d.members.deactivated > 0 && { to: '/admin/students?disabled=yes', text: `${n(d.members.deactivated)} ${t('ad.dash.attDeactivated')}` },
+    d.members.deactivated > 0 && { to: '/admin/students?tab=members&disabled=yes', text: `${n(d.members.deactivated)} ${t('ad.dash.attDeactivated')}` },
   ].filter(Boolean)
 
   return (

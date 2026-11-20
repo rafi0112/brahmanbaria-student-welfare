@@ -829,3 +829,13 @@
 
 .cm-frozen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .cm-lang { margin-bottom: 8px; }
+
+/* About page numbers panel (Website texts › About) */
+.ab-admin { margin: 6px 0 16px; padding: 16px 18px; }
+.ab-admin h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.ab-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; margin-top: 12px; }
+.ab-admin-row { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--a-line); border-radius: var(--a-r-lg); background: var(--a-surface); }
+.ab-admin-row.is-own { border-color: var(--a-accent); box-shadow: 0 0 0 3px var(--a-accent-soft); }
+.ab-admin-now { display: grid; gap: 2px; } .ab-admin-num { font-size: 1.7rem; font-weight: 700; line-height: 1.1; color: var(--a-text); }
+.ab-admin-names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ab-admin-row .btn { justify-self: start; }
