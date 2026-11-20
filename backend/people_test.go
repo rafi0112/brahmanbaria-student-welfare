@@ -53,12 +53,21 @@ func TestMemberCanEditPhoneGenderAndBloodGroupDirectly(t *testing.T) {
 			t.Errorf("%s=%q must be refused: %d", field, bad, rec.Code)
 		}
 	}
-	// academic details stay locked once approved: they never change through this route
-	if rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"batch": 3, "department": "Law"}, c); rec.Code != 200 {
-		t.Fatalf("unknown fields are ignored: %d", rec.Code)
+	// the member may also correct their academic details, checked like at registration
+	if rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"batch": 3, "department": "Law", "session": "2019-20", "upazila": "kasba", "union": ""}, c); rec.Code != 200 {
+		t.Fatalf("academic details: %d %s", rec.Code, rec.Body)
 	}
-	if p, _ := e.mem.ProfileByUser(context.Background(), u.ID); p.Batch == 3 || p.Department == "Law" {
-		t.Fatalf("academic fields must not change here: %+v", p)
+	if p, _ := e.mem.ProfileByUser(context.Background(), u.ID); p.Batch != 3 || p.Department != "Law" || p.Session != "2019-20" || p.Upazila != "kasba" {
+		t.Fatalf("academic fields: %+v", p)
+	}
+	for body, field := range map[string]map[string]any{"batch": {"batch": 99}, "department": {"department": "Astrology"}, "upazila": {"upazila": "atlantis"}, "union": {"upazila": "kasba", "union": "Nowhere"}, "name": {"name": "x"}, "session": {"session": "twenty"}} {
+		if rec := e.do("PATCH", "/api/v1/me/profile", field, c); rec.Code != 422 || !strings.Contains(rec.Body.String(), `"`+body+`"`) {
+			t.Errorf("%v must be refused on %s: %d %s", field, body, rec.Code, rec.Body)
+		}
+	}
+	// the change is in the activity log for admins
+	if ok, _ := e.mem.HasAuditAction(context.Background(), "member.self_edit"); !ok {
+		t.Fatal("no activity log entry for the member's own edit")
 	}
 }
 

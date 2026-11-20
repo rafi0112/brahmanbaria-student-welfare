@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import zlib from 'node:zlib'
 import { E2E } from '../playwright.config.js'
+import { login } from './session.js'
 
 // The signed-in header: account menu, the profile dialog (details and editing) and profile photos.
 // Runs against the isolated in-memory API; the admin account gets a member profile first so every part has data.
@@ -119,4 +120,33 @@ test('account menu, profile dialog with every detail, editing and a profile phot
   await page.locator('#drawer').getByRole('button', { name: 'Log out' }).click()
   await page.setViewportSize({ width: 1280, height: 900 })
   await expect(page.getByRole('button', { name: 'Account menu' })).toHaveCount(0)
+})
+
+test('an approved member corrects their own details (not the email) from My profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await login(page)
+  const made = await page.request.post('/api/v1/me/profile', { data: { name: 'Test Admin Person', batch: 16, department: 'Finance', session: '2019-20', occupation: 'Lecturer', workplace: 'Dhaka College', upazila: 'kasba', union: 'Kuti', phone: '01712345678' } })
+  expect([201, 409]).toContain(made.status())
+  const me = await (await page.request.get('/api/v1/auth/me')).json()
+  await page.request.post(`/api/v1/admin/students/${me.user.id}/approve`)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'My profile' }).click()
+  const dlg = page.locator('dialog.pdialog')
+  await dlg.getByRole('tab', { name: 'Update' }).click()
+  await dlg.getByRole('button', { name: 'Edit your details' }).click()
+  const form = dlg.locator('section[aria-labelledby="chg-h"] form')
+  await form.getByLabel('Full name').or(form.getByLabel(/^Name/)).first().fill('Corrected Person')
+  await form.locator('select').first().selectOption('17')
+  await form.getByLabel(/Profession/).fill('Researcher')
+  await expect(form.getByText(/You sign in with your email/)).toBeVisible()
+  await form.getByRole('button', { name: /Save/ }).click()
+  await expect(dlg.getByText('Saved.').first()).toBeVisible()
+  const after = await (await page.request.get('/api/v1/auth/me')).json()
+  expect(after.profile.name).toBe('Corrected Person')
+  expect(after.profile.batch).toBe(17)
+  expect(after.profile.occupation).toBe('Researcher')
+  expect(after.profile.status).toBe('approved')
+  expect(after.user.email).toBe(E2E.email)
 })

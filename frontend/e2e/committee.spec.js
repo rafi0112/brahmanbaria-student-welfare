@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { E2E } from '../playwright.config.js'
+import { login } from './session.js'
 
 // The executive committee is built in the admin panel and appears, grouped, on the public page.
 test.beforeEach(async ({ page }) => {
@@ -97,11 +98,7 @@ test('register shows the optional profile photo link field', async ({ page }) =>
 
 test('committee: next year drafted in both languages, published (the old one is archived), and an archived one restored', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/login')
-  await page.locator('input[type=email]').fill(E2E.email)
-  await page.locator('input[type=password]').fill(E2E.password)
-  await page.locator('form button[type=submit]').click()
-  await page.waitForURL((u) => u.pathname === '/')
+  await login(page)
   await page.goto('/admin?tab=committee')
   const f = () => page.locator('form.cm-form').first()
 

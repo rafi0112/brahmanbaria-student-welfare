@@ -286,8 +286,11 @@ func (s *pgStore) ProfileByUser(ctx context.Context, id string) (*Profile, error
 func (s *pgStore) UpdateProfile(ctx context.Context, id string, c ProfilePatch) error {
 	tag, err := s.db.Exec(ctx, `UPDATE profiles SET
 		phone = COALESCE($2, phone), blood_group = COALESCE($3, blood_group), show_in_directory = COALESCE($4, show_in_directory),
-		show_phone = COALESCE($5, show_phone), show_email = COALESCE($6, show_email), show_blood = COALESCE($7, show_blood), gender = COALESCE($8, gender)
-		WHERE user_id = $1::uuid`, id, c.Phone, c.BloodGroup, c.ShowInDirectory, c.ShowPhone, c.ShowEmail, c.ShowBlood, c.Gender)
+		show_phone = COALESCE($5, show_phone), show_email = COALESCE($6, show_email), show_blood = COALESCE($7, show_blood), gender = COALESCE($8, gender),
+		name = COALESCE($9, name), batch = COALESCE($10::int, batch), department = COALESCE($11, department), session = COALESCE($12, session),
+		upazila = COALESCE($13, upazila), union_name = COALESCE($14, union_name), occupation = COALESCE($15, occupation), workplace = COALESCE($16, workplace)
+		WHERE user_id = $1::uuid`, id, c.Phone, c.BloodGroup, c.ShowInDirectory, c.ShowPhone, c.ShowEmail, c.ShowBlood, c.Gender,
+		c.Name, c.Batch, c.Department, c.Session, c.Upazila, c.Union, c.Occupation, c.Workplace)
 	if err == nil && tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}

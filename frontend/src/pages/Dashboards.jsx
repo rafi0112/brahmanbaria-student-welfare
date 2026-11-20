@@ -120,13 +120,14 @@ function CompleteProfile({ defaultName, onDone }) {
   )
 }
 
-// Before approval a member corrects their academic details directly; once approved only an administrator changes them.
+// A member corrects any of their own details here (everything but the email, which is how they sign in). The server
+// checks them like at registration and keeps a note of the change in the admins' activity log.
 function EditDetails({ p }) {
   const { t, n, pick } = useApp()
   const auth = useAuth()
   const depts = useApi('/departments')
   const ups = useApi('/upazilas')
-  const start = () => ({ name: p.name, batch: String(p.batch), department: p.department, session: p.session || '', upazila: p.upazila, union: p.union, gender: p.gender || '', phone: p.phone || '', bloodGroup: p.bloodGroup || '' })
+  const start = () => ({ name: p.name, batch: String(p.batch), department: p.department, session: p.session || '', upazila: p.upazila, union: p.union || '', gender: p.gender || '', phone: p.phone || '', bloodGroup: p.bloodGroup || '', occupation: p.occupation || '', workplace: p.workplace || '' })
   const [v, setV] = useState(null)
   const [errs, setErrs] = useState({})
   const [msg, setMsg] = useState(null)
@@ -136,10 +137,10 @@ function EditDetails({ p }) {
   const send = async (e) => {
     e.preventDefault()
     setMsg(null); setErrs({})
-    if (!/^01\d{9}$/.test(v.phone.trim())) { setErrs({ phone: t('auth.e.phone') }); return }
+    if (v.phone.trim() && !/^01\d{9}$/.test(v.phone.trim())) { setErrs({ phone: t('auth.e.phone') }); return }
     setBusy(true)
     try {
-      auth.set(await api('/me/profile', { method: 'POST', body: JSON.stringify({ ...v, phone: v.phone.trim(), batch: Number(v.batch) }) }))
+      auth.set(await api('/me/profile', { method: 'PATCH', body: JSON.stringify({ ...v, phone: v.phone.trim(), batch: Number(v.batch) }) }))
       setV(null); setMsg({ tone: 'ok', text: t('dash.saved') })
     } catch (err) {
       if (err.fields) setErrs(err.fields)
@@ -182,6 +183,15 @@ function EditDetails({ p }) {
             {errs.phone && <small className="err">{errs.phone}</small>}
           </label>
           {sel('bloodGroup', 'auth.blood', BLOODS.map((b) => [b, b]))}
+          <label className="field"><span>{t('auth.occupation')}</span>
+            <input value={v.occupation} maxLength={120} onChange={(e) => set('occupation', e.target.value)} aria-invalid={!!errs.occupation} />
+            {errs.occupation && <small className="err">{errs.occupation}</small>}
+          </label>
+          <label className="field"><span>{t('auth.workplace')}</span>
+            <input value={v.workplace} maxLength={120} onChange={(e) => set('workplace', e.target.value)} aria-invalid={!!errs.workplace} />
+            {errs.workplace && <small className="err">{errs.workplace}</small>}
+          </label>
+          <p className="muted small">{t('dash.change.emailNote')}</p>
           <div className="row-actions">
             <button className="btn btn-dark" disabled={busy} aria-busy={busy || undefined}>{t('dash.change.save')}</button>
             <button type="button" className="btn btn-ghost" onClick={() => setV(null)}>{t('dash.change.cancel')}</button>
@@ -261,7 +271,7 @@ export function ProfileManager({ user, view = 'all' }) {
             <div><dt>{t('dash.listed')}</dt><dd>{p.showInDirectory ? t('ad.me.yes') : t('ad.me.no')}</dd></div>
           </dl>
           </>}
-          {showEdit && p.status !== 'approved' && <EditDetails p={p} />}
+          {showEdit && <EditDetails p={p} />}
           {showEdit && form && (
             <form onSubmit={save} className="card-form" noValidate>
               <h2>{t('dash.contact')}</h2>

@@ -2193,3 +2193,10 @@ select option:disabled { color: var(--muted); }
   background: var(--ink); color: var(--paper); font-size: .85rem; font-weight: 600; text-decoration: none; box-shadow: var(--shadow-pop); opacity: .92; }
 .edit-texts:hover, .edit-texts:focus-visible { opacity: 1; background: var(--accent-btn); color: #fff; }
 @media (max-width: 560px) { .edit-texts { left: 12px; bottom: 16px; padding: 9px 13px; font-size: .8rem; } }
+
+/* Alumni heading: the gold gradient on the letters only (on the word's mask box too it showed as slivers above it) */
+.phero-v-stack .st-title .hl, .phero-v-stack .st-title .hl .st-w { background: none !important; -webkit-text-fill-color: currentColor; padding: 0; margin: 0; }
+.phero-v-stack .st-title .hl .st-w { padding: .22em .14em .14em; margin: -.22em -.14em -.14em; }
+.phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #e7a33e 0%, #c98a2b 45%, #915907 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding: 0 .06em; margin: 0 -.06em; }
+:root[data-theme='dark'] .phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .phero-v-stack .st-title .hl .st-w > span { background: linear-gradient(135deg, #f8c77e, #e7a33e); -webkit-background-clip: text; background-clip: text; } }

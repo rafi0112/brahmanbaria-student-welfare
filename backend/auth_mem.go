@@ -219,6 +219,17 @@ func (m *memStore) UpdateProfile(_ context.Context, id string, c ProfilePatch) e
 	if c.ShowBlood != nil {
 		p.ShowBlood = *c.ShowBlood
 	}
+	for _, f := range []struct {
+		v   *string
+		dst *string
+	}{{c.Name, &p.Name}, {c.Department, &p.Department}, {c.Session, &p.Session}, {c.Upazila, &p.Upazila}, {c.Union, &p.Union}, {c.Occupation, &p.Occupation}, {c.Workplace, &p.Workplace}} {
+		if f.v != nil {
+			*f.dst = *f.v
+		}
+	}
+	if c.Batch != nil {
+		p.Batch = *c.Batch
+	}
 	return nil
 }
 

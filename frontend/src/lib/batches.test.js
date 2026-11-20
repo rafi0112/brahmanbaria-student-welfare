@@ -9,3 +9,9 @@ test('batch choices grow with the years, newest first, within what the server ac
   assert.equal(batchNumbers(new Date('2040-01-01'))[0], 44)
   assert.equal(batchNumbers(new Date('2090-01-01'))[0], 60)
 })
+
+test('this year\'s session follows the calendar', async () => {
+  const { currentSession } = await import('./batches.js')
+  assert.equal(currentSession(new Date('2026-11-20')), '2026-27')
+  assert.equal(currentSession(new Date('2099-03-01'), '–'), '2099–00')
+})

@@ -508,11 +508,57 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 		ShowPhone       *string `json:"showPhone"`
 		ShowEmail       *string `json:"showEmail"`
 		ShowBlood       *string `json:"showBlood"`
+		// the member's own details: anything but the email may be corrected by the member, checked like at registration
+		Name       *string `json:"name"`
+		Batch      *int    `json:"batch"`
+		Department *string `json:"department"`
+		Session    *string `json:"session"`
+		Upazila    *string `json:"upazila"`
+		Union      *string `json:"union"`
+		Occupation *string `json:"occupation"`
+		Workplace  *string `json:"workplace"`
 	}
 	if !decode(w, r, &q) {
 		return
 	}
 	errs := map[string]string{}
+	var changed []string
+	if q.Name != nil || q.Batch != nil || q.Department != nil || q.Session != nil || q.Upazila != nil || q.Union != nil || q.Occupation != nil || q.Workplace != nil {
+		cur, err := a.Auth.Store.ProfileByUser(r.Context(), u.ID)
+		if err != nil || cur == nil {
+			apiError(w, http.StatusNotFound, "no member profile for this account")
+			return
+		}
+		// the profile as it would be, checked as a whole (a new upazila needs a union of that upazila, and so on)
+		v := registerReq{Name: cur.Name, Batch: cur.Batch, Department: cur.Department, Session: cur.Session, Upazila: cur.Upazila, Union: cur.Union, Occupation: cur.Occupation, Workplace: cur.Workplace}
+		take := func(dst *string, src *string, key string, old string) {
+			if src != nil {
+				*dst = strings.TrimSpace(*src)
+				if *dst != old {
+					changed = append(changed, key)
+				}
+			}
+		}
+		take(&v.Name, q.Name, "name", cur.Name)
+		take(&v.Department, q.Department, "department", cur.Department)
+		take(&v.Session, q.Session, "session", cur.Session)
+		take(&v.Upazila, q.Upazila, "upazila", cur.Upazila)
+		take(&v.Union, q.Union, "union", cur.Union)
+		take(&v.Occupation, q.Occupation, "occupation", cur.Occupation)
+		take(&v.Workplace, q.Workplace, "workplace", cur.Workplace)
+		if q.Batch != nil {
+			v.Batch = *q.Batch
+			if v.Batch != cur.Batch {
+				changed = append(changed, "batch")
+			}
+		}
+		for k, msg := range a.validateProfile(&v, false) {
+			errs[k] = msg
+		}
+		// write back what was checked (trimmed and tidied)
+		q.Name, q.Department, q.Session, q.Upazila, q.Union, q.Occupation, q.Workplace = &v.Name, &v.Department, &v.Session, &v.Upazila, &v.Union, &v.Occupation, &v.Workplace
+		q.Batch = &v.Batch
+	}
 	if q.Phone != nil && *q.Phone != "" && !phoneRx.MatchString(*q.Phone) {
 		errs["phone"] = "Use an 11-digit number starting with 01."
 	}
@@ -532,7 +578,8 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 		return
 	}
 	err := a.Auth.Store.UpdateProfile(r.Context(), u.ID, ProfilePatch{Phone: q.Phone, Gender: q.Gender, BloodGroup: q.BloodGroup,
-		ShowInDirectory: q.ShowInDirectory, ShowPhone: q.ShowPhone, ShowEmail: q.ShowEmail, ShowBlood: q.ShowBlood})
+		ShowInDirectory: q.ShowInDirectory, ShowPhone: q.ShowPhone, ShowEmail: q.ShowEmail, ShowBlood: q.ShowBlood,
+		Name: q.Name, Batch: q.Batch, Department: q.Department, Session: q.Session, Upazila: q.Upazila, Union: q.Union, Occupation: q.Occupation, Workplace: q.Workplace})
 	if err == ErrNotFound {
 		apiError(w, http.StatusNotFound, "no member profile for this account")
 		return
@@ -540,6 +587,9 @@ func (a *App) updateProfile(w http.ResponseWriter, r *http.Request, u User) {
 	if err != nil {
 		apiError(w, 500, "could not save")
 		return
+	}
+	if len(changed) > 0 { // admins see in the activity log who corrected what
+		_ = a.Auth.Store.Audit(r.Context(), u.ID, "member.self_edit", "user", u.ID, map[string]any{"fields": changed})
 	}
 	writeJSON(w, 200, a.meBody(r.Context(), u))
 }

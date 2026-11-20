@@ -296,8 +296,19 @@ func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 			batches[*s.Batch] = true
 		}
 	}
+	// the newest batch anyone belongs to (current students or alumni): "how many batches so far", growing each year
+	latest := 0
+	for b := range batches {
+		latest = max(latest, b)
+	}
+	alumni := a.shownAlumni(r.Context())
+	for _, al := range alumni {
+		if al.Batch != nil {
+			latest = max(latest, *al.Batch)
+		}
+	}
 	writeJSON(w, 200, map[string]any{
-		"students": students, "alumni": len(a.shownAlumni(r.Context())), "batches": len(batches), "alumniUpToBatch": d.AlumniUpTo,
+		"students": students, "alumni": len(alumni), "batches": len(batches), "latestBatch": latest, "alumniUpToBatch": d.AlumniUpTo,
 		"upazilas": len(a.data().Upazilas), "places": len(a.publishedPlaces(r)), "sample": a.data().Sample,
 	})
 }

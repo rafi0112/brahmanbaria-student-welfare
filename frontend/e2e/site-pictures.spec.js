@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { E2E } from '../playwright.config.js'
+import { login } from './session.js'
 
 // A picture chosen for one place on the site shows there and nowhere else. Uses pictures bundled with the site, so no
 // upload is needed; the admin's own session saves them and visitors read them back.
 
 test('each chosen picture appears in its own section only', async ({ page, browser }) => {
   await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en'); localStorage.setItem('jk-theme', 'light') } catch { /* ignore */ } })
-  await page.goto('/login')
-  await page.locator('input[type=email]').fill(E2E.email)
-  await page.locator('input[type=password]').fill(E2E.password)
-  await page.locator('form button[type=submit]').click()
-  await page.waitForURL((u) => u.pathname === '/')
+  await login(page)
 
   const save = (body) => page.request.put('/api/v1/admin/settings/site-images', { data: body })
   try {
@@ -56,11 +53,7 @@ test('each chosen picture appears in its own section only', async ({ page, brows
 // Choosing a picture in the admin (from the gallery) is saved at once: no extra Save press, and visitors see it.
 test('choosing from the gallery in the admin goes live without pressing Save', async ({ page, browser }) => {
   await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'en'); localStorage.setItem('jk-theme', 'light') } catch { /* ignore */ } })
-  await page.goto('/login')
-  await page.locator('input[type=email]').fill(E2E.email)
-  await page.locator('input[type=password]').fill(E2E.password)
-  await page.locator('form button[type=submit]').click()
-  await page.waitForURL((u) => u.pathname === '/')
+  await login(page)
   const clear = () => page.request.put('/api/v1/admin/settings/site-images', { data: { hero: [], pages: {}, galleryFeatured: '', explore: '' } })
   try {
     await page.goto('/admin/site-images')

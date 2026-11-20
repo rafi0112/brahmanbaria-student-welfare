@@ -4,6 +4,8 @@ import { useApp } from '../lib/app.jsx'
 import { Avatar, Badge, Data, Empty, Loading } from '../components/ui.jsx'
 import { useImageEditor } from '../components/ImageEditor.jsx'
 import GalleryChooser from '../admin/GalleryChooser.jsx'
+import { currentSession } from '../lib/batches.js'
+import { bnDigits } from '../data/strings.js'
 
 const MAX_BYTES = 5 * 1024 * 1024
 
@@ -151,7 +153,7 @@ function CommitteeForm({ initial, onSubmit, onCancel, busy, errs }) {
         <input value={v[k('name')]} onChange={set(k('name'))} maxLength={100} lang={en ? 'en' : 'bn'} aria-invalid={!!errs?.[k('name')]} />{errs?.[k('name')] && <small className="err">{errs[k('name')]}</small>}
       </label>
       <label className="field"><span>{t('cm.term')}{en ? ' (English)' : ''}</span>
-        <input value={v[k('term')]} onChange={set(k('term'))} maxLength={80} placeholder={en ? '2026–27' : '২০২৬–২৭'} lang={en ? 'en' : 'bn'} />{errs?.[k('term')] && <small className="err">{errs[k('term')]}</small>}
+        <input value={v[k('term')]} onChange={set(k('term'))} maxLength={80} placeholder={en ? currentSession(new Date(), '–') : bnDigits(currentSession(new Date(), '–'))} lang={en ? 'en' : 'bn'} />{errs?.[k('term')] && <small className="err">{errs[k('term')]}</small>}
       </label>
       <label className="field"><span>{t('cm.description')}{en ? ' (English)' : ''}</span>
         <textarea rows="3" value={v[k('description')] || ''} onChange={set(k('description'))} maxLength={1000} lang={en ? 'en' : 'bn'} aria-invalid={!!errs?.[k('description')]} />{errs?.[k('description')] && <small className="err">{errs[k('description')]}</small>}

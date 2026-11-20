@@ -99,6 +99,16 @@ type NewUser struct {
 
 // ProfilePatch holds optional changes; nil means "leave as is".
 type ProfilePatch struct {
+	// a member's own details (everything but the email, which is the sign-in)
+	Name       *string
+	Batch      *int
+	Department *string
+	Session    *string
+	Upazila    *string
+	Union      *string
+	Occupation *string
+	Workplace  *string
+
 	Gender          *string
 	Phone           *string
 	BloodGroup      *string

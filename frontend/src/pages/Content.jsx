@@ -257,7 +257,7 @@ export function About() {
   const own = (k) => { const v = t(k); return v === k ? '' : v.trim() }
   const stats = [
     ['about.statStudentsL', 'about.statStudentsN', s ? (s.students || 0) + (s.alumni || 0) : null, 'users'], // students and alumni together
-    ['about.statBatchesL', 'about.statBatchesN', s?.batches, 'grad'],
+    ['about.statBatchesL', 'about.statBatchesN', s ? (s.latestBatch || s.batches) : null, 'grad'], // batches so far: the newest one
     ['about.statUpazilasL', 'about.statUpazilasN', s?.upazilas, 'pin'],
     ['about.statPlacesL', 'about.statPlacesN', s?.places, 'landmark'],
   ]

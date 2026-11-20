@@ -11,6 +11,7 @@ import PhotoPicker from '../components/PhotoPicker.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
 import BulkImport from './BulkImport.jsx'
 import { batchNumbers } from '../lib/batches.js'
+import { currentSession } from '../lib/batches.js'
 
 const BATCHES = batchNumbers()
 // The batches still studying: after the saved alumni batch ("alumni up to"). Graduated batches are managed on the Alumni page.
@@ -545,7 +546,7 @@ export function ImportedForm({ row, depts, onClose, onSaved }) {
             <select id={id} value={v.batch} onChange={text('batch')} aria-invalid={bad}><option value="">{t('auth.select')}</option>{BATCHES.map((b) => <option key={b} value={b}>{t('auth.batch')} {n(b)}</option>)}</select>)}</Field>
           <Field label={t('auth.dept')} required error={errs.department}>{(id, bad) => (
             <select id={id} value={v.department} onChange={text('department')} aria-invalid={bad}><option value="">{t('auth.select')}</option>{depts.map((d) => <option key={d} value={d}>{d}</option>)}</select>)}</Field>
-          <Field label={t('students.session')} error={errs.session} hint="2026-27">{(id, bad) => <input id={id} value={v.session} onChange={text('session')} maxLength={7} aria-invalid={bad} />}</Field>
+          <Field label={t('students.session')} error={errs.session} hint={currentSession()}>{(id, bad) => <input id={id} value={v.session} onChange={text('session')} maxLength={7} aria-invalid={bad} />}</Field>
           <Field label={t('auth.upazila')} error={errs.upazila}>{(id, bad) => (
             <select id={id} value={v.upazila} onChange={(e) => setV({ ...v, upazila: e.target.value, union: '' })} aria-invalid={bad}><option value="">—</option>{(ups.data?.items || []).map((u) => <option key={u.slug} value={u.slug}>{u.nameEn}</option>)}</select>)}</Field>
           <Field label={t('auth.union')} error={errs.union}>{(id, bad) => (

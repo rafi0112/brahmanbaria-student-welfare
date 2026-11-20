@@ -30,10 +30,20 @@ test('a new member is approved from Requests into the Directory; profile links o
   await expect(page.getByText('Links Person').first()).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/admin/profile/m-${id}$`))
 
-  // an admin account without a member profile offers no profile to open
+  // Admin management: "View member profile" is offered only for an admin who has a member profile, and opens it
+  const admins = await (await page.request.get('/api/v1/admin/users?role=admin')).json()
+  const me = admins.items.find((u) => u.email === 'e2e-admin@example.test')
   await page.goto('/admin?tab=roles')
   await page.locator('tbody tr', { hasText: 'e2e-admin@example.test' }).getByRole('button', { name: /Actions/ }).click()
-  await expect(page.getByRole('menuitem', { name: 'View member profile' })).toHaveCount(0)
-  await page.keyboard.press('Escape')
+  const item = page.getByRole('menuitem', { name: 'View member profile' })
+  if (me.memberStatus) {
+    await item.click()
+    await expect(page).toHaveURL(new RegExp(`/admin/profile/m-${me.id}$`))
+  } else {
+    await expect(item).toHaveCount(0)
+    await page.keyboard.press('Escape')
+  }
 
+  // tidy up: the member made here is removed again (later tests expect no registered members)
+  expect((await page.request.post(`/api/v1/admin/students/${id}/remove`, { data: { confirm: 'links.person@example.test' } })).ok()).toBe(true)
 })

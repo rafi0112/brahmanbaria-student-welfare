@@ -378,18 +378,18 @@ func TestProfilePatchCannotChangeProtectedFields(t *testing.T) {
 	e := authApp(t)
 	mc := e.member(t, "protect@example.com")
 	before := e.do("GET", "/api/v1/auth/me", nil, mc)
-	rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"role": "admin", "name": "Hijacked", "batch": 1, "department": "Law", "status": "approved", "phone": "01712345678"}, mc)
-	if rec.Code == 200 {
-		after := rec.Body.String()
-		if strings.Contains(after, `"role":"admin"`) || strings.Contains(after, "Hijacked") || strings.Contains(after, `"status":"approved"`) {
-			t.Fatalf("protected field changed through profile: %s", after)
-		}
-	} else if rec.Code != 400 && rec.Code != 422 {
-		t.Fatalf("unexpected status %d", rec.Code)
+	// a member corrects their own details (name, batch, department…), but never the role, the membership status or the email
+	rec := e.do("PATCH", "/api/v1/me/profile", map[string]any{"role": "admin", "status": "approved", "email": "other@example.com", "name": "Renamed Person", "batch": 1, "department": "Law", "phone": "01712345678"}, mc)
+	if rec.Code != 200 {
+		t.Fatalf("own details: %d %s", rec.Code, rec.Body)
 	}
 	now := e.do("GET", "/api/v1/auth/me", nil, mc)
-	if !strings.Contains(now.Body.String(), `"role":"member"`) || strings.Contains(now.Body.String(), "Hijacked") {
+	body := now.Body.String()
+	if !strings.Contains(body, `"role":"member"`) || strings.Contains(body, `"status":"approved"`) || !strings.Contains(body, "protect@example.com") || strings.Contains(body, "other@example.com") {
 		t.Fatalf("account changed: before %s after %s", before.Body, now.Body)
+	}
+	if !strings.Contains(body, "Renamed Person") || !strings.Contains(body, `"department":"Law"`) {
+		t.Fatalf("own details not saved: %s", body)
 	}
 	// the endpoint is bound to the signed-in identity: there is no id to aim at another member
 	if rec := e.do("PATCH", "/api/v1/me/profile/"+"someone-else", map[string]any{"phone": "01712345678"}, mc); rec.Code != 404 && rec.Code != 405 {

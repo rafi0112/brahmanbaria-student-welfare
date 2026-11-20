@@ -7,7 +7,7 @@ import { bnDigits } from '../data/strings.js'
 // It edits the same website texts as the list below it (about.stat…N / about.stat…L) and is saved with them.
 export const ABOUT_STATS = [
   ['about.statStudentsL', 'about.statStudentsN', (s) => (s ? (s.students || 0) + (s.alumni || 0) : null), 'বর্তমান শিক্ষার্থী + অ্যালামনাই', 'current students + alumni'],
-  ['about.statBatchesL', 'about.statBatchesN', (s) => s?.batches ?? null, 'শিক্ষার্থীদের ব্যাচ', 'batches of the students'],
+  ['about.statBatchesL', 'about.statBatchesN', (s) => (s ? (s.latestBatch || s.batches) : null), 'এ পর্যন্ত মোট ব্যাচ (সবচেয়ে নতুন ব্যাচের নম্বর, প্রতি বছর নিজে বাড়ে)', 'batches so far (the newest batch number; grows every year)'],
   ['about.statUpazilasL', 'about.statUpazilasN', (s) => s?.upazilas ?? null, 'জেলার উপজেলা', 'upazilas of the district'],
   ['about.statPlacesL', 'about.statPlacesN', (s) => s?.places ?? null, 'প্রকাশিত ঐতিহাসিক স্থান', 'published heritage places'],
 ]
@@ -16,7 +16,7 @@ export const ABOUT_STAT_KEYS = new Set(ABOUT_STATS.flatMap(([l, n]) => [l, n]))
 const latin = (s) => String(s || '').replace(/[০-৯]/g, (d) => '০১২৩৪৫৬৭৮৯'.indexOf(d))
 
 export default function AboutStats({ draft, set, reset, original }) {
-  const { pick, n } = useApp()
+  const { pick, n, lang } = useApp()
   const s = useApi('/stats').data
   return (
     <section className="ab-admin si-card" aria-labelledby="ab-admin-h">
@@ -37,7 +37,7 @@ export default function AboutStats({ draft, set, reset, original }) {
           return (
             <div key={nk} className={`ab-admin-row${own ? ' is-own' : ''}`} data-stat={nk}>
               <div className="ab-admin-now">
-                <span className="ab-admin-num">{own ? bnDigits(typed) : auto != null ? n(auto) : '–'}</span>
+                <span className="ab-admin-num">{own ? (lang === 'bn' ? bnDigits(typed) : typed) : auto != null ? n(auto) : '–'}</span>
                 <small className="muted">{own ? pick('আপনার লেখা সংখ্যা', 'your number') : pick(`নিজে গোনা: ${whatBn}`, `counted: ${whatEn}`)}</small>
               </div>
               <label className="field compact"><span>{pick('নিজের সংখ্যা', 'Your number')}</span>
