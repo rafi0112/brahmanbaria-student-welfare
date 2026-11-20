@@ -182,6 +182,7 @@ function ExecutiveForm({ initial, onSubmit, onCancel, busy, errs }) {
   const [d, setD] = useState({ department: d0.department || '', batch: d0.batch || '', session: d0.session || '', upazila: d0.upazila || '', message: d0.message || '',
     designationEn: d0.designationEn || '', bioEn: d0.bioEn || '', messageEn: d0.messageEn || '' })
   const setDet = (k) => (e) => setD((x) => ({ ...x, [k]: e.target.value }))
+  const known = initial?.found || {} // shown on the site while a box is empty (from the profile or the student/alumni lists)
   const [photo, setPhoto] = useState(initial?.photo ? { path: initial.photo, url: initial.photoUrl } : null)
   const [bad, setBad] = useState({})
   const found = useApi(!editing && !guest && dq.trim().length >= 2 ? `/admin/users${qs({ q: dq.trim(), limit: 6 })}` : null)
@@ -255,10 +256,10 @@ function ExecutiveForm({ initial, onSubmit, onCancel, busy, errs }) {
         <legend>{t('cm.detailsT')}</legend>
         <p className="muted small">{t('cm.detailsHint')}</p>
         <div className="cm-details-grid">
-          <label className="field"><span>{t('cm.dept')}</span><input value={d.department} onChange={setDet('department')} maxLength={120} aria-invalid={!!all.department} />{all.department && <small className="err">{all.department}</small>}</label>
-          <label className="field"><span>{t('cm.batch')}</span><input value={d.batch} onChange={setDet('batch')} maxLength={20} inputMode="numeric" aria-invalid={!!all.batch} />{all.batch && <small className="err">{all.batch}</small>}</label>
-          <label className="field"><span>{t('cm.session')}</span><input value={d.session} onChange={setDet('session')} maxLength={20} placeholder="2019-20" aria-invalid={!!all.session} />{all.session && <small className="err">{all.session}</small>}</label>
-          <label className="field"><span>{t('cm.upazila')}</span><input value={d.upazila} onChange={setDet('upazila')} maxLength={60} aria-invalid={!!all.upazila} />{all.upazila && <small className="err">{all.upazila}</small>}</label>
+          <label className="field"><span>{t('cm.dept')}</span><input value={d.department} onChange={setDet('department')} placeholder={known.department || ''} maxLength={120} aria-invalid={!!all.department} />{all.department && <small className="err">{all.department}</small>}</label>
+          <label className="field"><span>{t('cm.batch')}</span><input value={d.batch} onChange={setDet('batch')} placeholder={known.batch || ''} maxLength={20} inputMode="numeric" aria-invalid={!!all.batch} />{all.batch && <small className="err">{all.batch}</small>}</label>
+          <label className="field"><span>{t('cm.session')}</span><input value={d.session} onChange={setDet('session')} maxLength={20} placeholder={known.session || '2019-20'} aria-invalid={!!all.session} />{all.session && <small className="err">{all.session}</small>}</label>
+          <label className="field"><span>{t('cm.upazila')}</span><input value={d.upazila} onChange={setDet('upazila')} placeholder={known.upazila || ''} maxLength={60} aria-invalid={!!all.upazila} />{all.upazila && <small className="err">{all.upazila}</small>}</label>
         </div>
         <label className="field"><span>{t('cm.message')} <small className="muted">{d.message.length}/1000</small></span>
           <textarea rows={4} value={d.message} onChange={setDet('message')} maxLength={1000} placeholder={t('cm.messageHint')} aria-invalid={!!all.message} />{all.message && <small className="err">{all.message}</small>}

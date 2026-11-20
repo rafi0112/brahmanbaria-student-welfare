@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -841,5 +842,35 @@ func TestCommitteeRestoreAndEnglish(t *testing.T) {
 	}
 	if rec := jreq(e, "POST", "/api/v1/admin/committees/"+old.ID+"/restore", "admin-token", nil); rec.Code == 200 {
 		t.Fatal("a draft cannot be restored again")
+	}
+}
+
+// A seat without an account whose name is in the student list shows that student's batch, department, session and
+// upazila by default; an admin's own entry still wins.
+func TestCommitteeSeatDetailsFromTheStudentList(t *testing.T) {
+	e, _ := committeeApp(t)
+	students := e.app.directoryStudents(context.Background())
+	if len(students) == 0 {
+		t.Skip("no students in the test data")
+	}
+	s := students[0]
+	var c Committee
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees", "admin-token", map[string]any{"name": "Panel", "term": "2026"}), &c)
+	jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/members", "admin-token", map[string]any{"name": "Md. " + s.Name, "designation": "Member"})
+	jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/members", "admin-token", map[string]any{"name": s.Name, "designation": "Treasurer", "details": map[string]string{"department": "Typed by admin"}})
+	if rec := jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/publish", "admin-token", nil); rec.Code != 200 {
+		t.Fatalf("publish: %d %s", rec.Code, rec.Body)
+	}
+	var pub struct{ Members []publicExecutive }
+	decodeBody(t, jreq(e, "GET", "/api/v1/executive-committee", "", nil), &pub)
+	if len(pub.Members) != 2 {
+		t.Fatalf("members: %+v", pub.Members)
+	}
+	m := pub.Members[0]
+	if s.Batch != nil && m.Batch != strconv.Itoa(*s.Batch) || m.Department != s.Department || m.Session != s.Session || m.Upazila == "" {
+		t.Fatalf("from the student list: %+v (student %+v)", m, s)
+	}
+	if pub.Members[1].Department != "Typed by admin" {
+		t.Fatalf("an admin's entry wins: %+v", pub.Members[1])
 	}
 }

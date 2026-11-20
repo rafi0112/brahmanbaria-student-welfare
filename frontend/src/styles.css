@@ -2187,3 +2187,9 @@ select option:disabled { color: var(--muted); }
 .cm-message blockquote p { margin: 0 0 8px; font-size: 1.05rem; line-height: 1.75; font-style: italic; color: var(--ink); white-space: pre-line; overflow-wrap: anywhere; }
 .cm-message blockquote footer { color: var(--muted); font-size: .88rem; }
 .cm-who { margin: 2px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
+
+/* admin-only: open this page's texts in the panel */
+.edit-texts { position: fixed; z-index: 59; left: 18px; bottom: 22px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+  background: var(--ink); color: var(--paper); font-size: .85rem; font-weight: 600; text-decoration: none; box-shadow: var(--shadow-pop); opacity: .92; }
+.edit-texts:hover, .edit-texts:focus-visible { opacity: 1; background: var(--accent-btn); color: #fff; }
+@media (max-width: 560px) { .edit-texts { left: 12px; bottom: 16px; padding: 9px 13px; font-size: .8rem; } }

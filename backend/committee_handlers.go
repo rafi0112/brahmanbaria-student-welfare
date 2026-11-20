@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -63,35 +64,119 @@ type publicExecutive struct {
 	MessageEn     string `json:"messageEn,omitempty"`
 }
 
-// executiveDetails fills a seat's empty details from the linked member's approved profile.
-// The upazila typed by an admin is shown as written; one from a profile is shown by its Bangla and English names.
-func (a *App) executiveDetails(ctx context.Context, x Executive) (ExecDetails, string) {
+// executiveDetails fills a seat's empty details: first from the linked member's approved profile, then from the
+// student and alumni lists when exactly one person there has the seat's name (honorifics, dots and spacing ignored).
+// The upazila typed by an admin is shown as written; one from a record is shown by its Bangla and English names.
+func (a *App) executiveDetails(ctx context.Context, x Executive, people *personIndex) (ExecDetails, string) {
 	d := x.Details
 	en := d.Upazila
-	if x.UserID == "" || (d.Department != "" && d.Batch != "" && d.Session != "" && d.Upazila != "") {
-		return d, en
-	}
-	p, err := a.Auth.Store.ProfileByUser(ctx, x.UserID)
-	if err != nil || p == nil || p.Status != StatusApproved {
-		return d, en
-	}
-	if d.Department == "" {
-		d.Department = p.Department
-	}
-	if d.Batch == "" && p.Batch > 0 {
-		d.Batch = strconv.Itoa(p.Batch)
-	}
-	if d.Session == "" {
-		d.Session = p.Session
-	}
-	if d.Upazila == "" {
+	full := func() bool { return d.Department != "" && d.Batch != "" && d.Session != "" && d.Upazila != "" }
+	upazila := func(slug string) {
+		if d.Upazila != "" || slug == "" {
+			return
+		}
 		for _, u := range a.data().Upazilas {
-			if u.Slug == p.Upazila {
+			if u.Slug == slug {
 				d.Upazila, en = u.NameBn, u.NameEn
+				return
 			}
 		}
 	}
+	fill := func(dept string, batch int, session, slug string) {
+		if d.Department == "" {
+			d.Department = dept
+		}
+		if d.Batch == "" && batch > 0 {
+			d.Batch = strconv.Itoa(batch)
+		}
+		if d.Session == "" {
+			d.Session = session
+		}
+		upazila(slug)
+	}
+	if full() {
+		return d, en
+	}
+	if x.UserID != "" {
+		if p, err := a.Auth.Store.ProfileByUser(ctx, x.UserID); err == nil && p != nil && p.Status == StatusApproved {
+			fill(p.Department, p.Batch, p.Session, p.Upazila)
+		}
+	}
+	if !full() && people != nil {
+		if r, ok := people.find(x.Name); ok {
+			fill(r.department, r.batch, r.session, r.upazila)
+		}
+	}
 	return d, en
+}
+
+// personIndex: the student and alumni lists by a loose form of the name, for filling committee seats.
+type personRecord struct {
+	department, session, upazila string
+	batch                        int
+}
+
+type personIndex struct{ byName map[string][]personRecord }
+
+var nameHonorific = regexp.MustCompile(`^(?:মো|মোহা|মোছা|মোসা|মোসাম্মৎ|মোহাম্মদ|মুহাম্মদ|ড|ডা|অধ্যাপক|প্রফেসর|md|mst|mohammad|muhammad|mohammed|dr|prof|mr|mrs|ms)\s+`)
+
+// looseName: lower case, no dots, colons or visarga (so মোঃ is মো, Dr. is dr), single spaces, honorifics removed.
+func looseName(name string) string {
+	n := strings.ToLower(strings.TrimSpace(name))
+	n = strings.NewReplacer(".", " ", ":", " ", "ঃ", " ", ",", " ").Replace(n)
+	n = strings.Join(strings.Fields(n), " ")
+	for prev := ""; prev != n; {
+		prev = n
+		n = strings.TrimSpace(nameHonorific.ReplaceAllString(n+" ", ""))
+	}
+	return n
+}
+
+func (a *App) personIndex(ctx context.Context) *personIndex {
+	ix := &personIndex{byName: map[string][]personRecord{}}
+	add := func(name string, r personRecord) {
+		if k := looseName(name); k != "" {
+			ix.byName[k] = append(ix.byName[k], r)
+		}
+	}
+	for _, s := range a.directoryStudents(ctx) {
+		b := 0
+		if s.Batch != nil {
+			b = *s.Batch
+		}
+		add(s.Name, personRecord{department: s.Department, session: s.Session, upazila: s.Upazila, batch: b})
+	}
+	for _, al := range a.shownAlumni(ctx) {
+		b := 0
+		if al.Batch != nil {
+			b = *al.Batch
+		}
+		add(al.Name, personRecord{department: al.Department, upazila: al.Upazila, batch: b})
+	}
+	return ix
+}
+
+// find returns the one record with this name; two people of the same name (and different details) give nothing.
+func (ix *personIndex) find(name string) (personRecord, bool) {
+	rs := ix.byName[looseName(name)]
+	if len(rs) == 0 {
+		return personRecord{}, false
+	}
+	for _, r := range rs[1:] {
+		if r.batch != rs[0].batch || r.department != rs[0].department {
+			return personRecord{}, false
+		}
+	}
+	out := rs[0]
+	for _, r := range rs[1:] { // the same person in both lists: take whatever either has
+		if out.session == "" {
+			out.session = r.session
+		}
+		if out.upazila == "" {
+			out.upazila = r.upazila
+		}
+	}
+	return out, true
 }
 
 type publicCommittee struct {
@@ -117,8 +202,9 @@ func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := make([]publicExecutive, 0, len(xs))
+	people := a.personIndex(r.Context())
 	for _, x := range xs {
-		d, upEn := a.executiveDetails(r.Context(), x)
+		d, upEn := a.executiveDetails(r.Context(), x, people)
 		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo), Verified: a.accountVerified(r.Context(), x.UserID),
 			Department: d.Department, Batch: d.Batch, Session: d.Session, Upazila: d.Upazila, UpazilaEn: upEn, Message: d.Message,
 			DesignationEn: d.DesignationEn, BioEn: d.BioEn, MessageEn: d.MessageEn})
@@ -142,7 +228,20 @@ func (a *App) committeeOne(w http.ResponseWriter, r *http.Request, _ User) {
 		a.committeeFail(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"committee": c, "members": a.withPhotoURLs(xs)})
+	xs = a.withPhotoURLs(xs)
+	people := a.personIndex(r.Context())
+	for i := range xs {
+		bare := xs[i]
+		bare.Details = ExecDetails{}
+		found, en := a.executiveDetails(r.Context(), bare, people)
+		if found.Upazila != "" && en != "" && en != found.Upazila {
+			found.Upazila = found.Upazila + " / " + en
+		}
+		if found != (ExecDetails{}) {
+			xs[i].Found = &found
+		}
+	}
+	writeJSON(w, 200, map[string]any{"committee": c, "members": xs})
 }
 
 // committeeFail turns store errors into stable machine-readable codes the UI translates.

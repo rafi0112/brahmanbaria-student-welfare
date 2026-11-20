@@ -3,7 +3,7 @@ import { api, useApi } from '../lib/api.js'
 import { useApp, setSiteTexts } from '../lib/app.jsx'
 import { strings } from '../data/strings.js'
 import { Data } from '../components/ui.jsx'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Notice, PageHeader, SearchBox, useErrText, useNotice } from './kit.jsx'
 import Icon from './icons.jsx'
 import { describe, marksIn } from './textLabels.js'
@@ -69,7 +69,8 @@ export default function SiteTextsAdmin() {
   const { notice, ok, bad, clear } = useNotice()
   const [saved, setSaved] = useState(null) // { key: { bn, en } } as stored
   const [draft, setDraft] = useState({})
-  const [group, setGroup] = useState('home')
+  const [sp] = useSearchParams()
+  const [group, setGroup] = useState(() => (GROUPS.some(([id]) => id === sp.get('part')) ? sp.get('part') : 'home'))
   const [q, setQ] = useState('')
   const [onlyChanged, setOnlyChanged] = useState(false)
   const [shown, setShown] = useState(PAGE)

@@ -11,7 +11,7 @@ import { AlumniProfile } from '../pages/Community.jsx'
 import FacebookLink from './FacebookLink.jsx'
 import { CONTACT_EMAIL } from '../lib/contact.js'
 import { MotionLayer, Toasts, toast } from './Motion.jsx'
-import { BackToTop } from './SiteHelpers.jsx'
+import { BackToTop, EditTextsButton } from './SiteHelpers.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
@@ -178,6 +178,7 @@ function Header() {
       )}
       <Toasts t={t} />
       <BackToTop />
+      <EditTextsButton />
       <MotionLayer />
     </header>
   )

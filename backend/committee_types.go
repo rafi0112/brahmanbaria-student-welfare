@@ -67,6 +67,8 @@ type Executive struct {
 	PhotoURL    string      `json:"photoUrl"`
 	Order       int         `json:"order"`
 	Details     ExecDetails `json:"details"`
+	// Found: what the site shows for empty details (from a linked profile or the student and alumni lists); admin only
+	Found *ExecDetails `json:"found,omitempty"`
 }
 
 // ExecDetails: who the member is (shown in their pop-up on the Committee page) and a message in their own words.

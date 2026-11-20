@@ -358,3 +358,17 @@ test('about: richer sections, numbers counted by the site unless an admin types 
   await expect(page.locator('.ab-stats dl > div').first()).toContainText('মোট শিক্ষার্থী')
   await page.request.put('/api/v1/admin/settings/site-texts', { data: { texts: {} } })
 })
+
+test('admin: each public page has a button to its own texts; visitors do not see it', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'bn'); localStorage.setItem('jk-theme', 'light') } catch { /* */ } })
+  await page.goto('/about')
+  await expect(page.locator('.edit-texts')).toHaveCount(0)
+  await login(page)
+  await page.goto('/about')
+  await page.locator('.edit-texts').click()
+  await expect(page).toHaveURL(/\/admin\/site-texts\?part=about$/)
+  await expect(page.locator('.stx-row[data-text="about.doT"]')).toBeVisible()
+  await expect(page.locator('.stx-row[data-text="about.district1"]')).toBeVisible()
+  await page.goto('/events')
+  await expect(page.locator('.edit-texts')).toHaveAttribute('href', '/admin/site-texts?part=events')
+})
