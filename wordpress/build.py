@@ -41,13 +41,22 @@ for root, _, files in os.walk(os.path.join(PLUGIN, 'app')):
             if len(raw) > 1024:
                 open(p + '.gz', 'wb').write(gzip.compress(raw, 9, mtime=0))
 
-if os.path.exists(OUT):
-    os.remove(OUT)
-with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-    for root, dirs, files in os.walk(PLUGIN):
-        dirs.sort()
-        for f in sorted(files):
-            p = os.path.join(root, f)
-            z.write(p, os.path.relpath(p, STAGE).replace(os.sep, '/'))
+def make(out, skip=()):
+    if os.path.exists(out):
+        os.remove(out)
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for root, dirs, files in os.walk(PLUGIN):
+            dirs.sort()
+            for f in sorted(files):
+                p = os.path.join(root, f)
+                name = os.path.relpath(p, STAGE).replace(os.sep, '/')
+                if not name.startswith(skip):
+                    z.write(p, name)
+    print('made', out, round(os.path.getsize(out) / 1e6, 1), 'MB', file=sys.stderr)
+
+
+# bswa-site.zip: everything. bswa-site-lite.zip: without the built-in pictures (the plugin takes those from the main
+# site), small enough for any WordPress upload limit.
+make(OUT)
+make(os.path.join(HERE, 'bswa-site-lite.zip'), skip=('bswa-site/app/images/',))
 shutil.rmtree(STAGE, ignore_errors=True)
-print('made', OUT, round(os.path.getsize(OUT) / 1e6, 1), 'MB', file=sys.stderr)

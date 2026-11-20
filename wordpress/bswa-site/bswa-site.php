@@ -15,6 +15,10 @@ if (!defined('ABSPATH')) {
 }
 
 define('BSWA_SITE_DIR', __DIR__ . '/app');
+// The main (Cloudflare) site: pictures missing from this copy are taken from there.
+if (!defined('BSWA_SITE_MAIN')) {
+	define('BSWA_SITE_MAIN', 'https://brahmanbaria-student-welfare.pages.dev');
+}
 
 /*
  * Every visitor address of this WordPress site is answered by the BSWA website: a file of the site (a script, a
@@ -47,6 +51,12 @@ function bswa_site_serve() {
 	$file = bswa_site_file($path);
 	if ($file !== '') {
 		bswa_site_send_file($file, $path);
+	}
+	// A picture or file of the site that is not in this copy (the small "lite" zip leaves the built-in pictures out):
+	// it is fetched from the main site instead, so nothing shows broken.
+	if (preg_match('#^/[A-Za-z0-9._/-]+\.(png|jpe?g|webp|avif|svg|gif|ico|mp4|webm|woff2?)$#', $path) && strpos($path, '..') === false) {
+		wp_redirect(BSWA_SITE_MAIN . $path, 302);
+		exit;
 	}
 	bswa_site_send_page();
 }

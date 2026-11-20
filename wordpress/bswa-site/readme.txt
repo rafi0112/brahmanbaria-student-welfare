@@ -15,6 +15,8 @@ Supabase থেকে আসে; তাই Cloudflare সাইট আর এই
 == ইনস্টল ==
 
 1. WordPress ড্যাশবোর্ড → Plugins → Add New → Upload Plugin → bswa-site.zip বেছে Install Now → Activate।
+   হোস্ট “ফাইল খুব বড়” বললে bswa-site-lite.zip দিন (সাইটের নিজস্ব ছবিগুলো মূল সাইট থেকে আসে), অথবা
+   হোস্টের File Manager দিয়ে bswa-site.zip ফাইলটি wp-content/plugins/ ফোল্ডারে আনজিপ করে Plugins থেকে Activate করুন।
 2. Settings → Permalinks → “Post name” বেছে Save (একবার)।
 3. Render → BSWA সার্ভার → Environment → CORS_ORIGIN-এ কমা দিয়ে ওয়ার্ডপ্রেস ঠিকানা যোগ করুন, যেমন:
    https://brahmanbaria-student-welfare.pages.dev,https://your-wordpress-domain.com
