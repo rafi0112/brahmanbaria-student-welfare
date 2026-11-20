@@ -16,7 +16,7 @@ import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
   ['/', 'nav.home'], ['/about', 'nav.about'], ['/students', 'nav.students'], ['/events', 'nav.events'], ['/alumni', 'nav.alumni'],
-  ['/committee', 'nav.committee'], ['/gallery', 'nav.gallery'], ['/help', 'nav.help'],
+  ['/committee', 'nav.committee'], ['/gallery', 'nav.gallery'], ['/blog', 'nav.blog'], ['/help', 'nav.help'],
 ]
 const BAR = NAV // Home is on the bar too, as the committee asked; the drawer lists every page
 

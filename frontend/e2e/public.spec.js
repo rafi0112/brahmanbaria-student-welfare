@@ -14,7 +14,7 @@ test('desktop navigation: links, active state and the bar settling on scroll', a
   await expect(header).not.toHaveClass(/is-scrolled/)
   await expect(header).toHaveClass(/is-clear/) // clear over the hero photograph
   const main = page.getByRole('navigation', { name: 'Main' })
-  for (const label of ['Home', 'About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
+  for (const label of ['Home', 'About', 'Students', 'Events', 'Alumni', 'Committee', 'Gallery', 'Blog', 'Contact']) await expect(main.getByRole('link', { name: label, exact: true })).toBeVisible()
   await expect(main.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Login', exact: true }).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Register', exact: true }).first()).toBeVisible()
@@ -103,6 +103,7 @@ test('mobile drawer opens, closes with Escape, and closes after navigating', asy
   await page.keyboard.press('Escape')
   await expect(drawer).toBeHidden()
   await menu.click()
+  await expect(drawer.getByRole('link', { name: 'Blog' })).toBeVisible()
   await drawer.getByRole('link', { name: 'Gallery' }).click()
   await expect(page).toHaveURL(/\/gallery$/)
   await expect(drawer).toBeHidden()
