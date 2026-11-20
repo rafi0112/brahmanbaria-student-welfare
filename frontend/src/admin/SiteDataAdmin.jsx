@@ -11,6 +11,7 @@ import GalleryChooser from './GalleryChooser.jsx'
 import Icon from './icons.jsx'
 import { EmailDialog, ImportedForm, InviteCell, VerifiedMark } from './StudentsAdmin.jsx'
 import { Link } from 'react-router-dom'
+import { batchNumbers } from '../lib/batches.js'
 
 // Admin pages for the rest of the site's data, all stored in the database: events, FAQ questions, departments,
 // upazilas (editorial entries) and alumni (directory records). Each page lists, adds, edits, publishes or removes.
@@ -329,7 +330,7 @@ function AlumnusEditor({ row, depts, ups, onClose, onSaved }) {
       <Field label={t('ad.al.name')} required error={errs.name}>{(id, bad) => <input id={id} {...text(v, setV, 'name')} aria-invalid={bad} maxLength={200} />}</Field>
       <div className="ad-grid-2">
         <Field label={t('auth.batch')} error={errs.batch}>{(id, bad) => (
-          <select id={id} {...text(v, setV, 'batch')} aria-invalid={bad}><option value="">—</option>{Array.from({ length: 30 }, (_, i) => i + 1).map((b) => <option key={b} value={b}>{t('auth.batch')} {n(b)}</option>)}</select>)}</Field>
+          <select id={id} {...text(v, setV, 'batch')} aria-invalid={bad}><option value="">—</option>{batchNumbers().reverse().map((b) => <option key={b} value={b}>{t('auth.batch')} {n(b)}</option>)}</select>)}</Field>
         <Field label={t('auth.dept')} error={errs.department}>{(id, bad) => (
           <select id={id} {...text(v, setV, 'department')} aria-invalid={bad}><option value="">—</option>{depts.map((d) => <option key={d}>{d}</option>)}</select>)}</Field>
         <Field label={t('ad.al.occupation')} error={errs.occupation}>{(id, bad) => <input id={id} {...text(v, setV, 'occupation')} aria-invalid={bad} />}</Field>

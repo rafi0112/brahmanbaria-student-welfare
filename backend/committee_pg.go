@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgx/v5"
@@ -14,15 +15,15 @@ const (
 	committeeCols = `c.id::text, c.name, c.term, c.description, COALESCE(to_char(c.starts_on, 'YYYY-MM-DD'), ''), COALESCE(to_char(c.ends_on, 'YYYY-MM-DD'), ''), c.status,
 		COALESCE(to_char(c.published_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''), COALESCE(to_char(c.archived_at AT TIME ZONE 'UTC', ` + tsFmt + `), ''),
 		to_char(c.created_at AT TIME ZONE 'UTC', ` + tsFmt + `),
-		(SELECT count(*) FROM executives x WHERE x.committee_id = c.id AND x.removed_at IS NULL)`
-	execCols = `x.id::text, x.committee_id::text, COALESCE(x.user_id::text, ''), x.name, x.designation, x.bio, x.photo_path, x.display_order`
+		(SELECT count(*) FROM executives x WHERE x.committee_id = c.id AND x.removed_at IS NULL), c.name_en, c.term_en, c.description_en`
+	execCols = `x.id::text, x.committee_id::text, COALESCE(x.user_id::text, ''), x.name, x.designation, x.bio, x.photo_path, x.display_order, x.details::text`
 )
 
 type rowScanner interface{ Scan(dest ...any) error }
 
 func scanCommittee(r rowScanner) (Committee, error) {
 	var c Committee
-	err := r.Scan(&c.ID, &c.Name, &c.Term, &c.Description, &c.StartsOn, &c.EndsOn, &c.Status, &c.PublishedAt, &c.ArchivedAt, &c.CreatedAt, &c.MemberCount)
+	err := r.Scan(&c.ID, &c.Name, &c.Term, &c.Description, &c.StartsOn, &c.EndsOn, &c.Status, &c.PublishedAt, &c.ArchivedAt, &c.CreatedAt, &c.MemberCount, &c.NameEn, &c.TermEn, &c.DescriptionEn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -31,9 +32,13 @@ func scanCommittee(r rowScanner) (Committee, error) {
 
 func scanExec(r rowScanner) (Executive, error) {
 	var x Executive
-	err := r.Scan(&x.ID, &x.CommitteeID, &x.UserID, &x.Name, &x.Designation, &x.Bio, &x.Photo, &x.Order)
+	var details string
+	err := r.Scan(&x.ID, &x.CommitteeID, &x.UserID, &x.Name, &x.Designation, &x.Bio, &x.Photo, &x.Order, &details)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return x, ErrNotFound
+	}
+	if err == nil && details != "" {
+		_ = json.Unmarshal([]byte(details), &x.Details)
 	}
 	return x, err
 }
@@ -129,9 +134,9 @@ func (s *pgStore) CreateCommittee(ctx context.Context, actorID string, in Commit
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	var id string
-	if err := tx.QueryRow(ctx, `INSERT INTO committees (name, term, starts_on, ends_on, created_by, updated_by, description)
-		VALUES ($1, $2, $3::date, $4::date, NULLIF($5, '')::uuid, NULLIF($5, '')::uuid, $6) RETURNING id::text`,
-		in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, `INSERT INTO committees (name, term, starts_on, ends_on, created_by, updated_by, description, name_en, term_en, description_en)
+		VALUES ($1, $2, $3::date, $4::date, NULLIF($5, '')::uuid, NULLIF($5, '')::uuid, $6, $7, $8, $9) RETURNING id::text`,
+		in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description, in.NameEn, in.TermEn, in.DescriptionEn).Scan(&id); err != nil {
 		return Committee{}, err
 	}
 	if err := audit(ctx, tx, id, "", actorID, "committee.create"); err != nil {
@@ -170,8 +175,9 @@ func (s *pgStore) UpdateCommittee(ctx context.Context, actorID, id string, in Co
 		return Committee{}, ErrCommitteeArchived
 	}
 	if _, err := tx.Exec(ctx, `UPDATE committees SET name = $2, term = $3, starts_on = $4::date, ends_on = $5::date, description = $7,
+		name_en = $8, term_en = $9, description_en = $10,
 		updated_by = NULLIF($6, '')::uuid, updated_at = now() WHERE id = $1::uuid`,
-		id, in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description); err != nil {
+		id, in.Name, in.Term, nullDate(in.StartsOn), nullDate(in.EndsOn), actorID, in.Description, in.NameEn, in.TermEn, in.DescriptionEn); err != nil {
 		return Committee{}, err
 	}
 	if err := audit(ctx, tx, id, "", actorID, "committee.update"); err != nil {
@@ -243,6 +249,11 @@ func (s *pgStore) SetCommitteeStatus(ctx context.Context, actorID, id, action st
 			return Committee{}, ErrBadState
 		}
 		_, err = tx.Exec(ctx, `UPDATE committees SET status = 'archived', archived_at = now(), updated_by = NULLIF($2, '')::uuid, updated_at = now() WHERE id = $1::uuid`, id, actorID)
+	case "restore": // an archived term becomes a draft again, to edit and publish (next year's panel, or one archived by mistake)
+		if status != CommitteeArchived {
+			return Committee{}, ErrBadState
+		}
+		_, err = tx.Exec(ctx, `UPDATE committees SET status = 'draft', archived_at = NULL, updated_by = NULLIF($2, '')::uuid, updated_at = now() WHERE id = $1::uuid`, id, actorID)
 	default:
 		return Committee{}, ErrBadState
 	}
@@ -295,11 +306,12 @@ func (s *pgStore) AddExecutive(ctx context.Context, actorID, committeeID string,
 		}
 	}
 	var id string
-	err = tx.QueryRow(ctx, `INSERT INTO executives (committee_id, user_id, name, designation, bio, photo_path, display_order, created_by, updated_by)
+	details, _ := json.Marshal(in.Details)
+	err = tx.QueryRow(ctx, `INSERT INTO executives (committee_id, user_id, name, designation, bio, photo_path, display_order, created_by, updated_by, details)
 		VALUES ($1::uuid, NULLIF($2, '')::uuid, $3, $4, $5, $6,
 		  COALESCE($7::int, (SELECT COALESCE(MAX(display_order) + 1, 0) FROM executives WHERE committee_id = $1::uuid AND removed_at IS NULL)),
-		  NULLIF($8, '')::uuid, NULLIF($8, '')::uuid) RETURNING id::text`,
-		committeeID, in.UserID, name, in.Designation, in.Bio, in.Photo, in.Order, actorID).Scan(&id)
+		  NULLIF($8, '')::uuid, NULLIF($8, '')::uuid, $9::jsonb) RETURNING id::text`,
+		committeeID, in.UserID, name, in.Designation, in.Bio, in.Photo, in.Order, actorID, string(details)).Scan(&id)
 	if isUnique(err) {
 		return Executive{}, ErrDuplicateExecutive
 	}
@@ -349,11 +361,18 @@ func (s *pgStore) UpdateExecutive(ctx context.Context, actorID, id string, p Exe
 	if err != nil {
 		return Executive{}, err
 	}
+	var details *string
+	if p.Details != nil {
+		b, _ := json.Marshal(p.Details)
+		s := string(b)
+		details = &s
+	}
 	if _, err := tx.Exec(ctx, `UPDATE executives SET
 		name = COALESCE($2, name), designation = COALESCE($3, designation), bio = COALESCE($4, bio),
 		photo_path = COALESCE($5, photo_path), display_order = COALESCE($6::int, display_order),
+		details = COALESCE($8::jsonb, details),
 		updated_by = NULLIF($7, '')::uuid, updated_at = now() WHERE id = $1::uuid`,
-		id, p.Name, p.Designation, p.Bio, p.Photo, p.Order, actorID); err != nil {
+		id, p.Name, p.Designation, p.Bio, p.Photo, p.Order, actorID, details); err != nil {
 		return Executive{}, err
 	}
 	if err := audit(ctx, tx, committeeID, id, actorID, "executive.update"); err != nil {

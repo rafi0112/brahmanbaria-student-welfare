@@ -200,6 +200,8 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 	mig19, _ := migrationFS.ReadFile("migrations/019_directory_records.sql")
 	mig20, _ := migrationFS.ReadFile("migrations/020_more_content_kinds.sql")
 	mig21, _ := migrationFS.ReadFile("migrations/021_site_settings.sql")
+	mig26, _ := migrationFS.ReadFile("migrations/026_executive_details.sql")
+	mig27, _ := migrationFS.ReadFile("migrations/027_committee_english.sql")
 	// only the table of 004 is needed here; its function and trigger would be created outside the temp schema
 	const roleChanges = `CREATE TEMP TABLE role_changes (id bigserial PRIMARY KEY, target_id uuid NOT NULL, actor_id uuid, old_role text NOT NULL, new_role text NOT NULL,
 		source text NOT NULL DEFAULT 'admin_ui', created_at timestamptz NOT NULL DEFAULT now())`
@@ -221,7 +223,7 @@ func TestPostgresStoresInTempTables(t *testing.T) {
 				return err
 			}
 		}
-		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12)), string(mig13), temp(string(mig14)), string(mig15), temp(string(mig17)), string(mig18), temp(string(mig19)), string(mig20), temp(string(mig21))} {
+		for _, sql := range []string{temp(string(mig5)), roleChanges, temp(string(mig6)), temp(string(mig7)), temp(string(mig8)), temp(string(mig9)), string(mig10), temp(string(mig11)), temp(string(mig12)), string(mig13), temp(string(mig14)), string(mig15), temp(string(mig17)), string(mig18), temp(string(mig19)), string(mig20), temp(string(mig21)), string(mig26), string(mig27)} {
 			if _, err := c.Exec(ctx, sql); err != nil {
 				return err
 			}
@@ -751,4 +753,93 @@ func dotEnvValue(path, key string) string {
 		}
 	}
 	return ""
+}
+
+// A seat's identity details and message are saved by admins and shown on the Committee page; empty details come from
+// the linked member's approved profile; no phone or email is ever shown.
+func TestExecutiveDetailsOnThePublicPanel(t *testing.T) {
+	e, _ := committeeApp(t)
+	if rec := e.do("POST", "/api/v1/me/profile", myProfile, nil, bearer("member-token")...); rec.Code != 201 {
+		t.Fatalf("profile: %d %s", rec.Code, rec.Body)
+	}
+	var c Committee
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees", "admin-token", map[string]any{"name": "Panel", "term": "2026"}), &c)
+	var guest, member Executive
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/members", "admin-token", map[string]any{"name": "Guest Person", "designation": "Advisor",
+		"details": map[string]string{"department": "Finance", "batch": "12", "session": "2017-18", "upazila": "Sarail", "message": "Stay together."}}), &guest)
+	if guest.Details.Message != "Stay together." || guest.Details.Department != "Finance" {
+		t.Fatalf("saved details: %+v", guest)
+	}
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/members", "admin-token", map[string]any{"userId": idMember, "designation": "President"}), &member)
+	// edit: only the message given; the rest comes from the member's profile once approved
+	if rec := jreq(e, "PATCH", "/api/v1/admin/executives/"+member.ID, "admin-token", map[string]any{"details": map[string]string{"message": "Welcome, freshers!"}}); rec.Code != 200 {
+		t.Fatalf("patch: %d %s", rec.Code, rec.Body)
+	}
+	if rec := jreq(e, "PATCH", "/api/v1/admin/executives/"+member.ID, "admin-token", map[string]any{"details": map[string]string{"message": strings.Repeat("x", 1001)}}); rec.Code != 422 {
+		t.Fatalf("long message: %d", rec.Code)
+	}
+	e.approve(t, idMember)
+	if rec := jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/publish", "admin-token", nil); rec.Code != 200 {
+		t.Fatalf("publish: %d %s", rec.Code, rec.Body)
+	}
+	body := jreq(e, "GET", "/api/v1/executive-committee", "", nil).Body.String()
+	for _, want := range []string{`"message":"Stay together."`, `"upazila":"Sarail"`, `"batch":"12"`, `"message":"Welcome, freshers!"`, `"department":"` + myProfile["department"].(string) + `"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("public panel lacks %s: %s", want, body)
+		}
+	}
+	for _, never := range []string{"@", "phone", "01712345678"} {
+		if strings.Contains(body, never) {
+			t.Errorf("public panel shows %q: %s", never, body)
+		}
+	}
+}
+
+// A new year's panel: publishing it archives the old one; an archived term can be restored as a draft, edited (in
+// Bangla and English) and published again. The public page shows the English texts when they are given.
+func TestCommitteeRestoreAndEnglish(t *testing.T) {
+	e, _ := committeeApp(t)
+	var old, next Committee
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees", "admin-token", map[string]any{"name": "কমিটি ২০২৬", "term": "২০২৬"}), &old)
+	decodeBody(t, jreq(e, "POST", "/api/v1/admin/committees", "admin-token", map[string]any{"name": "কমিটি ২০২৭", "term": "২০২৭", "nameEn": "Committee 2027", "termEn": "2027", "descriptionEn": "Next year's panel."}), &next)
+	if next.NameEn != "Committee 2027" || next.DescriptionEn != "Next year's panel." {
+		t.Fatalf("english saved: %+v", next)
+	}
+	for _, c := range []Committee{old, next} {
+		if rec := jreq(e, "POST", "/api/v1/admin/committees/"+c.ID+"/members", "admin-token", map[string]any{"name": "Seat Person", "designation": "সভাপতি",
+			"details": map[string]string{"designationEn": "President", "bioEn": "Hello", "messageEn": "Welcome"}}); rec.Code != 201 {
+			t.Fatalf("seat: %d %s", rec.Code, rec.Body)
+		}
+	}
+	jreq(e, "POST", "/api/v1/admin/committees/"+old.ID+"/publish", "admin-token", nil)
+	if rec := jreq(e, "POST", "/api/v1/admin/committees/"+next.ID+"/publish", "admin-token", nil); rec.Code != 200 {
+		t.Fatalf("publish next: %d %s", rec.Code, rec.Body)
+	}
+	var detail struct{ Committee Committee }
+	decodeBody(t, jreq(e, "GET", "/api/v1/admin/committees/"+old.ID, "admin-token", nil), &detail)
+	if detail.Committee.Status != CommitteeArchived {
+		t.Fatalf("old panel should be archived: %+v", detail.Committee)
+	}
+	pub := jreq(e, "GET", "/api/v1/executive-committee", "", nil).Body.String()
+	for _, want := range []string{`"nameEn":"Committee 2027"`, `"designationEn":"President"`, `"messageEn":"Welcome"`} {
+		if !strings.Contains(pub, want) {
+			t.Errorf("public lacks %s: %s", want, pub)
+		}
+	}
+	// an archived term is read-only until restored as a draft
+	if rec := jreq(e, "PATCH", "/api/v1/admin/committees/"+old.ID, "admin-token", map[string]any{"name": "কমিটি ২০২৬ (সংশোধিত)"}); rec.Code != 409 {
+		t.Fatalf("edit archived: %d", rec.Code)
+	}
+	var restored Committee
+	rec := jreq(e, "POST", "/api/v1/admin/committees/"+old.ID+"/restore", "admin-token", nil)
+	decodeBody(t, rec, &restored)
+	if rec.Code != 200 || restored.Status != CommitteeDraft || restored.ArchivedAt != "" {
+		t.Fatalf("restore: %d %+v", rec.Code, restored)
+	}
+	if rec := jreq(e, "PATCH", "/api/v1/admin/committees/"+old.ID, "admin-token", map[string]any{"name": "কমিটি ২০২৬ (সংশোধিত)", "nameEn": "Committee 2026"}); rec.Code != 200 {
+		t.Fatalf("edit restored: %d %s", rec.Code, rec.Body)
+	}
+	if rec := jreq(e, "POST", "/api/v1/admin/committees/"+old.ID+"/restore", "admin-token", nil); rec.Code == 200 {
+		t.Fatal("a draft cannot be restored again")
+	}
 }

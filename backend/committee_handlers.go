@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -48,14 +49,60 @@ type publicExecutive struct {
 	Bio         string `json:"bio"`
 	PhotoURL    string `json:"photoUrl"`
 	Verified    bool   `json:"verified"` // the seat is linked to an approved member whose email is confirmed
+	// who they are and a message in their own words; empty details come from the linked member's approved profile.
+	// Never a phone number, email or address.
+	Department string `json:"department,omitempty"`
+	Batch      string `json:"batch,omitempty"`
+	Session    string `json:"session,omitempty"`
+	Upazila    string `json:"upazila,omitempty"`
+	UpazilaEn  string `json:"upazilaEn,omitempty"`
+	Message    string `json:"message,omitempty"`
+	// English versions (empty shows the main text)
+	DesignationEn string `json:"designationEn,omitempty"`
+	BioEn         string `json:"bioEn,omitempty"`
+	MessageEn     string `json:"messageEn,omitempty"`
+}
+
+// executiveDetails fills a seat's empty details from the linked member's approved profile.
+// The upazila typed by an admin is shown as written; one from a profile is shown by its Bangla and English names.
+func (a *App) executiveDetails(ctx context.Context, x Executive) (ExecDetails, string) {
+	d := x.Details
+	en := d.Upazila
+	if x.UserID == "" || (d.Department != "" && d.Batch != "" && d.Session != "" && d.Upazila != "") {
+		return d, en
+	}
+	p, err := a.Auth.Store.ProfileByUser(ctx, x.UserID)
+	if err != nil || p == nil || p.Status != StatusApproved {
+		return d, en
+	}
+	if d.Department == "" {
+		d.Department = p.Department
+	}
+	if d.Batch == "" && p.Batch > 0 {
+		d.Batch = strconv.Itoa(p.Batch)
+	}
+	if d.Session == "" {
+		d.Session = p.Session
+	}
+	if d.Upazila == "" {
+		for _, u := range a.data().Upazilas {
+			if u.Slug == p.Upazila {
+				d.Upazila, en = u.NameBn, u.NameEn
+			}
+		}
+	}
+	return d, en
 }
 
 type publicCommittee struct {
-	Name        string `json:"name"`
-	Term        string `json:"term"`
-	Description string `json:"description"`
-	StartsOn    string `json:"startsOn"`
-	EndsOn      string `json:"endsOn"`
+	Name          string `json:"name"`
+	Term          string `json:"term"`
+	Description   string `json:"description"`
+	StartsOn      string `json:"startsOn"`
+	EndsOn        string `json:"endsOn"`
+	NameEn        string `json:"nameEn,omitempty"`
+	TermEn        string `json:"termEn,omitempty"`
+	DescriptionEn string `json:"descriptionEn,omitempty"`
 }
 
 func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +118,12 @@ func (a *App) publicCommittee(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]publicExecutive, 0, len(xs))
 	for _, x := range xs {
-		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo), Verified: a.accountVerified(r.Context(), x.UserID)})
+		d, upEn := a.executiveDetails(r.Context(), x)
+		out = append(out, publicExecutive{ID: x.ID, Name: x.Name, Designation: x.Designation, Bio: x.Bio, PhotoURL: a.photoURL(x.Photo), Verified: a.accountVerified(r.Context(), x.UserID),
+			Department: d.Department, Batch: d.Batch, Session: d.Session, Upazila: d.Upazila, UpazilaEn: upEn, Message: d.Message,
+			DesignationEn: d.DesignationEn, BioEn: d.BioEn, MessageEn: d.MessageEn})
 	}
-	writeJSON(w, 200, map[string]any{"committee": publicCommittee{c.Name, c.Term, c.Description, c.StartsOn, c.EndsOn}, "members": out})
+	writeJSON(w, 200, map[string]any{"committee": publicCommittee{c.Name, c.Term, c.Description, c.StartsOn, c.EndsOn, c.NameEn, c.TermEn, c.DescriptionEn}, "members": out})
 }
 
 func (a *App) listCommittees(w http.ResponseWriter, r *http.Request, _ User) {
@@ -156,7 +206,7 @@ func (a *App) updateCommittee(w http.ResponseWriter, r *http.Request, u User) {
 func (a *App) committeeAction(w http.ResponseWriter, r *http.Request, u User) {
 	id, action := r.PathValue("id"), r.PathValue("action")
 	switch action {
-	case "publish", "unpublish", "archive":
+	case "publish", "unpublish", "archive", "restore":
 		c, err := a.Auth.Store.SetCommitteeStatus(r.Context(), u.ID, id, action)
 		if err != nil {
 			a.committeeFail(w, err)

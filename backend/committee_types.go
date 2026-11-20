@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -30,52 +31,90 @@ type Committee struct {
 	Name        string `json:"name"`
 	Term        string `json:"term"`
 	Description string `json:"description"`
-	StartsOn    string `json:"startsOn"`
-	EndsOn      string `json:"endsOn"`
-	Status      string `json:"status"`
-	MemberCount int    `json:"memberCount"`
-	PublishedAt string `json:"publishedAt,omitempty"`
-	ArchivedAt  string `json:"archivedAt,omitempty"`
-	CreatedAt   string `json:"createdAt"`
+	// the same in English; empty shows the main text
+	NameEn        string `json:"nameEn"`
+	TermEn        string `json:"termEn"`
+	DescriptionEn string `json:"descriptionEn"`
+	StartsOn      string `json:"startsOn"`
+	EndsOn        string `json:"endsOn"`
+	Status        string `json:"status"`
+	MemberCount   int    `json:"memberCount"`
+	PublishedAt   string `json:"publishedAt,omitempty"`
+	ArchivedAt    string `json:"archivedAt,omitempty"`
+	CreatedAt     string `json:"createdAt"`
 }
 
 type CommitteeInput struct {
-	Name        string `json:"name"`
-	Term        string `json:"term"`
-	Description string `json:"description"`
-	StartsOn    string `json:"startsOn"`
-	EndsOn      string `json:"endsOn"`
+	Name          string `json:"name"`
+	Term          string `json:"term"`
+	Description   string `json:"description"`
+	NameEn        string `json:"nameEn"`
+	TermEn        string `json:"termEn"`
+	DescriptionEn string `json:"descriptionEn"`
+	StartsOn      string `json:"startsOn"`
+	EndsOn        string `json:"endsOn"`
 }
 
 // Executive is one seat. UserID links to a registered member when there is one.
 type Executive struct {
-	ID          string `json:"id"`
-	CommitteeID string `json:"committeeId"`
-	UserID      string `json:"userId,omitempty"`
-	Name        string `json:"name"`
-	Designation string `json:"designation"`
-	Bio         string `json:"bio"`
-	Photo       string `json:"photo"`
-	PhotoURL    string `json:"photoUrl"`
-	Order       int    `json:"order"`
+	ID          string      `json:"id"`
+	CommitteeID string      `json:"committeeId"`
+	UserID      string      `json:"userId,omitempty"`
+	Name        string      `json:"name"`
+	Designation string      `json:"designation"`
+	Bio         string      `json:"bio"`
+	Photo       string      `json:"photo"`
+	PhotoURL    string      `json:"photoUrl"`
+	Order       int         `json:"order"`
+	Details     ExecDetails `json:"details"`
+}
+
+// ExecDetails: who the member is (shown in their pop-up on the Committee page) and a message in their own words.
+// An empty field is filled from the linked member's profile when the page is shown.
+type ExecDetails struct {
+	Department string `json:"department,omitempty"`
+	Batch      string `json:"batch,omitempty"`
+	Session    string `json:"session,omitempty"`
+	Upazila    string `json:"upazila,omitempty"`
+	Message    string `json:"message,omitempty"`
+	// English: the designation, introduction and message (empty shows the main text)
+	DesignationEn string `json:"designationEn,omitempty"`
+	BioEn         string `json:"bioEn,omitempty"`
+	MessageEn     string `json:"messageEn,omitempty"`
+}
+
+func (d *ExecDetails) clean(errs map[string]string) {
+	for _, f := range []struct {
+		v   *string
+		key string
+		max int
+	}{{&d.Department, "department", 120}, {&d.Batch, "batch", 20}, {&d.Session, "session", 20}, {&d.Upazila, "upazila", 60}, {&d.Message, "message", 1000},
+		{&d.DesignationEn, "designationEn", 80}, {&d.BioEn, "bioEn", 500}, {&d.MessageEn, "messageEn", 1000}} {
+		*f.v = strings.TrimSpace(*f.v)
+		if runes(*f.v) > f.max {
+			errs[f.key] = fmt.Sprintf("At most %d characters.", f.max)
+		}
+	}
 }
 
 type ExecutiveInput struct {
-	UserID      string `json:"userId"`
-	Name        string `json:"name"`
-	Designation string `json:"designation"`
-	Bio         string `json:"bio"`
-	Photo       string `json:"photo"`
-	Order       *int   `json:"order"`
+	UserID      string      `json:"userId"`
+	Name        string      `json:"name"`
+	Designation string      `json:"designation"`
+	Bio         string      `json:"bio"`
+	Photo       string      `json:"photo"`
+	Order       *int        `json:"order"`
+	Details     ExecDetails `json:"details"`
 }
 
 // ExecutivePatch: nil means "leave as is".
 type ExecutivePatch struct {
-	Name        *string `json:"name"`
-	Designation *string `json:"designation"`
-	Bio         *string `json:"bio"`
-	Photo       *string `json:"photo"`
-	Order       *int    `json:"order"`
+	Name        *string      `json:"name"`
+	Designation *string      `json:"designation"`
+	Bio         *string      `json:"bio"`
+	Photo       *string      `json:"photo"`
+	Order       *int         `json:"order"`
+	Details     *ExecDetails `json:"details"`
 }
 
 // CommitteeStore holds committee terms and executive seats. Every rule (one published panel, no duplicate seats,
@@ -115,7 +154,17 @@ func validDate(s string) bool {
 
 func (in *CommitteeInput) clean() map[string]string {
 	in.Name, in.Term, in.Description = strings.TrimSpace(in.Name), strings.TrimSpace(in.Term), strings.TrimSpace(in.Description)
+	in.NameEn, in.TermEn, in.DescriptionEn = strings.TrimSpace(in.NameEn), strings.TrimSpace(in.TermEn), strings.TrimSpace(in.DescriptionEn)
 	errs := map[string]string{}
+	if runes(in.NameEn) > 100 {
+		errs["nameEn"] = "At most 100 characters."
+	}
+	if runes(in.TermEn) > 80 {
+		errs["termEn"] = "At most 80 characters."
+	}
+	if runes(in.DescriptionEn) > 1000 {
+		errs["descriptionEn"] = "Keep the introduction under 1000 characters."
+	}
 	if runes(in.Description) > 1000 {
 		errs["description"] = "Keep the introduction under 1000 characters."
 	}
@@ -161,6 +210,7 @@ func (in *ExecutiveInput) clean() map[string]string {
 	if in.Order != nil && (*in.Order < 0 || *in.Order > 1000) {
 		errs["order"] = "Order must be between 0 and 1000."
 	}
+	in.Details.clean(errs)
 	return errs
 }
 
@@ -188,6 +238,9 @@ func (p *ExecutivePatch) clean() map[string]string {
 	}
 	if p.Order != nil && (*p.Order < 0 || *p.Order > 1000) {
 		errs["order"] = "Order must be between 0 and 1000."
+	}
+	if p.Details != nil {
+		p.Details.clean(errs)
 	}
 	return errs
 }

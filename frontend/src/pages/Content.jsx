@@ -250,24 +250,77 @@ export function Gallery() {
 
 /* ---------------- About ---------------- */
 export function About() {
-  const { t } = useApp()
+  const { t, n } = useApp()
   const site = useSiteImages()
-  const stats = useApi('/stats')
-  const { n } = useApp()
-  const s = stats.data
+  const s = useApi('/stats').data
+  // a text the admin may leave empty: empty means "count it from the site's data"
+  const own = (k) => { const v = t(k); return v === k ? '' : v.trim() }
+  const stats = [
+    ['about.statStudentsL', 'about.statStudentsN', s ? (s.students || 0) + (s.alumni || 0) : null, 'users'], // students and alumni together
+    ['about.statBatchesL', 'about.statBatchesN', s?.batches, 'grad'],
+    ['about.statUpazilasL', 'about.statUpazilasN', s?.upazilas, 'pin'],
+    ['about.statPlacesL', 'about.statPlacesN', s?.places, 'landmark'],
+  ]
   const values = [['v1', 'M9 8a3 3 0 1 0 0-.1M3 20c.7-3.6 3.2-5.5 6-5.5s5.3 1.9 6 5.5'], ['v2', 'M3 20h18M5 20V10M19 20V10M3 10l9-6 9 6'], ['v3', 'M3 10l9-5 9 5-9 5zM7 12v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4'], ['v4', 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z']]
+  const doing = [['do1', 'users'], ['do2', 'book'], ['do3', 'heart'], ['do4', 'calendar'], ['do5', 'grad']]
   return (
-    <>
+    <div className="about-page">
       <PageHero page="about" kicker={t('about.kicker')} title={t('about.title')} variant="vine" lede={t('about.p1')} src="/images/bswa/mosque.webp" />
-      <section className="section wrap two-col">
-        <div>
+
+      <section className="section wrap ab-intro">
+        <div className="ab-intro-text">
           <p className="lede">{t('about.p2')}</p>
+          <p>{t('about.p3')}</p>
           <h2>{t('about.mission')}</h2>
           <ul className="ticks">{['m1', 'm2', 'm3', 'm4'].map((k) => <li key={k}>{t(`about.${k}`)}</li>)}</ul>
         </div>
         <div className={`sketch-card${site.pages['about-art-1'] || site.pages['about-art-2'] ? ' has-photo' : ''}`}><img src={site.pages['about-art-1'] || '/art/heritage.webp'} alt="" loading="lazy" /><img src={site.pages['about-art-2'] || '/art/students.webp'} alt="" loading="lazy" /></div>
       </section>
-      <section className="section wrap">
+
+      <section className="section wrap ab-stats" aria-label={t('about.statsT')}>
+        <dl>
+          {stats.map(([label, num, auto, ic]) => {
+            const value = own(num) || (auto != null ? n(auto) : '–')
+            return (
+              <div key={label}>
+                <span className="ab-stat-ico"><Icon name={ic} size={20} /></span>
+                <dd className="num">{value}</dd>
+                <dt>{t(label)}</dt>
+              </div>
+            )
+          })}
+        </dl>
+      </section>
+
+      <section className="section wrap ab-do">
+        <div className="ab-head"><p className="eyebrow">{t('about.doK')}</p><h2>{t('about.doT')}</h2></div>
+        <div className="ab-do-grid">
+          {doing.map(([k, ic]) => (
+            <div key={k} className="ab-do-card">
+              <span className="ab-do-ico"><Icon name={ic} size={20} /></span>
+              <h3>{t(`about.${k}`)}</h3>
+              <p>{t(`about.${k}d`)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section wrap ab-facts">
+        <article className="ab-fact">
+          <p className="eyebrow">{t('about.districtK')}</p>
+          <h2>{t('about.districtT')}</h2>
+          <ul>{['district1', 'district2', 'district3', 'district4', 'district5'].map((k) => <li key={k}>{t(`about.${k}`)}</li>)}</ul>
+          <Link className="link-arrow" to="/directory">{t('about.districtMore')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </article>
+        <article className="ab-fact">
+          <p className="eyebrow">{t('about.jnuK')}</p>
+          <h2>{t('about.jnuT')}</h2>
+          <ul>{['jnu1', 'jnu2', 'jnu3'].map((k) => <li key={k}>{t(`about.${k}`)}</li>)}</ul>
+          <Link className="link-arrow" to="/students">{t('about.jnuMore')} <Icon name="arrow" size={15} className="arr" /></Link>
+        </article>
+      </section>
+
+      <section className="section wrap ab-values">
         <h2>{t('about.values')}</h2>
         <div className="values">
           {values.map(([k, d]) => (
@@ -277,13 +330,6 @@ export function About() {
             </div>
           ))}
         </div>
-        <div className="stats-strip about-stats">
-          <dl>
-            {[['students', s?.students], ['batches', s?.batches], ['upazilas', s?.upazilas], ['places', s?.places]].map(([k, v]) => (
-              <div key={k}><dt>{t(`stat.${k}`)}</dt><dd className="num">{v != null ? n(v) : '–'}</dd></div>
-            ))}
-          </dl>
-        </div>
         <div className="cta-band">
           <div><h2>{t('about.ctaTitle')}</h2><p>{t('about.ctaText')}</p></div>
           <div className="cta-band-actions">
@@ -292,7 +338,7 @@ export function About() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   )
 }
 

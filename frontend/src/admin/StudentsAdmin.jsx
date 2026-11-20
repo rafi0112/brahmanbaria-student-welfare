@@ -10,8 +10,9 @@ import ListToolbar from './toolbar.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
 import DataTable, { Trunc } from './DataTable.jsx'
 import BulkImport from './BulkImport.jsx'
+import { batchNumbers } from '../lib/batches.js'
 
-const BATCHES = Array.from({ length: 25 }, (_, i) => 25 - i)
+const BATCHES = batchNumbers()
 // The batches still studying: after the saved alumni batch ("alumni up to"). Graduated batches are managed on the Alumni page.
 const runningBatches = (cut) => BATCHES.filter((b) => !(cut > 0) || b > cut)
 function useAlumniCut() { return useApi('/stats').data?.alumniUpToBatch || 0 }

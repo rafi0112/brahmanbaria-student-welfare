@@ -284,10 +284,14 @@
 .ad-chip b { font-weight: 500; color: var(--a-text); } .ad-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ad-chip button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; } .ad-chip button:hover { background: var(--a-hover); color: var(--a-text); }
 .ad-showing { margin: 0; color: var(--a-text-3); font-size: .8125rem; }
-.ad-bulk { position: sticky; top: 12px; z-index: 6; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; margin: 0 0 12px; background: var(--a-text); color: var(--a-bg); border-radius: var(--a-r-lg); box-shadow: var(--a-pop); animation: adm-pop 140ms var(--a-ease) both; }
-.ad-bulk .btn { color: inherit; } .ad-bulk .btn:hover:not(:disabled) { background: rgba(255, 255, 255, .14); } .ad-bulk .btn-dark { background: var(--a-surface); color: var(--a-text); }
-.ad-bulk select { height: 30px; background: transparent; color: inherit; border-color: rgba(255, 255, 255, .3); }
-.ad-bulk option { color: #111; }
+.ad-bulk { position: sticky; top: 12px; z-index: 6; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 10px 12px; margin: 0 0 12px;
+  background: var(--a-surface); color: var(--a-text); border: 1px solid var(--a-accent); border-radius: var(--a-r-lg);
+  box-shadow: 0 0 0 3px var(--a-accent-soft), var(--a-pop); animation: adm-pop 140ms var(--a-ease) both; }
+.ad-bulk > strong { color: var(--a-accent); margin-right: 4px; }
+.ad-bulk .btn { color: var(--a-text); } .ad-bulk .btn:hover:not(:disabled) { background: var(--a-hover); }
+.ad-bulk .btn-dark { background: var(--a-accent); color: var(--a-on-accent); } .ad-bulk .btn-dark:hover:not(:disabled) { background: var(--a-accent-hover); }
+.ad-bulk select, .ad-bulk input { height: 34px; background: var(--a-surface); color: var(--a-text); border: 1px solid var(--a-line-strong); border-radius: var(--a-r); color-scheme: inherit; }
+.ad-bulk option { background: var(--a-surface); color: var(--a-text); }
 .ad-pager { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 14px; color: var(--a-text-3); }
 .adm .pagination { display: flex; gap: 6px; align-items: center; margin: 0; } .adm .pagination .num { padding: 0 6px; color: var(--a-text-2); }
 .ad-size { display: inline-flex; gap: 6px; align-items: center; } .ad-size select { height: 30px; }
@@ -817,3 +821,11 @@
 .gc-cap { position: absolute; inset: auto 0 0 0; padding: 14px 8px 6px; font-size: .74rem; color: #fff; text-align: left; background: linear-gradient(transparent, rgba(0, 0, 0, .65)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gc-more { display: flex; justify-content: center; }
 .gc-foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--a-line); position: sticky; bottom: 0; background: var(--a-surface); }
+.ad-bulk select { width: auto; flex: 0 1 230px; min-width: 160px; } .ad-bulk .gal-bulk-date { display: inline-flex; gap: 6px; align-items: center; }
+
+.cm-details { border: 1px solid var(--a-line); border-radius: var(--a-r-lg); padding: 10px 14px 4px; margin: 6px 0 12px; }
+.cm-details legend { font-weight: 600; padding: 0 6px; }
+.cm-details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 12px; }
+
+.cm-frozen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.cm-lang { margin-bottom: 8px; }

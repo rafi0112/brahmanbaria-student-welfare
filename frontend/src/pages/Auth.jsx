@@ -10,6 +10,7 @@ import AuthShell from '../components/AuthShell.jsx'
 import PasswordHelp, { ConfirmHint } from '../components/PasswordHelp.jsx'
 import { checkPassword } from '../lib/password.js'
 import { arrivedByEmailLink, googleEnabled, supabase, supabaseConfigured, urlAuthError } from '../lib/supabase.js'
+import { batchNumbers } from '../lib/batches.js'
 
 const emailOk = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())
 const origin = () => window.location.origin
@@ -157,7 +158,7 @@ export default function Auth({ mode }) {
   const upList = ups.data?.items || []
   const unions = upList.find((u) => u.slug === v.upazila)?.unions || []
   const options = {
-    batch: Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [b, `${t('auth.batch')} ${n(b)}`]),
+    batch: batchNumbers().map((b) => [b, `${t('auth.batch')} ${n(b)}`]),
     department: (depts.data?.items || []).map((d) => [d, d]),
     upazila: upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]),
     union: unions.map((x) => [x, x]),

@@ -135,18 +135,26 @@ function PhotoPicker({ value, onChange }) {
 /* ---- committee details ---- */
 function CommitteeForm({ initial, onSubmit, onCancel, busy, errs }) {
   const { t } = useApp()
-  const [v, setV] = useState(initial || { name: '', term: '', description: '', startsOn: '', endsOn: '' })
+  const [v, setV] = useState({ name: '', term: '', description: '', nameEn: '', termEn: '', descriptionEn: '', startsOn: '', endsOn: '', ...(initial || {}) })
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value })
+  const [lang, setLang] = useState('bn')
+  const en = lang === 'en'
+  const k = (x) => (en ? `${x}En` : x)
   return (
     <form className="card-form cm-form" onSubmit={(e) => { e.preventDefault(); onSubmit(v) }} noValidate>
-      <label className="field"><span>{t('cm.name')}</span>
-        <input value={v.name} onChange={set('name')} maxLength={100} aria-invalid={!!errs?.name} />{errs?.name && <small className="err">{errs.name}</small>}
+      <div className="chips cm-lang" role="tablist" aria-label={t('cm.langT')}>
+        <button type="button" role="tab" aria-selected={!en} className={`chip ${!en ? 'on' : ''}`} onClick={() => setLang('bn')}>বাংলা</button>
+        <button type="button" role="tab" aria-selected={en} className={`chip ${en ? 'on' : ''}`} onClick={() => setLang('en')}>English</button>
+      </div>
+      {en && <p className="muted small">{t('cm.langHint')}</p>}
+      <label className="field"><span>{t('cm.name')}{en ? ' (English)' : ''}</span>
+        <input value={v[k('name')]} onChange={set(k('name'))} maxLength={100} lang={en ? 'en' : 'bn'} aria-invalid={!!errs?.[k('name')]} />{errs?.[k('name')] && <small className="err">{errs[k('name')]}</small>}
       </label>
-      <label className="field"><span>{t('cm.term')}</span>
-        <input value={v.term} onChange={set('term')} maxLength={80} placeholder="2026–27" />{errs?.term && <small className="err">{errs.term}</small>}
+      <label className="field"><span>{t('cm.term')}{en ? ' (English)' : ''}</span>
+        <input value={v[k('term')]} onChange={set(k('term'))} maxLength={80} placeholder={en ? '2026–27' : '২০২৬–২৭'} lang={en ? 'en' : 'bn'} />{errs?.[k('term')] && <small className="err">{errs[k('term')]}</small>}
       </label>
-      <label className="field"><span>{t('cm.description')}</span>
-        <textarea rows="3" value={v.description || ''} onChange={set('description')} maxLength={1000} aria-invalid={!!errs?.description} />{errs?.description && <small className="err">{errs.description}</small>}
+      <label className="field"><span>{t('cm.description')}{en ? ' (English)' : ''}</span>
+        <textarea rows="3" value={v[k('description')] || ''} onChange={set(k('description'))} maxLength={1000} lang={en ? 'en' : 'bn'} aria-invalid={!!errs?.[k('description')]} />{errs?.[k('description')] && <small className="err">{errs[k('description')]}</small>}
       </label>
       <div className="two">
         <label className="field"><span>{t('cm.starts')}</span><input type="date" value={v.startsOn} onChange={set('startsOn')} />{errs?.startsOn && <small className="err">{errs.startsOn}</small>}</label>
@@ -169,6 +177,11 @@ function ExecutiveForm({ initial, onSubmit, onCancel, busy, errs }) {
   const dq = useDebounced(q)
   const [member, setMember] = useState(null) // {id, name, email}
   const [v, setV] = useState({ name: initial?.name || '', designation: initial?.designation || '', bio: initial?.bio || '' })
+  // who they are and a message, shown in their pop-up on the Committee page; empty fields come from a linked member's profile
+  const d0 = initial?.details || {}
+  const [d, setD] = useState({ department: d0.department || '', batch: d0.batch || '', session: d0.session || '', upazila: d0.upazila || '', message: d0.message || '',
+    designationEn: d0.designationEn || '', bioEn: d0.bioEn || '', messageEn: d0.messageEn || '' })
+  const setDet = (k) => (e) => setD((x) => ({ ...x, [k]: e.target.value }))
   const [photo, setPhoto] = useState(initial?.photo ? { path: initial.photo, url: initial.photoUrl } : null)
   const [bad, setBad] = useState({})
   const found = useApi(!editing && !guest && dq.trim().length >= 2 ? `/admin/users${qs({ q: dq.trim(), limit: 6 })}` : null)
@@ -185,6 +198,7 @@ function ExecutiveForm({ initial, onSubmit, onCancel, busy, errs }) {
       userId: !editing && !guest ? member.id : '',
       name: guest || editing ? v.name.trim() : '',
       designation: v.designation.trim(), bio: v.bio.trim(), photo: photo?.path || '',
+      details: Object.fromEntries(Object.entries(d).map(([k, x]) => [k, x.trim()])),
     })
   }
   const all = { ...errs, ...bad }
@@ -237,6 +251,32 @@ function ExecutiveForm({ initial, onSubmit, onCancel, busy, errs }) {
       <label className="field"><span>{t('cm.bio')} <small className="muted">{v.bio.length}/500</small></span>
         <textarea rows={3} value={v.bio} onChange={(e) => setV({ ...v, bio: e.target.value })} maxLength={500} />{all.bio && <small className="err">{all.bio}</small>}
       </label>
+      <fieldset className="cm-details">
+        <legend>{t('cm.detailsT')}</legend>
+        <p className="muted small">{t('cm.detailsHint')}</p>
+        <div className="cm-details-grid">
+          <label className="field"><span>{t('cm.dept')}</span><input value={d.department} onChange={setDet('department')} maxLength={120} aria-invalid={!!all.department} />{all.department && <small className="err">{all.department}</small>}</label>
+          <label className="field"><span>{t('cm.batch')}</span><input value={d.batch} onChange={setDet('batch')} maxLength={20} inputMode="numeric" aria-invalid={!!all.batch} />{all.batch && <small className="err">{all.batch}</small>}</label>
+          <label className="field"><span>{t('cm.session')}</span><input value={d.session} onChange={setDet('session')} maxLength={20} placeholder="2019-20" aria-invalid={!!all.session} />{all.session && <small className="err">{all.session}</small>}</label>
+          <label className="field"><span>{t('cm.upazila')}</span><input value={d.upazila} onChange={setDet('upazila')} maxLength={60} aria-invalid={!!all.upazila} />{all.upazila && <small className="err">{all.upazila}</small>}</label>
+        </div>
+        <label className="field"><span>{t('cm.message')} <small className="muted">{d.message.length}/1000</small></span>
+          <textarea rows={4} value={d.message} onChange={setDet('message')} maxLength={1000} placeholder={t('cm.messageHint')} aria-invalid={!!all.message} />{all.message && <small className="err">{all.message}</small>}
+        </label>
+      </fieldset>
+      <fieldset className="cm-details">
+        <legend>{t('cm.englishT')}</legend>
+        <p className="muted small">{t('cm.langHint')}</p>
+        <label className="field"><span>{t('cm.designationEn')}</span>
+          <input value={d.designationEn} onChange={setDet('designationEn')} maxLength={80} lang="en" placeholder="President" aria-invalid={!!all.designationEn} />{all.designationEn && <small className="err">{all.designationEn}</small>}
+        </label>
+        <label className="field"><span>{t('cm.bioEn')} <small className="muted">{d.bioEn.length}/500</small></span>
+          <textarea rows={3} value={d.bioEn} onChange={setDet('bioEn')} maxLength={500} lang="en" aria-invalid={!!all.bioEn} />{all.bioEn && <small className="err">{all.bioEn}</small>}
+        </label>
+        <label className="field"><span>{t('cm.messageEn')} <small className="muted">{d.messageEn.length}/1000</small></span>
+          <textarea rows={3} value={d.messageEn} onChange={setDet('messageEn')} maxLength={1000} lang="en" aria-invalid={!!all.messageEn} />{all.messageEn && <small className="err">{all.messageEn}</small>}
+        </label>
+      </fieldset>
       <PhotoPicker value={photo} onChange={setPhoto} />
       <div className="row">
         <button className="btn btn-dark btn-sm" disabled={busy}>{busy ? t('state.loading') : t('cm.save')}</button>
@@ -367,9 +407,14 @@ export default function CommitteeManager() {
                       </div>
                     )}
                   </header>
-                  {frozen && <p className="notice">{t('cm.frozen')}</p>}
+                  {frozen && (
+                    <div className="notice cm-frozen">
+                      <span>{t('cm.frozen')} {t('cm.restoreHint')}</span>
+                      <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => status('restore', t('cm.confirmRestore'), t('cm.restore'))}>{t('cm.restore')}</button>
+                    </div>
+                  )}
 
-                  {mode === 'edit' && <CommitteeForm initial={{ name: c.name, term: c.term, description: c.description || '', startsOn: c.startsOn, endsOn: c.endsOn }} busy={busy} errs={errs}
+                  {mode === 'edit' && <CommitteeForm initial={{ name: c.name, term: c.term, description: c.description || '', nameEn: c.nameEn || '', termEn: c.termEn || '', descriptionEn: c.descriptionEn || '', startsOn: c.startsOn, endsOn: c.endsOn }} busy={busy} errs={errs}
                     onSubmit={(v) => run(() => api(`/admin/committees/${sel}`, { method: 'PATCH', body: body(v) }))} onCancel={() => setMode(null)} />}
 
                   {members.length === 0 ? <Empty>{t('cm.noMembers')}</Empty> : (
@@ -401,7 +446,7 @@ export default function CommitteeManager() {
                   {mode === 'add' && <ExecutiveForm busy={busy} errs={errs} onCancel={() => setMode(null)}
                     onSubmit={(v) => run(() => api(`/admin/committees/${sel}/members`, { method: 'POST', body: body(v) }), 'cm.added')} />}
                   {mode?.edit && <ExecutiveForm key={mode.edit.id} initial={mode.edit} busy={busy} errs={errs} onCancel={() => setMode(null)}
-                    onSubmit={(v) => run(() => api(`/admin/executives/${mode.edit.id}`, { method: 'PATCH', body: body({ name: v.name, designation: v.designation, bio: v.bio, photo: v.photo }) }))} />}
+                    onSubmit={(v) => run(() => api(`/admin/executives/${mode.edit.id}`, { method: 'PATCH', body: body({ name: v.name, designation: v.designation, bio: v.bio, photo: v.photo, details: v.details }) }))} />}
                 </>
               )}
             </Data>

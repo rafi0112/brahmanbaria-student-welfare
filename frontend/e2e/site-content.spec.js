@@ -337,3 +337,24 @@ test.describe('in Bangla', () => {
     expect(await page.locator('input[type=email]').evaluate((x) => getComputedStyle(x).fontFamily)).toMatch(/^"?Tiro Bangla"?/)
   })
 })
+
+test('about: richer sections, numbers counted by the site unless an admin types them, no "Home /" trail on pages', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('jk-lang', 'bn'); localStorage.setItem('jk-theme', 'light') } catch { /* */ } })
+  await page.goto('/about')
+  await expect(page.getByRole('heading', { name: 'আমরা যা করি' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ব্রাহ্মণবাড়িয়া জেলা' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'জগন্নাথ বিশ্ববিদ্যালয়' })).toBeVisible()
+  await expect(page.locator('.ab-stats dd').first()).not.toHaveText('–')
+  for (const p of ['/about', '/events', '/blog', '/committee']) {
+    await page.goto(p)
+    await expect(page.locator('.phero-crumbs, nav[aria-label="Breadcrumb"]')).toHaveCount(0)
+  }
+  // an admin's own number and label replace the counted ones
+  await login(page)
+  const put = await page.request.put('/api/v1/admin/settings/site-texts', { data: { texts: { 'about.statStudentsN': { bn: '১৩০', en: '130' }, 'about.statStudentsL': { bn: 'মোট শিক্ষার্থী', en: 'Students in all' } } } })
+  expect(put.ok()).toBe(true)
+  await page.goto('/about')
+  await expect(page.locator('.ab-stats dl > div').first()).toContainText('১৩০')
+  await expect(page.locator('.ab-stats dl > div').first()).toContainText('মোট শিক্ষার্থী')
+  await page.request.put('/api/v1/admin/settings/site-texts', { data: { texts: {} } })
+})

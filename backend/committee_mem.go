@@ -120,6 +120,7 @@ func (m *memStore) CreateCommittee(_ context.Context, actorID string, in Committ
 	now := time.Now()
 	c := &memCommittee{Committee: Committee{
 		ID: fmt.Sprintf("c%04d", m.cm.seq), Name: in.Name, Term: in.Term, Description: in.Description, StartsOn: in.StartsOn, EndsOn: in.EndsOn,
+		NameEn: in.NameEn, TermEn: in.TermEn, DescriptionEn: in.DescriptionEn,
 		Status: CommitteeDraft, CreatedAt: now.Format(time.RFC3339Nano),
 	}, createdAt: now}
 	m.cm.committees[c.ID] = c
@@ -139,6 +140,7 @@ func (m *memStore) UpdateCommittee(_ context.Context, actorID, id string, in Com
 		return Committee{}, ErrCommitteeArchived
 	}
 	c.Name, c.Term, c.StartsOn, c.EndsOn, c.Description = in.Name, in.Term, in.StartsOn, in.EndsOn, in.Description
+	c.NameEn, c.TermEn, c.DescriptionEn = in.NameEn, in.TermEn, in.DescriptionEn
 	m.cmLog(id, "", actorID, "committee.update")
 	return m.cmView(c), nil
 }
@@ -177,6 +179,11 @@ func (m *memStore) SetCommitteeStatus(_ context.Context, actorID, id, action str
 			return Committee{}, ErrBadState
 		}
 		c.Status, c.ArchivedAt = CommitteeArchived, now
+	case "restore":
+		if c.Status != CommitteeArchived {
+			return Committee{}, ErrBadState
+		}
+		c.Status, c.ArchivedAt = CommitteeDraft, ""
 	default:
 		return Committee{}, ErrBadState
 	}
@@ -234,7 +241,7 @@ func (m *memStore) AddExecutive(_ context.Context, actorID, committeeID string, 
 	m.cm.seq++
 	x := &memExecutive{Executive: Executive{
 		ID: fmt.Sprintf("x%04d", m.cm.seq), CommitteeID: committeeID, UserID: in.UserID, Name: name,
-		Designation: in.Designation, Bio: in.Bio, Photo: in.Photo, Order: order,
+		Designation: in.Designation, Bio: in.Bio, Photo: in.Photo, Order: order, Details: in.Details,
 	}}
 	m.cm.executives[x.ID] = x
 	m.cmLog(committeeID, x.ID, actorID, "executive.add")
@@ -266,6 +273,9 @@ func (m *memStore) UpdateExecutive(_ context.Context, actorID, id string, p Exec
 	}
 	if p.Order != nil {
 		x.Order = *p.Order
+	}
+	if p.Details != nil {
+		x.Details = *p.Details
 	}
 	m.cmLog(x.CommitteeID, id, actorID, "executive.update")
 	return x.Executive, nil

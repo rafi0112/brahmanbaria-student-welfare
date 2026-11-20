@@ -149,8 +149,14 @@ export function Alumni() {
 
 /* ---------------- Committee ---------------- */
 export function Committee() {
-  const { t } = useApp()
-  const res = useApi('/executive-committee')
+  const { t, n, pick } = useApp()
+  const raw = useApi('/executive-committee')
+  // the committee and its seats in the visitor's language (the main text when the other one is empty);
+  // grouping still reads both designations
+  const res = raw.data ? { ...raw, data: {
+    committee: raw.data.committee && { ...raw.data.committee, name: pick(raw.data.committee.name, raw.data.committee.nameEn), term: pick(raw.data.committee.term, raw.data.committee.termEn), description: pick(raw.data.committee.description, raw.data.committee.descriptionEn) },
+    members: raw.data.members.map((m) => ({ ...m, seat: `${m.designation} ${m.designationEn || ''}`, designation: pick(m.designation, m.designationEn), bio: pick(m.bio, m.bioEn), message: pick(m.message, m.messageEn) })),
+  } } : raw
   const [profile, openProfile, closeProfile] = useProfileParam()
   // a click on a member opens their details in the pop-up (a click with Ctrl/⌘ still opens the link as usual)
   const go = (id) => (e) => { if (e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) { e.preventDefault(); openProfile(id) } }
@@ -196,6 +202,7 @@ export function Committee() {
                             <span className="cm-ring"><ExecPhoto m={m} size={88} /></span>
                             <h3>{name(m)}{m.verified && <VerifiedMark size={15} />}</h3>
                             <p className="cm-chip">{m.designation}</p>
+                            {(m.department || m.batch) && <p className="cm-who">{[m.department, m.batch && `${t('students.batch')} ${/^\d+$/.test(m.batch) ? n(m.batch) : m.batch}`].filter(Boolean).join(' · ')}</p>}
                             {m.bio && <p className="muted small exec-bio">{m.bio}</p>}
                           </article>
                         ))}
@@ -266,8 +273,13 @@ function SeatPhoto({ m }) {
 }
 
 function CommitteeProfile({ m, group, committee }) {
-  const { t, pick } = useApp()
+  const { t, n, pick } = useApp()
   const term = [committee.term, committee.startsOn && `${committee.startsOn} → ${committee.endsOn || '…'}`].filter(Boolean).join(' · ')
+  // who they are, as in a student's pop-up (an admin's entry, or the linked member's profile)
+  const identity = [
+    [t('students.dept'), m.department], [t('students.batch'), m.batch && (/^\d+$/.test(m.batch) ? n(m.batch) : m.batch)],
+    [t('students.session'), m.session], [t('students.from'), pick(m.upazila, m.upazilaEn)],
+  ].filter(([, v]) => v)
   return (
     <article className="sprofile is-modal">
       <div className="pm-cover" aria-hidden="true" />
@@ -283,6 +295,18 @@ function CommitteeProfile({ m, group, committee }) {
       </div>
       <div className="sp-body">
         <div className="sp-main">
+          {m.message && (
+            <section className="sp-sec cm-message">
+              <h2>{t('committee.messageH')}</h2>
+              <blockquote><p>{m.message}</p><footer>— {m.name}{m.designation ? `, ${m.designation}` : ''}</footer></blockquote>
+            </section>
+          )}
+          {identity.length > 0 && (
+            <section className="sp-sec">
+              <h2>{t('committee.identityH')}</h2>
+              <dl className="sp-facts">{identity.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+            </section>
+          )}
           <section className="sp-sec">
             <h2>{t('committee.about')}</h2>
             {m.bio ? <p className="cm-bio-full">{m.bio}</p> : <p className="muted">{t('committee.noIntroductionHasBeen')}</p>}
@@ -304,10 +328,11 @@ function CommitteeProfile({ m, group, committee }) {
 function groupSeats(members) {
   const teacher = (d) => /শিক্ষক উপদেষ্টা|teacher advis/i.test(d)
   const student = (d) => /ছাত্র উপদেষ্টা|student advis|alumni advis/i.test(d)
+  const seat = (m) => m.seat || m.designation
   return [
-    ['exec', members.filter((m) => !teacher(m.designation) && !student(m.designation))],
-    ['teachers', members.filter((m) => teacher(m.designation))],
-    ['students', members.filter((m) => student(m.designation))],
+    ['exec', members.filter((m) => !teacher(seat(m)) && !student(seat(m)))],
+    ['teachers', members.filter((m) => teacher(seat(m)))],
+    ['students', members.filter((m) => student(seat(m)))],
   ]
 }
 

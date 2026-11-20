@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { initials } from '../lib/initials.js'
-import { Link } from 'react-router-dom'
 import images from '../data/images.json'
 import { usePhoto } from '../lib/api.js'
 import { useApp } from '../lib/app.jsx'
@@ -141,24 +140,17 @@ export function Pagination({ page, pages, onPage }) {
   )
 }
 
-export function Crumbs({ items }) {
-  return (
-    <nav className="crumbs" aria-label="Breadcrumb">
-      {items.map((c, i) => (
-        <span key={i}>
-          {c.to ? <Link to={c.to}>{c.label}</Link> : <span aria-current="page">{c.label}</span>}
-          {i < items.length - 1 && <i aria-hidden="true">/</i>}
-        </span>
-      ))}
-    </nav>
-  )
+// The site shows no "Home / Page" trail above its pages (the menu already says where you are); the pages that still pass
+// one simply get nothing.
+export function Crumbs() {
+  return null
 }
 
 // Page opening shared by every inner page: serif title (its last word set in the accent colour), a short lede, optional
 // search or chips (`children`) and a photograph beside it. Decorative image, real text.
 // variant gives each page its own picture treatment: vine, bleed, arch, circle, frame, collage, tilt, wave
 export function PageHero({ kicker, title, lede, image, imageUrl, src, script, variant = 'vine', page, noMedia, children }) {
-  const { t, lang } = useApp()
+  const { lang } = useApp()
   const site = useSiteImages()
   if (page && site.pages?.[page]) src = site.pages[page] // the picture an admin chose for this page
   const bare = noMedia && !src // no picture of its own, and none chosen by an admin: the heading simply has the full width
@@ -173,7 +165,6 @@ export function PageHero({ kicker, title, lede, image, imageUrl, src, script, va
     <header className={`phero-wrap phero-v-${variant}${bare ? ' phero-bare' : ''}`}>
       <div className="wrap phero">
         <div className="phero-copy">
-          <nav className="phero-crumbs" aria-label={t('nav.breadcrumb')}><Link to="/">{t('nav.home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{kicker || head}</span></nav>
           {kicker && <p className="eyebrow">{kicker}</p>}
           <h1 className="st-title"><SplitText text={head} />{last && <span className="hl"><SplitText text={last} start={head.split(/\s+/).length} /></span>}</h1>
           {lede && <p className="phero-lede">{lede}</p>}

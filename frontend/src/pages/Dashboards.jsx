@@ -6,6 +6,7 @@ import { errorKey, useAuth } from '../lib/auth.jsx'
 import { Empty, Loading } from '../components/ui.jsx'
 import PhotoPicker from '../components/PhotoPicker.jsx'
 import { toast } from '../components/Motion.jsx'
+import { batchNumbers } from '../lib/batches.js'
 
 const LEVELS = ['members', 'hidden'] // the public site shows four fields only, so "public" no longer exists as a choice
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -43,7 +44,7 @@ function CompleteProfile({ defaultName, onDone }) {
   const upList = ups.data?.items || []
   const unions = upList.find((u) => u.slug === v.upazila)?.unions || []
   const opt = {
-    batch: Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [b, `${t('auth.batch')} ${n(b)}`]),
+    batch: batchNumbers().map((b) => [b, `${t('auth.batch')} ${n(b)}`]),
     department: (depts.data?.items || []).map((d) => [d, d]),
     upazila: upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]),
     union: unions.map((x) => [x, x]),
@@ -171,7 +172,7 @@ function EditDetails({ p }) {
             <input value={v.session} placeholder="2020-21" onChange={(e) => set('session', e.target.value)} aria-invalid={!!errs.session} />
             {errs.session && <small className="err">{errs.session}</small>}
           </label>
-          {sel('batch', 'auth.batch', Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [String(b), `${t('auth.batch')} ${n(b)}`]))}
+          {sel('batch', 'auth.batch', batchNumbers().map((b) => [String(b), `${t('auth.batch')} ${n(b)}`]))}
           {sel('department', 'auth.dept', (depts.data?.items || []).map((d) => [d, d]))}
           {sel('upazila', 'auth.upazila', upList.map((u) => [u.slug, pick(u.nameBn, u.nameEn)]))}
           {sel('union', 'auth.union', unions.map((x) => [x, x]), !v.upazila)}

@@ -10,6 +10,7 @@ import PasswordHelp, { ConfirmHint } from '../components/PasswordHelp.jsx'
 import { checkPassword } from '../lib/password.js'
 import { PasswordInput } from '../components/ui.jsx'
 import AuthShell from '../components/AuthShell.jsx'
+import { batchNumbers } from '../lib/batches.js'
 
 // Captured once, before the Supabase client removes the error from the address bar.
 const urlAuthError = typeof window === 'undefined' ? null : readUrlAuthError(window.location.search, window.location.hash)
@@ -142,7 +143,7 @@ export default function Activate() {
           <form onSubmit={submit} noValidate>
             <p className="muted">{t('ad.act2.profileIntro')}</p>
             {field('name', t('auth.name'), <input value={v.name} onChange={text('name')} maxLength={80} aria-invalid={!!errs.name} />)}
-            {field('batch', t('auth.batch'), select('batch', Array.from({ length: 25 }, (_, i) => 25 - i).map((b) => [String(b), `${t('auth.batch')} ${n(b)}`])))}
+            {field('batch', t('auth.batch'), select('batch', batchNumbers().map((b) => [String(b), `${t('auth.batch')} ${n(b)}`])))}
             {field('department', t('auth.dept'), select('department', (depts.data?.items || []).map((d) => [d, d])))}
             {field('session', t('auth.session'), <input value={v.session} onChange={text('session')} placeholder="2020-21" maxLength={7} aria-invalid={!!errs.session} />)}
             {isAlum && field('occupation', t('auth.occupation'), <input value={v.occupation || ''} onChange={text('occupation')} maxLength={120} aria-invalid={!!errs.occupation} aria-required="true" />, t('auth.alumHint').replace('{n}', n(alumniUpTo)))}
